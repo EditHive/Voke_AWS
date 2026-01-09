@@ -392,7 +392,7 @@ const ResumeBuilder = () => {
             <Printer className="w-4 h-4 mr-2" />
             Print
           </Button>
-          <Button className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white border-0 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 transition-all">
+          <Button onClick={handlePrint} className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white border-0 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 transition-all">
             <Download className="w-4 h-4 mr-2" />
             Export PDF
           </Button>
