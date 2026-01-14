@@ -318,10 +318,21 @@ const QuestionPractice = () => {
                         <Card className="h-full border-primary/10 bg-gradient-to-br from-violet-50/50 to-fuchsia-50/50 dark:from-violet-950/10 dark:to-fuchsia-950/10 backdrop-blur-sm relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Trophy className="w-5 h-5 text-amber-500" />
-                                    Your Progress
-                                </CardTitle>
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Trophy className="w-5 h-5 text-amber-500" />
+                                        Your Progress
+                                    </CardTitle>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="h-8 gap-2 bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20 hover:text-amber-700"
+                                        onClick={() => navigate('/leaderboard')}
+                                    >
+                                        <Trophy className="w-3.5 h-3.5" />
+                                        Leaderboard
+                                    </Button>
+                                </div>
                                 <CardDescription>Keep pushing your limits!</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
