@@ -179,9 +179,33 @@ const Profile = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Sanitize handles (remove URL parts if present)
+      const sanitizedData = { ...formData };
+      
+      const sanitizeHandle = (handle: string, domain: string) => {
+        if (!handle) return "";
+        let clean = handle.trim();
+        if (clean.endsWith('/')) clean = clean.slice(0, -1);
+        if (clean.includes(domain)) {
+          const parts = clean.split('/');
+          return parts[parts.length - 1];
+        }
+        return clean;
+      };
+
+      sanitizedData.leetcode_id = sanitizeHandle(sanitizedData.leetcode_id, "leetcode.com");
+      sanitizedData.codeforces_id = sanitizeHandle(sanitizedData.codeforces_id, "codeforces.com");
+
+      // Update state with sanitized values to reflect in UI immediately
+      setFormData(prev => ({
+        ...prev,
+        leetcode_id: sanitizedData.leetcode_id,
+        codeforces_id: sanitizedData.codeforces_id
+      }));
+
       const { error } = await supabase
         .from("profiles")
-        .update(formData)
+        .update(sanitizedData)
         .eq("id", user.id);
 
       if (error) throw error;

@@ -696,11 +696,26 @@ const QuestionPractice = () => {
                                                         identifier = contestId && index ? `${contestId}${index}` : question.title;
                                                     }
 
+                                                    // Sanitize username if it's a URL
+                                                    let username = question.platform === "LeetCode" ? profile.leetcode_id : profile.codeforces_id;
+                                                    if (username) {
+                                                        // Remove trailing slash if exists
+                                                        if (username.endsWith('/')) {
+                                                            username = username.slice(0, -1);
+                                                        }
+                                                        
+                                                        // Extract from URL if it's a full URL
+                                                        if (username.includes("leetcode.com") || username.includes("codeforces.com")) {
+                                                            const parts = username.split('/');
+                                                            username = parts[parts.length - 1];
+                                                        }
+                                                    }
+
                                                     try {
                                                         const { data, error } = await supabase.functions.invoke('verify-question-solution', {
                                                             body: {
                                                                 platform: question.platform,
-                                                                username: question.platform === "LeetCode" ? profile.leetcode_id : profile.codeforces_id,
+                                                                username: username,
                                                                 identifier: identifier || question.title
                                                             }
                                                         });
