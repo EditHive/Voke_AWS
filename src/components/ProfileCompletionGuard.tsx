@@ -16,14 +16,12 @@ export const ProfileCompletionGuard = ({ children }: { children: React.ReactNode
         try {
             const { data: { user } } = await supabase.auth.getUser();
 
-            // Allow access to auth page and public routes regardless of profile status
+
             if (!user) {
                 setLoading(false);
                 return;
             }
 
-            // We no longer force redirect to profile page if profile is incomplete
-            // The user will be prompted to complete their profile when they visit the profile settings
         } catch (error) {
             console.error("Error checking profile:", error);
         } finally {
