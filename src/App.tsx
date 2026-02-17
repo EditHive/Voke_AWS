@@ -1,0 +1,61 @@
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Index from "./pages/Index";
+import Auth from "./pages/Auth";
+import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
+import LearningPaths from "./pages/LearningPaths";
+import InterviewNew from "./pages/InterviewNew";
+import InterviewSession from "./pages/InterviewSession";
+import VideoInterview from "./pages/VideoInterview";
+import VideoInterviewResults from "./pages/VideoInterviewResults";
+import VideoPracticeHistory from "./pages/VideoPracticeHistory";
+import ProgressAnalytics from "./pages/ProgressAnalytics";
+import JobMarketInsights from "./pages/JobMarketInsights";
+import AdaptiveInterview from "./pages/AdaptiveInterview";
+import PeerInterviews from "./pages/PeerInterviews";
+import CreatePeerSession from "./pages/CreatePeerSession";
+import PeerSessionRoom from "./pages/PeerSessionRoom";
+import RatePeerSession from "./pages/RatePeerSession";
+import Leaderboard from "./pages/Leaderboard";
+import NotFound from "./pages/NotFound";
+
+const queryClient = new QueryClient();
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/learning-paths" element={<LearningPaths />} />
+          <Route path="/interview/new" element={<InterviewNew />} />
+          <Route path="/interview/:id" element={<InterviewSession />} />
+        <Route path="/video-interview" element={<VideoInterview />} />
+        <Route path="/video-interview/:id/results" element={<VideoInterviewResults />} />
+        <Route path="/video-practice" element={<VideoPracticeHistory />} />
+          <Route path="/progress-analytics" element={<ProgressAnalytics />} />
+          <Route path="/job-market" element={<JobMarketInsights />} />
+          <Route path="/adaptive-interview" element={<AdaptiveInterview />} />
+          <Route path="/peer-interviews" element={<PeerInterviews />} />
+          <Route path="/peer-interviews/create" element={<CreatePeerSession />} />
+          <Route path="/peer-interviews/session/:sessionId" element={<PeerSessionRoom />} />
+          <Route path="/peer-interviews/rate/:sessionId" element={<RatePeerSession />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
+
+export default App;
