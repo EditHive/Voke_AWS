@@ -150,7 +150,7 @@ Keep your tone professional, encouraging, and educational. This is a learning ex
             { role: "system", content: systemPrompt },
             ...messages,
           ],
-          stream: true,
+          stream: false,
         }),
       }
     );
@@ -186,12 +186,18 @@ Keep your tone professional, encouraging, and educational. This is a learning ex
       throw new Error(`AI gateway error: ${response.status}`);
     }
 
-    return new Response(response.body, {
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "text/event-stream",
-      },
-    });
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content ?? "";
+
+    return new Response(
+      JSON.stringify({ content }),
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error in adaptive-interview-chat function:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";

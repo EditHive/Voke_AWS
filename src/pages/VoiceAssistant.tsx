@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useGeminiLive } from '@/hooks/useGeminiLive';
+import { useGroqVoice } from '@/hooks/useGroqVoice';
 import { AudioVisualizer } from '@/components/AudioVisualizer';
 import { LiveStatus } from '@/types/voice';
 import { Mic, X, MessageSquare, Sparkles, AlertCircle, ArrowLeft } from 'lucide-react';
@@ -17,8 +17,9 @@ const VoiceAssistant: React.FC = () => {
         isUserSpeaking,
         isAiSpeaking,
         volume,
-        logs
-    } = useGeminiLive();
+        logs,
+        errorDetails,
+    } = useGroqVoice();
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [userContext, setUserContext] = useState<string>('');
@@ -38,32 +39,163 @@ const VoiceAssistant: React.FC = () => {
 
     const loadUserContext = async () => {
         try {
+            console.log('[VoiceAssistant] Starting loadUserContext...');
             const { data: { user } } = await supabase.auth.getUser();
+            console.log('[VoiceAssistant] User:', user?.id);
+
             if (!user) {
+                console.error('[VoiceAssistant] No user found, redirecting to auth');
                 navigate('/auth');
                 return;
             }
 
-            const { data: profile } = await supabase
+            const { data: profile, error: profileError } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', user.id)
                 .single();
 
+            console.log('[VoiceAssistant] Profile:', profile);
+            console.log('[VoiceAssistant] Profile error:', profileError);
+
             if (profile) {
                 let context = `User Name: ${profile.full_name || 'Candidate'}\n`;
+                let projectCount = 0;
+
+                // Fetch GitHub context
+                if (profile.github_url) {
+                    console.log('[VoiceAssistant] Fetching GitHub context for:', profile.github_url);
+                    try {
+                        const githubToken = import.meta.env.VITE_GITHUB_TOKEN;
+                        console.log('[VoiceAssistant] GitHub token available:', !!githubToken);
+
+                        // Extract username from GitHub URL
+                        const usernameMatch = profile.github_url.match(/github\.com\/([^\/]+)/);
+                        if (!usernameMatch) {
+                            console.warn('[VoiceAssistant] Invalid GitHub URL format');
+                            context += `GitHub Profile: ${profile.github_url}\n`;
+                        } else {
+                            const username = usernameMatch[1];
+
+                            // Fetch repos with README content
+                            const headers: Record<string, string> = {
+                                'Accept': 'application/vnd.github.v3+json',
+                                'User-Agent': 'Voke-Interview-App'
+                            };
+
+                            if (githubToken) {
+                                headers['Authorization'] = `token ${githubToken}`;
+                            }
+
+                            const reposResponse = await fetch(
+                                `https://api.github.com/users/${username}/repos?sort=updated&per_page=5`,
+                                { headers }
+                            );
+
+                            if (reposResponse.ok) {
+                                const repos = await reposResponse.json();
+                                projectCount = repos.length;
+
+                                // Fetch README for each repo
+                                const projectSummaries = await Promise.all(
+                                    repos.map(async (repo: any) => {
+                                        let readmeSummary = 'No README available';
+
+                                        try {
+                                            const readmeResponse = await fetch(
+                                                `https://api.github.com/repos/${username}/${repo.name}/readme`,
+                                                { headers }
+                                            );
+
+                                            if (readmeResponse.ok) {
+                                                const readmeData = await readmeResponse.json();
+                                                const decodedContent = atob(readmeData.content);
+                                                readmeSummary = decodedContent.substring(0, 300).replace(/[#*`\n]/g, ' ').trim();
+                                            }
+                                        } catch (e) {
+                                            console.log(`[VoiceAssistant] No README for ${repo.name}`);
+                                        }
+
+                                        return `Project: ${repo.name}\n- Description: ${repo.description || 'No description'}\n- Tech: ${repo.language || 'Not specified'}\n- Stars: ${repo.stargazers_count}\n- Summary: ${readmeSummary}`;
+                                    })
+                                );
+
+                                context += `\nGITHUB PROJECTS:\n${projectSummaries.join('\n\n')}\n`;
+                                console.log('[VoiceAssistant] ✓ GitHub projects loaded with READMEs:', projectCount);
+                            } else {
+                                console.warn('[VoiceAssistant] GitHub API error:', reposResponse.status);
+                                context += `GitHub Profile: ${profile.github_url}\n`;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('[VoiceAssistant] Failed to fetch GitHub context:', e);
+                        context += `GitHub Profile: ${profile.github_url}\n`;
+                    }
+                } else {
+                    console.log('[VoiceAssistant] No GitHub URL in profile');
+                    context += `GitHub Profile: Not provided\n`;
+                }
+
+                // Parse resume PDF if available
+                if (profile.resume_url) {
+                    console.log('[VoiceAssistant] Fetching resume from:', profile.resume_url);
+                    try {
+                        const resumeResponse = await fetch(profile.resume_url);
+                        console.log('[VoiceAssistant] Resume fetch status:', resumeResponse.status);
+
+                        const resumeBlob = await resumeResponse.blob();
+                        console.log('[VoiceAssistant] Resume blob size:', resumeBlob.size, 'type:', resumeBlob.type);
+
+                        // Dynamically import pdfjs
+                        const pdfjsLib = await import('pdfjs-dist');
+                        // Use the correct worker from node_modules
+                        pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+                            'pdfjs-dist/build/pdf.worker.min.mjs',
+                            import.meta.url
+                        ).toString();
+
+                        const arrayBuffer = await resumeBlob.arrayBuffer();
+                        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                        console.log('[VoiceAssistant] PDF loaded, pages:', pdf.numPages);
+
+                        let resumeText = '';
+                        for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            const pageText = textContent.items.map((item: any) => item.str).join(' ');
+                            resumeText += pageText + '\n';
+                        }
+
+                        // Clean and truncate resume text
+                        resumeText = resumeText.replace(/\s+/g, ' ').trim().substring(0, 2000);
+                        context += `\nRESUME CONTENT:\n${resumeText}\n`;
+                        console.log('[VoiceAssistant] ✓ Resume parsed successfully, length:', resumeText.length);
+                    } catch (e) {
+                        console.error('[VoiceAssistant] Failed to parse resume:', e);
+                        context += `Resume URL: ${profile.resume_url}\n`;
+                    }
+                } else {
+                    console.log('[VoiceAssistant] No resume URL in profile');
+                }
+
                 if (profile.linkedin_url) context += `LinkedIn Profile: ${profile.linkedin_url}\n`;
-                if (profile.github_url) context += `GitHub Profile: ${profile.github_url}\n`;
-                if (profile.resume_url) context += `Resume URL: ${profile.resume_url}\n`;
 
-                // Add instruction to ask about these
-                context += `\nINSTRUCTION: The user has provided the above profile links. Start by greeting them by name. Then, ask them to tell you about a specific project or experience from their resume or GitHub if available, or ask about their professional background from LinkedIn. Do not just list the URLs. Act as if you have read them.`;
+                // Add instruction
+                if (projectCount > 0) {
+                    context += `\nINSTRUCTION: You have detailed information about the user's ${projectCount} GitHub projects and their resume. You know about ALL of them. When asked about projects or experience, you can discuss any of them in detail. Start by greeting them warmly by name, then ask about a specific project or experience that interests you.`;
+                } else {
+                    context += `\nINSTRUCTION: Start by greeting the user warmly by name and ask them to tell you about their experience.`;
+                }
 
+                console.log('[VoiceAssistant] Final context length:', context.length);
+                console.log('[VoiceAssistant] Full context:', context);
                 setUserContext(context);
             }
         } catch (error) {
-            console.error('Error loading context:', error);
+            console.error('[VoiceAssistant] Error loading context:', error);
             toast.error('Failed to load profile context');
+            // Set minimal context so the interview can still proceed
+            setUserContext('User Name: Candidate\nINSTRUCTION: Greet the user and ask them to introduce themselves.');
         } finally {
             setLoadingContext(false);
         }
@@ -121,9 +253,14 @@ const VoiceAssistant: React.FC = () => {
 
                     {isError && (
                         <div className="absolute inset-0 flex items-center justify-center z-20 bg-slate-950/80 backdrop-blur-sm">
-                            <div className="flex flex-col items-center gap-3 text-red-400">
+                            <div className="flex flex-col items-center gap-3 text-red-400 p-4 text-center">
                                 <AlertCircle className="w-10 h-10" />
                                 <span className="text-sm font-medium">Connection Error</span>
+                                {errorDetails && (
+                                    <p className="text-xs text-red-300 mt-1 max-w-[200px] break-words">
+                                        {errorDetails}
+                                    </p>
+                                )}
                                 <button
                                     onClick={() => window.location.reload()}
                                     className="mt-2 px-4 py-2 bg-slate-800 rounded-lg hover:bg-slate-700 text-xs text-white transition-colors"
@@ -174,8 +311,8 @@ const VoiceAssistant: React.FC = () => {
                             {logs.map((msg) => (
                                 <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                     <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${msg.role === 'user'
-                                            ? 'bg-blue-600/20 text-blue-100 rounded-tr-sm'
-                                            : 'bg-slate-800/50 text-slate-300 rounded-tl-sm'
+                                        ? 'bg-blue-600/20 text-blue-100 rounded-tr-sm'
+                                        : 'bg-slate-800/50 text-slate-300 rounded-tl-sm'
                                         }`}>
                                         {msg.text}
                                     </div>

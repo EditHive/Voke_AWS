@@ -22,3 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+TensorFlowTTS/
+piper-phonemize/
+piper/
+piper_models/
+*.pyc
+__pycache__/
+.venv/
+*.wav
+*.log
+.env
+test-*.js
+server.log
