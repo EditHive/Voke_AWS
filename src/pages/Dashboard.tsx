@@ -71,7 +71,7 @@ const Dashboard = () => {
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-50 shadow-soft">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/dashboard")}>
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
               <Mic className="w-5 h-5 text-white" />
             </div>
@@ -81,14 +81,11 @@ const Dashboard = () => {
             <Button variant="ghost" onClick={() => navigate("/dashboard")}>
               Dashboard
             </Button>
-            <Button variant="ghost" onClick={() => navigate("/learning-paths")}>
-              Learning Paths
+            <Button variant="ghost" onClick={() => navigate("/blog")}>
+              Blog
             </Button>
-            <Button variant="ghost" onClick={() => navigate("/video-practice")}>
-              Video Practice
-            </Button>
-            <Button variant="ghost" onClick={() => navigate("/job-market")}>
-              Job Market
+            <Button variant="ghost" onClick={() => navigate("/community")}>
+              Community
             </Button>
             <Button variant="ghost" onClick={() => navigate("/leaderboard")}>
               Leaderboard

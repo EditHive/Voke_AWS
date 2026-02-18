@@ -109,7 +109,7 @@ const InterviewNew = () => {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 cursor-pointer group" onClick={() => navigate("/")}>
+          <div className="flex items-center gap-2 cursor-pointer group" onClick={() => navigate("/dashboard")}>
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20 group-hover:shadow-violet-500/40 transition-all duration-300">
               <Mic className="w-6 h-6 text-white" />
             </div>

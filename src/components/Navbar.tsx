@@ -3,8 +3,19 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useNavigate } from "react-router-dom";
 import { Mic } from "lucide-react";
 
+import { supabase } from "@/integrations/supabase/client";
+
 export const Navbar = () => {
     const navigate = useNavigate();
+
+    const handleLogoClick = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            navigate("/dashboard");
+        } else {
+            navigate("/");
+        }
+    };
 
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 border-b border-gray-200/50 dark:border-gray-800/50 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl transition-colors duration-300">
@@ -13,7 +24,7 @@ export const Navbar = () => {
                     {/* Logo/Brand */}
                     <div
                         className="flex items-center gap-2 cursor-pointer group"
-                        onClick={() => navigate("/")}
+                        onClick={handleLogoClick}
                     >
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-purple-600 dark:from-violet-500 dark:to-purple-500 flex items-center justify-center shadow-lg shadow-violet-500/30 dark:shadow-violet-500/20 group-hover:scale-110 transition-transform duration-300">
                             <Mic className="w-5 h-5 text-white" />

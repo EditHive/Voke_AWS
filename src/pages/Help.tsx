@@ -8,9 +8,20 @@ import { Mic, ArrowLeft, Search, HelpCircle, BookOpen, Video, MessageCircle, Mai
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { motion } from "motion/react";
 
+import { supabase } from "@/integrations/supabase/client";
+
 const Help = () => {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState("");
+
+    const handleLogoClick = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            navigate("/dashboard");
+        } else {
+            navigate("/");
+        }
+    };
 
     const categories = [
         {
@@ -101,7 +112,7 @@ const Help = () => {
                             <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
                                 <ArrowLeft className="h-5 w-5" />
                             </Button>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 cursor-pointer" onClick={handleLogoClick}>
                                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
                                     <Mic className="w-6 h-6 text-white" />
                                 </div>

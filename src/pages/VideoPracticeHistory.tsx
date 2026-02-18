@@ -71,7 +71,7 @@ const VideoPracticeHistory = () => {
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-10 shadow-soft">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/dashboard")}>
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
               <Mic className="w-5 h-5 text-white" />
             </div>
