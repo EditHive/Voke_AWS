@@ -26,10 +26,10 @@ export const Navbar = () => {
                         className="flex items-center gap-2 cursor-pointer group"
                         onClick={handleLogoClick}
                     >
-                        <img 
-                            src="/images/voke_logo.png" 
-                            alt="Voke Logo" 
-                            className="w-10 h-10 object-contain group-hover:scale-110 transition-transform duration-300" 
+                        <img
+                            src="/images/voke_logo.png"
+                            alt="Voke Logo"
+                            className="w-10 h-10 object-contain group-hover:scale-110 transition-transform duration-300"
                         />
                         <span className="text-xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 dark:from-violet-400 dark:via-purple-400 dark:to-fuchsia-400 bg-clip-text text-transparent">
                             Voke
@@ -58,6 +58,13 @@ export const Navbar = () => {
                             className="text-gray-700 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors"
                         >
                             Job Market
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            onClick={() => navigate("/voice-assistant")}
+                            className="text-gray-700 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors"
+                        >
+                            AI Voice Agent
                         </Button>
                     </div>
 
