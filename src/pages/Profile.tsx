@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Brain, LogOut, Upload, FileText, TrendingUp, Target, Award, Calendar } from "lucide-react";
+import { Brain, LogOut, Upload, FileText, TrendingUp, Target, Award, Calendar, User, Briefcase, Activity, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { motion, AnimatePresence } from "motion/react";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -78,20 +79,17 @@ const Profile = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get interview sessions stats
       const { data: sessions } = await supabase
         .from("interview_sessions")
         .select("*")
         .eq("user_id", user.id);
 
-      // Get video interview stats
       const { data: videoSessions } = await supabase
         .from("video_interview_sessions")
         .select("overall_score")
         .eq("user_id", user.id)
         .not("overall_score", "is", null);
 
-      // Get peer sessions stats
       const { data: peerSessions } = await supabase
         .from("peer_interview_sessions")
         .select("*")
@@ -221,264 +219,460 @@ const Profile = () => {
     navigate("/");
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { 
+        staggerChildren: 0.1,
+        delayChildren: 0.2
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { 
+      y: 0, 
+      opacity: 1,
+      transition: { type: "spring" as const, stiffness: 300, damping: 24 }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Brain className="h-8 w-8 animate-pulse text-primary" />
+        <motion.div
+          animate={{ rotate: 360, scale: [1, 1.2, 1] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <Brain className="h-12 w-12 text-primary" />
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Dynamic Background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px]" />
+        <div className="absolute top-[40%] -right-[10%] w-[40%] h-[40%] rounded-full bg-purple-500/10 blur-[100px]" />
+        <div className="absolute -bottom-[10%] left-[20%] w-[30%] h-[30%] rounded-full bg-blue-500/10 blur-[80px]" />
+      </div>
+
       {/* Header */}
-      <header className="border-b border-border bg-card">
+      <motion.header 
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="border-b border-border/40 bg-background/80 backdrop-blur-md sticky top-0 z-50"
+      >
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Brain className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold text-foreground">Profile</h1>
+            <div className="p-2 bg-primary/10 rounded-xl">
+              <Brain className="h-6 w-6 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600">
+              Profile & Settings
+            </h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <ThemeToggle />
-            <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="hover:bg-primary/5">
               Dashboard
             </Button>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
+            <Button variant="destructive" size="sm" onClick={handleLogout} className="shadow-lg shadow-destructive/20 hover:shadow-destructive/40 transition-all">
               <LogOut className="h-4 w-4 mr-2" />
               Logout
             </Button>
           </div>
         </div>
-      </header>
+      </motion.header>
 
-      <div className="container mx-auto px-4 py-8">
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="container mx-auto px-4 py-8 relative z-10"
+      >
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Target className="h-4 w-4 text-primary" />
-                Total Interviews
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-primary">{stats.totalInterviews}</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Award className="h-4 w-4 text-primary" />
-                Completed
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-primary">{stats.completedSessions}</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                Avg Score
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-primary">{stats.averageScore}%</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-primary" />
-                Peer Sessions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-primary">{stats.peerSessions}</p>
-            </CardContent>
-          </Card>
+          {[
+            { title: "Total Interviews", value: stats.totalInterviews, icon: Target, color: "text-blue-500", bg: "bg-blue-500/10" },
+            { title: "Completed", value: stats.completedSessions, icon: Award, color: "text-green-500", bg: "bg-green-500/10" },
+            { title: "Avg Score", value: `${stats.averageScore}%`, icon: TrendingUp, color: "text-purple-500", bg: "bg-purple-500/10" },
+            { title: "Peer Sessions", value: stats.peerSessions, icon: Calendar, color: "text-orange-500", bg: "bg-orange-500/10" }
+          ].map((stat, index) => (
+            <motion.div key={index} variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
+              <Card className="border-border/50 bg-card/50 backdrop-blur-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 overflow-hidden group">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className={`p-3 rounded-xl ${stat.bg} group-hover:scale-110 transition-transform duration-300`}>
+                      <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                    </div>
+                    <Sparkles className="h-4 w-4 text-muted-foreground/30" />
+                  </div>
+                  <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
+                  <p className="text-3xl font-bold text-foreground mt-1">{stat.value}</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
         </div>
 
-        <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="profile">Profile Info</TabsTrigger>
-            <TabsTrigger value="skills">Skills Progress</TabsTrigger>
-            <TabsTrigger value="activity">Recent Activity</TabsTrigger>
-            <TabsTrigger value="resume">Resume</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="profile">
-            <Card>
-              <CardHeader>
-                <CardTitle>Personal Information</CardTitle>
-                <CardDescription>Update your profile details</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    value={profile?.email || ""}
-                    disabled
-                    className="bg-muted"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="full_name">Full Name</Label>
-                  <Input
-                    id="full_name"
-                    value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    placeholder="Enter your full name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="linkedin_url">LinkedIn URL</Label>
-                  <Input
-                    id="linkedin_url"
-                    value={formData.linkedin_url}
-                    onChange={(e) => setFormData({ ...formData, linkedin_url: e.target.value })}
-                    placeholder="https://linkedin.com/in/yourprofile"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="github_url">GitHub URL</Label>
-                  <Input
-                    id="github_url"
-                    value={formData.github_url}
-                    onChange={(e) => setFormData({ ...formData, github_url: e.target.value })}
-                    placeholder="https://github.com/yourusername"
-                  />
-                </div>
-                <Button onClick={handleSave} disabled={saving} className="w-full">
-                  {saving ? "Saving..." : "Save Changes"}
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="skills">
-            <Card>
-              <CardHeader>
-                <CardTitle>Skill Development</CardTitle>
-                <CardDescription>Track your identified skill gaps and learning progress</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {skillGaps.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">
-                    No skill gaps identified yet. Complete a career guidance assessment to see your personalized skill development plan.
-                  </p>
-                ) : (
-                  skillGaps.map((gap: any, index: number) => (
-                    <div key={index} className="space-y-2 p-4 border border-border rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-foreground">{gap.skill}</h4>
-                        <Badge variant={gap.importance === 'High' ? 'destructive' : gap.importance === 'Medium' ? 'default' : 'secondary'}>
-                          {gap.importance} Priority
-                        </Badge>
-                      </div>
-                      {gap.learning_resource && (
-                        <p className="text-sm text-muted-foreground">{gap.learning_resource}</p>
-                      )}
-                      <Progress value={Math.random() * 60 + 20} className="h-2" />
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="activity">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Your latest interview sessions</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {recentActivity.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">
-                    No recent activity. Start your first interview to see your progress here.
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {recentActivity.map((activity) => (
-                      <div key={activity.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
-                        <div>
-                          <h4 className="font-semibold text-foreground">{activity.interview_type}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(activity.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <Badge variant={activity.status === 'completed' ? 'default' : 'secondary'}>
-                          {activity.status}
-                        </Badge>
-                      </div>
-                    ))}
+        <Tabs defaultValue="profile" className="flex flex-col md:flex-row gap-8">
+          <motion.div variants={itemVariants} className="w-full md:w-64 shrink-0">
+            <TabsList className="flex flex-col w-full h-auto bg-transparent p-0 gap-2">
+              {[
+                { value: "profile", label: "Profile Info", icon: User },
+                { value: "skills", label: "Skills Progress", icon: Brain },
+                { value: "activity", label: "Recent Activity", icon: Activity },
+                { value: "resume", label: "Resume", icon: FileText }
+              ].map((tab) => (
+                <TabsTrigger 
+                  key={tab.value} 
+                  value={tab.value}
+                  className="w-full justify-start px-4 py-3 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none hover:bg-muted/50 transition-all duration-200"
+                >
+                  <div className="flex items-center gap-3">
+                    <tab.icon className="h-4 w-4" />
+                    <span className="font-medium">{tab.label}</span>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </motion.div>
 
-          <TabsContent value="resume">
-            <Card>
-              <CardHeader>
-                <CardTitle>Resume Management</CardTitle>
-                <CardDescription>Upload and manage your resume</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {profile?.resume_url && (
-                  <div className="p-4 border border-border rounded-lg bg-muted/50">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-6 w-6 text-primary" />
-                        <div>
-                          <p className="font-semibold text-foreground">Current Resume</p>
-                          <p className="text-sm text-muted-foreground">Uploaded successfully</p>
-                        </div>
+          <div className="flex-1 min-w-0">
+            <AnimatePresence mode="wait">
+              <TabsContent value="profile" className="mt-0">
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Card className="border-border/50 bg-card/50 backdrop-blur-sm shadow-xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <User className="h-5 w-5 text-primary" />
+                      Personal Information
+                    </CardTitle>
+                    <CardDescription>Update your profile details and public presence</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email Address</Label>
+                        <Input id="email" value={profile?.email || ""} disabled className="bg-muted/50" />
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(profile.resume_url, "_blank")}
+                      <div className="space-y-2">
+                        <Label htmlFor="full_name">Full Name</Label>
+                        <Input
+                          id="full_name"
+                          value={formData.full_name}
+                          onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                          placeholder="Enter your full name"
+                          className="focus:ring-2 focus:ring-primary/20 transition-all"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="linkedin_url">LinkedIn Profile</Label>
+                        <Input
+                          id="linkedin_url"
+                          value={formData.linkedin_url}
+                          onChange={(e) => setFormData({ ...formData, linkedin_url: e.target.value })}
+                          placeholder="https://linkedin.com/in/yourprofile"
+                          className="focus:ring-2 focus:ring-primary/20 transition-all"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="github_url">GitHub Profile</Label>
+                        <Input
+                          id="github_url"
+                          value={formData.github_url}
+                          onChange={(e) => setFormData({ ...formData, github_url: e.target.value })}
+                          placeholder="https://github.com/yourusername"
+                          className="focus:ring-2 focus:ring-primary/20 transition-all"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end pt-4">
+                      <Button 
+                        onClick={handleSave} 
+                        disabled={saving} 
+                        className="w-full md:w-auto min-w-[150px] shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all"
                       >
-                        View
+                        {saving ? (
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            className="mr-2"
+                          >
+                            <Sparkles className="h-4 w-4" />
+                          </motion.div>
+                        ) : (
+                          <Sparkles className="h-4 w-4 mr-2" />
+                        )}
+                        {saving ? "Saving Changes..." : "Save Changes"}
                       </Button>
                     </div>
-                  </div>
-                )}
-                
-                <div className="space-y-2">
-                  <Label htmlFor="resume">Upload New Resume</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="resume"
-                      type="file"
-                      accept=".pdf,.doc,.docx"
-                      onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
-                      className="flex-1"
-                    />
-                    <Button
-                      onClick={handleResumeUpload}
-                      disabled={!resumeFile || saving}
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      {saving ? "Uploading..." : "Upload"}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Supported formats: PDF, DOC, DOCX (Max 5MB)
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
+
+            <TabsContent value="skills" className="mt-0">
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Card className="border-border/50 bg-card/50 backdrop-blur-sm shadow-xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Brain className="h-5 w-5 text-primary" />
+                      Skill Development
+                    </CardTitle>
+                    <CardDescription>Track your identified skill gaps and learning progress</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {skillGaps.length === 0 ? (
+                      <div className="text-center py-12 px-4 rounded-2xl bg-muted/30 border border-dashed border-border">
+                        <Target className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                        <h3 className="text-lg font-medium text-foreground">No Skill Gaps Identified</h3>
+                        <p className="text-muted-foreground mt-2 max-w-md mx-auto">
+                          Complete a career guidance assessment to discover your personalized skill development plan.
+                        </p>
+                        <Button variant="outline" className="mt-6" onClick={() => navigate("/career-guidance")}>
+                          Start Assessment
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="grid gap-4">
+                        {skillGaps.map((gap: any, index: number) => (
+                          <motion.div 
+                            key={index}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="p-5 border border-border/50 rounded-xl bg-background/50 hover:bg-background/80 transition-colors"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                <div className={`h-2 w-2 rounded-full ${gap.importance === 'High' ? 'bg-red-500' : gap.importance === 'Medium' ? 'bg-yellow-500' : 'bg-blue-500'}`} />
+                                <h4 className="font-semibold text-foreground">{gap.skill}</h4>
+                              </div>
+                              <Badge variant={gap.importance === 'High' ? 'destructive' : gap.importance === 'Medium' ? 'default' : 'secondary'} className="capitalize">
+                                {gap.importance} Priority
+                              </Badge>
+                            </div>
+                            {gap.learning_resource && (
+                              <p className="text-sm text-muted-foreground mb-4 pl-5 border-l-2 border-border/50">
+                                {gap.learning_resource}
+                              </p>
+                            )}
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>Progress</span>
+                                <span>{Math.round(Math.random() * 60 + 20)}%</span>
+                              </div>
+                              <Progress value={Math.random() * 60 + 20} className="h-2" />
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
+
+            <TabsContent value="activity" className="mt-0">
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Card className="border-border/50 bg-card/50 backdrop-blur-sm shadow-xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Activity className="h-5 w-5 text-primary" />
+                      Recent Activity
+                    </CardTitle>
+                    <CardDescription>Your latest interview sessions and achievements</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {recentActivity.length === 0 ? (
+                      <div className="text-center py-12 px-4 rounded-2xl bg-muted/30 border border-dashed border-border">
+                        <Calendar className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                        <h3 className="text-lg font-medium text-foreground">No Recent Activity</h3>
+                        <p className="text-muted-foreground mt-2">
+                          Start your first interview to see your progress here.
+                        </p>
+                        <Button className="mt-6" onClick={() => navigate("/interview")}>
+                          Start Interview
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {recentActivity.map((activity, index) => (
+                          <motion.div 
+                            key={activity.id}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="flex items-center justify-between p-4 border border-border/50 rounded-xl bg-background/50 hover:bg-background/80 transition-all hover:shadow-md"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="p-2 rounded-full bg-primary/10">
+                                <Briefcase className="h-5 w-5 text-primary" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-foreground">{activity.interview_type}</h4>
+                                <p className="text-sm text-muted-foreground">
+                                  {new Date(activity.created_at).toLocaleDateString(undefined, { 
+                                    weekday: 'long', 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+                            <Badge variant={activity.status === 'completed' ? 'default' : 'secondary'} className="capitalize">
+                              {activity.status}
+                            </Badge>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
+
+            <TabsContent value="resume" className="mt-0">
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Card className="border-border/50 bg-card/50 backdrop-blur-sm shadow-xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-primary" />
+                      Resume Management
+                    </CardTitle>
+                    <CardDescription>Upload and manage your resume for AI analysis</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {profile?.resume_url && (
+                      <motion.div 
+                        initial={{ scale: 0.95, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="p-6 border border-primary/20 rounded-2xl bg-primary/5 relative overflow-hidden group"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                        <div className="flex items-center justify-between relative z-10">
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 bg-background rounded-xl shadow-sm">
+                              <FileText className="h-8 w-8 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-foreground text-lg">Current Resume</p>
+                              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                <Sparkles className="h-3 w-3 text-green-500" />
+                                Active & Ready for Analysis
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            onClick={() => window.open(profile.resume_url, "_blank")}
+                            className="hover:bg-primary hover:text-primary-foreground transition-colors"
+                          >
+                            View Document
+                          </Button>
+                        </div>
+                      </motion.div>
+                    )}
+                    
+                    <div className="space-y-4">
+                      <Label htmlFor="resume" className="text-base">Upload New Resume</Label>
+                      <div className="border-2 border-dashed border-border hover:border-primary/50 rounded-2xl p-8 transition-colors text-center bg-muted/20 hover:bg-muted/40 group cursor-pointer relative">
+                        <input
+                          id="resume"
+                          type="file"
+                          accept=".pdf,.doc,.docx"
+                          onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+                        />
+                        <div className="flex flex-col items-center gap-3 relative z-10 pointer-events-none">
+                          <div className="p-4 rounded-full bg-background shadow-sm group-hover:scale-110 transition-transform duration-300">
+                            {resumeFile ? (
+                              <FileText className="h-8 w-8 text-primary" />
+                            ) : (
+                              <Upload className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">
+                              {resumeFile ? resumeFile.name : "Click to upload or drag and drop"}
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              PDF, DOC, DOCX (Max 5MB)
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <AnimatePresence>
+                        {resumeFile && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="flex justify-end"
+                          >
+                            <Button
+                              onClick={handleResumeUpload}
+                              disabled={saving}
+                              className="w-full md:w-auto shadow-lg shadow-primary/20"
+                            >
+                              {saving ? (
+                                <>
+                                  <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                    className="mr-2"
+                                  >
+                                    <Upload className="h-4 w-4" />
+                                  </motion.div>
+                                  Uploading...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  Upload Selected File
+                                </>
+                              )}
+                            </Button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
+          </AnimatePresence>
+          </div>
         </Tabs>
-      </div>
+      </motion.div>
     </div>
   );
 };

@@ -13,9 +13,11 @@ export const Footer = () => {
                     {/* Brand Section */}
                     <div className="space-y-4">
                         <Link to="/" className="flex items-center gap-2">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
-                                <Mic className="w-6 h-6 text-white" />
-                            </div>
+                            <img 
+                                src="/images/voke_logo.png" 
+                                alt="Voke Logo" 
+                                className="w-10 h-10 object-contain" 
+                            />
                             <span className="text-xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent">
                                 Voke
                             </span>
