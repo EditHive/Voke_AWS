@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Brain, LogOut, Video, Play, TrendingUp } from "lucide-react";
+import { LogOut, Video, Play, TrendingUp, Mic, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const VideoPracticeHistory = () => {
   const navigate = useNavigate();
@@ -70,16 +71,19 @@ const VideoPracticeHistory = () => {
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-10 shadow-soft">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Brain className="w-8 h-8 text-primary" />
-            <h1 className="text-2xl font-bold text-primary">Quantum Query</h1>
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/dashboard")}>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+              <Mic className="w-5 h-5 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">Voke</h1>
           </div>
           <nav className="flex items-center gap-4">
             <Button variant="ghost" onClick={() => navigate("/dashboard")}>
               Dashboard
             </Button>
-            <Button variant="ghost" onClick={() => navigate("/video-practice")}>
-              Video Practice
+            <ThemeToggle />
+            <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
+              <Settings className="w-5 h-5" />
             </Button>
             <Button variant="outline" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />
@@ -129,7 +133,7 @@ const VideoPracticeHistory = () => {
                         <Video className="w-5 h-5 text-primary" />
                         <h3 className="font-semibold text-lg line-clamp-1">{session.question}</h3>
                       </div>
-                      
+
                       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                         <span>{new Date(session.created_at).toLocaleDateString()}</span>
                         <span>•</span>

@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Brain, LogOut, CheckCircle, Circle, BookOpen } from "lucide-react";
+import { LogOut, CheckCircle, Circle, BookOpen, Mic, Settings } from "lucide-react";
 import { toast } from "sonner";
 
 const LearningPaths = () => {
@@ -100,11 +101,14 @@ const LearningPaths = () => {
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Header */}
-      <header className="bg-card border-b border-border sticky top-0 z-10 shadow-soft">
+      {/* Header */}
+      <header className="bg-card border-b border-border sticky top-0 z-50 shadow-soft">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
-            <Brain className="w-8 h-8 text-primary" />
-            <h1 className="text-2xl font-bold text-primary">Quantum Query</h1>
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => user ? navigate("/dashboard") : navigate("/")}>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+              <Mic className="w-5 h-5 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">Voke</h1>
           </div>
           <nav className="flex items-center gap-4">
             {user && (
@@ -112,8 +116,9 @@ const LearningPaths = () => {
                 <Button variant="ghost" onClick={() => navigate("/dashboard")}>
                   Dashboard
                 </Button>
-                <Button variant="ghost" onClick={() => navigate("/learning-paths")}>
-                  Learning Paths
+                <ThemeToggle />
+                <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
+                  <Settings className="w-5 h-5" />
                 </Button>
                 <Button variant="outline" onClick={handleLogout}>
                   <LogOut className="w-4 h-4 mr-2" />
@@ -124,6 +129,7 @@ const LearningPaths = () => {
             {!user && (
               <Button onClick={() => navigate("/auth")}>Sign In</Button>
             )}
+            <ThemeToggle />
           </nav>
         </div>
       </header>
@@ -135,8 +141,8 @@ const LearningPaths = () => {
           <p className="text-xl text-muted-foreground">Explore what you need to learn for different tech roles</p>
         </div>
 
-        {/* Job Profiles */}
-        {jobProfiles.length === 0 ? (
+        {/* Learning Paths */}
+        {learningPaths.length === 0 ? (
           <Card className="p-12 text-center">
             <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-2xl font-semibold mb-2">No Learning Paths Yet</h3>
@@ -144,29 +150,30 @@ const LearningPaths = () => {
           </Card>
         ) : (
           <div className="space-y-8">
-            {jobProfiles.map((profile) => {
-              const pathsForProfile = learningPaths.filter(p => p.job_profile_id === profile.id);
-              
-              return (
-                <Card key={profile.id}>
-                  <CardHeader>
-                    <div className="flex items-start gap-4">
-                      <div className="w-16 h-16 rounded-lg bg-gradient-hero flex items-center justify-center text-3xl">
-                        {profile.icon || "💼"}
+            {/* Show paths grouped by job profile if profiles exist */}
+            {jobProfiles.length > 0 ? (
+              jobProfiles.map((profile) => {
+                const pathsForProfile = learningPaths.filter(p => p.job_profile_id === profile.id);
+
+                if (pathsForProfile.length === 0) return null;
+
+                return (
+                  <Card key={profile.id}>
+                    <CardHeader>
+                      <div className="flex items-start gap-4">
+                        <div className="w-16 h-16 rounded-lg bg-gradient-hero flex items-center justify-center text-3xl">
+                          {profile.icon || "💼"}
+                        </div>
+                        <div className="flex-1">
+                          <CardTitle className="text-2xl mb-2">{profile.title}</CardTitle>
+                          <CardDescription className="text-base">{profile.description}</CardDescription>
+                          <span className="inline-block mt-2 px-3 py-1 bg-secondary text-secondary-foreground rounded-full text-sm font-medium">
+                            {profile.category}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <CardTitle className="text-2xl mb-2">{profile.title}</CardTitle>
-                        <CardDescription className="text-base">{profile.description}</CardDescription>
-                        <span className="inline-block mt-2 px-3 py-1 bg-secondary text-secondary-foreground rounded-full text-sm font-medium">
-                          {profile.category}
-                        </span>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {pathsForProfile.length === 0 ? (
-                      <p className="text-muted-foreground text-center py-4">No learning paths defined yet</p>
-                    ) : (
+                    </CardHeader>
+                    <CardContent>
                       <div className="grid md:grid-cols-2 gap-4">
                         {pathsForProfile.map((path) => (
                           <div
@@ -190,11 +197,44 @@ const LearningPaths = () => {
                           </div>
                         ))}
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
+                    </CardContent>
+                  </Card>
+                );
+              })
+            ) : (
+              /* Show all paths without grouping if no profiles */
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-2xl">All Learning Paths</CardTitle>
+                  <CardDescription>Explore our curated learning paths</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {learningPaths.map((path) => (
+                      <div
+                        key={path.id}
+                        className="flex items-start gap-3 p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                        onClick={() => toggleProgress(path.id)}
+                      >
+                        <div className="mt-0.5">
+                          {isCompleted(path.id) ? (
+                            <CheckCircle className="w-5 h-5 text-primary" />
+                          ) : (
+                            <Circle className="w-5 h-5 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold mb-1">{path.title}</h4>
+                          {path.description && (
+                            <p className="text-sm text-muted-foreground">{path.description}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
 

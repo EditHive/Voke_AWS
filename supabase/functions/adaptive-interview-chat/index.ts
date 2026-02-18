@@ -14,26 +14,62 @@ serve(async (req) => {
 
   try {
     const { messages, userId, skillGaps } = await req.json();
-    console.log("Adaptive interview request for user:", userId);
-    
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("API_KEY is not configured");
+
+    // Input validation
+    if (!messages || !Array.isArray(messages)) {
+      return new Response(
+        JSON.stringify({ error: "Missing or invalid 'messages' parameter" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Missing 'userId' parameter" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    console.log("Adaptive interview request for user:", userId, "with", messages.length, "messages");
+
+    // Environment variable validation
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!supabaseUrl) {
+      throw new Error("SUPABASE_URL is not configured");
+    }
+
+    if (!supabaseKey) {
+      throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
+    }
+
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get user's interview history for context
-    const { data: pastSessions } = await supabase
+    // Get user's interview history for context (non-critical, continue on error)
+    const { data: pastSessions, error: pastSessionsError } = await supabase
       .from("interview_sessions")
       .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(5);
 
-    const { data: videoSessions } = await supabase
+    if (pastSessionsError) {
+      console.error("Error fetching past sessions:", pastSessionsError);
+    }
+
+    const { data: videoSessions, error: videoSessionsError } = await supabase
       .from("video_interview_sessions")
       .select("*")
       .eq("user_id", userId)
@@ -41,18 +77,23 @@ serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(5);
 
+    if (videoSessionsError) {
+      console.error("Error fetching video sessions:", videoSessionsError);
+    }
+
     // Build context-aware system prompt
+    const safeSkillGaps = skillGaps || { note: "No specific skill gaps identified yet. Conduct a general assessment." };
     const systemPrompt = `You are an expert technical interviewer conducting an adaptive interview simulation. Your goal is to help the candidate improve their skills based on their identified gaps.
 
 CANDIDATE'S SKILL GAPS:
-${JSON.stringify(skillGaps, null, 2)}
+${JSON.stringify(safeSkillGaps, null, 2)}
 
 INTERVIEW HISTORY CONTEXT:
 - Completed ${pastSessions?.length || 0} text interview sessions
 - Completed ${videoSessions?.length || 0} video interview sessions
-- Average video score: ${videoSessions && videoSessions.length > 0 
-  ? Math.round(videoSessions.reduce((sum, s) => sum + (s.overall_score || 0), 0) / videoSessions.length)
-  : "N/A"}
+- Average video score: ${videoSessions && videoSessions.length > 0
+        ? Math.round(videoSessions.reduce((sum: number, s: any) => sum + (s.overall_score || 0), 0) / videoSessions.length)
+        : "N/A"}
 
 YOUR APPROACH:
 1. Focus on the identified skill gaps systematically
@@ -117,7 +158,7 @@ Keep your tone professional, encouraging, and educational. This is a learning ex
     if (!response.ok) {
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      
+
       if (response.status === 429) {
         return new Response(
           JSON.stringify({
@@ -129,7 +170,7 @@ Keep your tone professional, encouraging, and educational. This is a learning ex
           }
         );
       }
-      
+
       if (response.status === 402) {
         return new Response(
           JSON.stringify({
