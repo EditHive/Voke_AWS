@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Brain, LogOut, ArrowLeft, TrendingUp, Eye, MessageSquare, Award } from "lucide-react";
+import { LogOut, ArrowLeft, TrendingUp, Eye, MessageSquare, Award, Mic, CheckCircle, XCircle, AlertCircle, ArrowRight, Settings } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const VideoInterviewResults = () => {
   const { id } = useParams();
@@ -81,13 +82,19 @@ const VideoInterviewResults = () => {
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-10 shadow-soft">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Brain className="w-8 h-8 text-primary" />
-            <h1 className="text-2xl font-bold text-primary">Quantum Query</h1>
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+              <Mic className="w-5 h-5 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">Voke</h1>
           </div>
           <nav className="flex items-center gap-4">
             <Button variant="ghost" onClick={() => navigate("/dashboard")}>
               Dashboard
+            </Button>
+            <ThemeToggle />
+            <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
+              <Settings className="w-5 h-5" />
             </Button>
             <Button variant="outline" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />
@@ -141,7 +148,7 @@ const VideoInterviewResults = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className={`text-4xl font-bold mb-2 ${getScoreColor(session.delivery_score || 0)}`}>
+              <div className={`text - 4xl font - bold mb - 2 ${getScoreColor(session.delivery_score || 0)} `}>
                 {session.delivery_score || 0}
               </div>
               <Progress value={session.delivery_score || 0} className="mb-2" />
@@ -159,7 +166,7 @@ const VideoInterviewResults = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className={`text-4xl font-bold mb-2 ${getScoreColor(session.body_language_score || 0)}`}>
+              <div className={`text - 4xl font - bold mb - 2 ${getScoreColor(session.body_language_score || 0)} `}>
                 {session.body_language_score || 0}
               </div>
               <Progress value={session.body_language_score || 0} className="mb-2" />
@@ -177,7 +184,7 @@ const VideoInterviewResults = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className={`text-4xl font-bold mb-2 ${getScoreColor(session.confidence_score || 0)}`}>
+              <div className={`text - 4xl font - bold mb - 2 ${getScoreColor(session.confidence_score || 0)} `}>
                 {session.confidence_score || 0}
               </div>
               <Progress value={session.confidence_score || 0} className="mb-2" />

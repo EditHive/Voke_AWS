@@ -44,15 +44,15 @@ export const exportRoadmapToPDF = (
     } else {
       doc.setFont('helvetica', 'normal');
     }
-    
+
     const lines = doc.splitTextToSize(text, maxWidth);
-    
+
     // Check if we need a new page
     if (yPosition + (lines.length * fontSize * 0.4) > pageHeight - margin) {
       doc.addPage();
       yPosition = margin;
     }
-    
+
     doc.text(lines, margin, yPosition);
     yPosition += lines.length * fontSize * 0.4 + 5;
   };
@@ -84,10 +84,10 @@ export const exportRoadmapToPDF = (
   yPosition = 50;
 
   // Date
-  const date = new Date().toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+  const date = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
   });
   addText(`Generated on: ${date}`, 10, true);
   yPosition += 5;
@@ -130,11 +130,11 @@ export const exportRoadmapToPDF = (
   // Preparation Roadmap
   if (recommendations.preparation_roadmap) {
     addSectionHeader('3-Month Preparation Plan');
-    
+
     // Parse roadmap into weeks
     const roadmapLines = recommendations.preparation_roadmap.split('\n');
     let currentWeek = '';
-    
+
     roadmapLines.forEach(line => {
       if (line.trim()) {
         if (line.toLowerCase().includes('week')) {
@@ -151,7 +151,7 @@ export const exportRoadmapToPDF = (
   doc.addPage();
   yPosition = margin;
   addSectionHeader('Weekly Progress Tracker');
-  
+
   addText('Use this template to track your weekly progress:', 10, true);
   yPosition += 5;
 
@@ -160,7 +160,7 @@ export const exportRoadmapToPDF = (
       doc.addPage();
       yPosition = margin;
     }
-    
+
     // Week header
     doc.setDrawColor(79, 70, 229);
     doc.setLineWidth(0.5);
@@ -169,7 +169,7 @@ export const exportRoadmapToPDF = (
     doc.setFontSize(11);
     doc.text(`Week ${week}`, margin + 5, yPosition + 10);
     yPosition += 20;
-    
+
     // Checkboxes
     const tasks = ['Complete learning resources', 'Practice exercises', 'Review progress', 'Update portfolio'];
     tasks.forEach(task => {
@@ -179,7 +179,7 @@ export const exportRoadmapToPDF = (
       doc.text(task, margin + 12, yPosition);
       yPosition += 6;
     });
-    
+
     yPosition += 5;
   }
 
@@ -194,7 +194,7 @@ export const exportRoadmapToPDF = (
   // Footer on last page
   doc.setFontSize(12);
   doc.setTextColor(128, 128, 128);
-  doc.text('Quantum Query - Career Preparation System', pageWidth / 2, pageHeight - 10, { align: 'center' });
+  doc.text('Voke - Career Preparation System', pageWidth / 2, pageHeight - 10, { align: 'center' });
 
   // Save the PDF
   const fileName = `Career_Roadmap_${userName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;

@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Brain, LogOut, Video, StopCircle, Play, Upload, ArrowRight } from "lucide-react";
+import { Mic, LogOut, Video, StopCircle, Play, Upload, ArrowRight, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const COMMON_QUESTIONS = [
   "Tell me about yourself and your background.",
@@ -23,7 +24,7 @@ const VideoInterview = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  
+
   const [isRecording, setIsRecording] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
@@ -73,7 +74,7 @@ const VideoInterview = () => {
         },
         audio: true
       });
-      
+
       setStream(mediaStream);
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
@@ -102,7 +103,7 @@ const VideoInterview = () => {
     mediaRecorder.onstop = () => {
       const blob = new Blob(chunksRef.current, { type: 'video/webm' });
       setRecordedBlob(blob);
-      
+
       // Show preview
       if (videoRef.current) {
         videoRef.current.srcObject = null;
@@ -120,7 +121,7 @@ const VideoInterview = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      
+
       // Stop camera stream
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
@@ -218,16 +219,19 @@ const VideoInterview = () => {
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-10 shadow-soft">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Brain className="w-8 h-8 text-primary" />
-            <h1 className="text-2xl font-bold text-primary">Quantum Query</h1>
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+              <Mic className="w-5 h-5 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">Voke</h1>
           </div>
           <nav className="flex items-center gap-4">
             <Button variant="ghost" onClick={() => navigate("/dashboard")}>
               Dashboard
             </Button>
-            <Button variant="ghost" onClick={() => navigate("/video-practice")}>
-              Video Practice
+            <ThemeToggle />
+            <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
+              <Settings className="w-5 h-5" />
             </Button>
             <Button variant="outline" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />
@@ -330,8 +334,8 @@ const VideoInterview = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-lg font-medium mb-4">{currentQuestion}</p>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => {
                     const newQuestion = COMMON_QUESTIONS[Math.floor(Math.random() * COMMON_QUESTIONS.length)];

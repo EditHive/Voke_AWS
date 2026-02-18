@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, TrendingUp, Star, Users, Loader2, Medal, Award } from "lucide-react";
+import { Brain, Trophy, Medal, Star, TrendingUp, Users, Award, Crown, LogOut, Settings, Loader2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -35,21 +36,31 @@ const Leaderboard = () => {
     }
   };
 
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error("Failed to log out.");
+      console.error("Logout error:", error);
+    } else {
+      navigate("/auth");
+    }
+  };
+
   const loadLeaderboard = async () => {
     try {
       // Get top-rated users
       const { data: ratingsData, error: ratingsError } = await supabase
         .from("peer_interview_ratings")
         .select(`
-          rated_user_id,
-          overall_score
-        `);
+rated_user_id,
+  overall_score
+    `);
 
       if (ratingsError) throw ratingsError;
 
       // Aggregate ratings by user
       const userRatings = new Map<string, { scores: number[]; count: number }>();
-      
+
       ratingsData?.forEach((rating) => {
         const userId = rating.rated_user_id;
         if (!userRatings.has(userId)) {
@@ -68,7 +79,7 @@ const Leaderboard = () => {
       if (sessionsError) throw sessionsError;
 
       const userSessions = new Map<string, number>();
-      
+
       sessionsData?.forEach((session) => {
         if (session.status === "completed") {
           userSessions.set(
@@ -174,12 +185,19 @@ const Leaderboard = () => {
             <Trophy className="h-6 w-6 text-primary" />
             <h1 className="text-2xl font-bold text-foreground">Leaderboard</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Button variant="outline" onClick={() => navigate("/dashboard")}>
+          <nav className="flex items-center gap-4">
+            <Button variant="ghost" onClick={() => navigate("/dashboard")}>
               Dashboard
             </Button>
-          </div>
+            <ThemeToggle />
+            <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
+              <Settings className="w-5 h-5" />
+            </Button>
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
+          </nav>
         </div>
       </header>
 
