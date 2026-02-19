@@ -6,6 +6,9 @@ const STUN_SERVERS = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
   ],
 };
 
@@ -14,7 +17,7 @@ export const useWebRTC = (sessionId: string | undefined, userId: string | null) 
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'failed'>('connecting');
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'failed' | 'checking'>('connecting');
 
   const [lastMessage, setLastMessage] = useState<{sender: string, text: string, time: string} | null>(null);
   const peerConnection = useRef<RTCPeerConnection | null>(null);
@@ -38,8 +41,22 @@ export const useWebRTC = (sessionId: string | undefined, userId: string | null) 
         });
 
         peerConnection.current.ontrack = (event) => {
+          console.log("Track received:", event.streams[0].id);
           setRemoteStream(event.streams[0]);
-          setConnectionStatus('connected');
+        };
+
+        peerConnection.current.oniceconnectionstatechange = () => {
+          const state = peerConnection.current?.iceConnectionState;
+          console.log("ICE Connection State:", state);
+          
+          if (state === 'connected' || state === 'completed') {
+            setConnectionStatus('connected');
+          } else if (state === 'failed' || state === 'disconnected' || state === 'closed') {
+            setConnectionStatus('failed');
+          } else if (state === 'checking') {
+            setConnectionStatus('checking');
+            toast.info("Establishing connection path...");
+          }
         };
 
         peerConnection.current.onicecandidate = (event) => {

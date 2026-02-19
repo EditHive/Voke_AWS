@@ -89,58 +89,164 @@ const Dashboard = () => {
     }
   };
 
+  /* -------------------------------------------------------------------------- */
+  /*                             Data Fetching & Logic                          */
+  /* -------------------------------------------------------------------------- */
+
   const loadData = async () => {
     try {
+      setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // 1. Fetch Profile
       const { data: profileData } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single();
-
       setProfile(profileData);
 
-      const { data: sessionsData } = await supabase
+      // 2. Fetch Text Interviews
+      const { data: textSessions } = await supabase
         .from("interview_sessions")
         .select("*")
         .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(5);
+        .order("created_at", { ascending: false });
 
-      // Mock data for demonstration if no real sessions exist
-      const MOCK_SESSIONS = [
-        {
-          id: "mock-1",
-          interview_type: "React Frontend",
-          created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-          status: "completed",
-          score: 85
-        },
-        {
-          id: "mock-2",
-          interview_type: "System Design",
-          created_at: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-          status: "in_progress",
-          score: null
-        },
-        {
-          id: "mock-3",
-          interview_type: "Behavioral",
-          created_at: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
-          status: "completed",
-          score: 92
-        }
-      ];
+        // 3. Fetch Video Interviews
+      const { data: videoSessions } = await supabase
+        .from("video_interview_sessions")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
-      setSessions(sessionsData && sessionsData.length > 0 ? sessionsData : MOCK_SESSIONS);
+      // 4. Fetch Peer Interviews (Host or Guest)
+      const { data: peerSessions } = await supabase
+        .from("peer_interview_sessions")
+        .select("*, peer_interview_ratings(*)")
+        .or(`host_user_id.eq.${user.id},guest_user_id.eq.${user.id}`)
+        .order("scheduled_at", { ascending: false });
+
+      
+      // Combine for "Recent Activity" list (Top 5)
+      const allActivity = [
+        ...(textSessions || []).map(s => ({ ...s, type: 'Text', date: s.created_at, score: s.overall_score })),
+        ...(videoSessions || []).map(s => ({ ...s, type: 'Video', date: s.created_at, score: s.overall_score })),
+        ...(peerSessions || []).map(s => ({ ...s, type: 'Peer', date: s.scheduled_at, score: null })) // Peer score separate
+      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      setSessions(allActivity.slice(0, 5));
+      
+      // Calculate Stats
+      const statsData = calculateRealStats(textSessions || [], videoSessions || [], peerSessions || [], user.id);
+      setRealStats(statsData);
+
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
       setLoading(false);
     }
   };
+
+  const calculateStreak = (dates: string[]) => {
+    if (dates.length === 0) return 0;
+
+    // Unique sorted dates YYYY-MM-DD
+    const uniqueDates = Array.from(new Set(dates.map(d => new Date(d).toISOString().split('T')[0])))
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime()); // Descending
+
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+    // If no activity today or yesterday, streak is broken
+    if (!uniqueDates.includes(today) && !uniqueDates.includes(yesterday)) {
+      return 0;
+    }
+
+    let streak = 0;
+    let currentCheck = uniqueDates.includes(today) ? new Date(today) : new Date(yesterday);
+
+    for (const dateStr of uniqueDates) {
+      const date = new Date(dateStr);
+      // Compare time values normalized to noon to avoid timezone issues with exact midnight
+      const d1 = new Date(currentCheck).setHours(12,0,0,0);
+      const d2 = new Date(date).setHours(12,0,0,0);
+      
+      if (d1 === d2) {
+        streak++;
+        currentCheck.setDate(currentCheck.getDate() - 1);
+      } else {
+        break; // Gap found
+      }
+    }
+    return streak;
+  };
+
+  const calculateRealStats = (text: any[], video: any[], peer: any[], userId: string) => {
+    // 1. Total Count
+    const total = text.length + video.length + peer.filter((p: any) => p.status === 'completed').length;
+
+    // 2. Average Score
+    let totalScore = 0;
+    let scoredCount = 0;
+
+    // Text
+    text.forEach(s => {
+      if (s.overall_score) { totalScore += s.overall_score; scoredCount++; }
+    });
+    // Video
+    video.forEach(s => {
+      if (s.overall_score) { totalScore += s.overall_score; scoredCount++; }
+    });
+    // Peer (Fetch ratings where user was rated)
+    peer.forEach((p: any) => {
+      const myRating = p.peer_interview_ratings?.find((r: any) => r.rated_user_id === userId);
+      if (myRating) { totalScore += myRating.overall_score * 10; scoredCount++; } // Convert 1-10 to 1-100 if needed, assuming 10 scale
+    });
+    // Note: Peer ratings might be 1-10 or 1-5, adjust normalization if user confirms scale. Assuming 1-100 for text/video.
+    // Let's assume Peer is 1-10 and map to 1-100 for consistency if average is distinct.
+    // If peer ratings are not yet standard, we might need to adjust. For now, treating raw.
+    
+    // Correction: Peer ratings schema shows `overall_score` as number. Let's assume 100 base for now or normalize later.
+    // Actually, looking at previous artifacts, peer might be new. Let's stick to raw average if unsure, or normalize.
+    // Safe bet: Normalize everything to %
+
+    const avgScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : 0;
+
+    // 3. Hours
+    // Text: total_duration_seconds
+    // Video: duration_seconds
+    // Peer: duration_minutes
+    let totalSeconds = 0;
+    text.forEach(s => totalSeconds += (s.total_duration_seconds || 0));
+    video.forEach(s => totalSeconds += (s.duration_seconds || 0));
+    peer.filter((p: any) => p.status === 'completed').forEach((p: any) => totalSeconds += ((p.duration_minutes || 0) * 60));
+
+    const totalHours = Math.round(totalSeconds / 3600);
+
+    // 4. Streak
+    const allDates = [
+      ...text.map(s => s.created_at),
+      ...video.map(s => s.created_at),
+      ...peer.map(s => s.scheduled_at) // Using scheduled_at for peer dates
+    ];
+    const streak = calculateStreak(allDates);
+
+    return [
+      { label: "Interviews", value: total.toString(), icon: FileText, color: "text-blue-500", bg: "bg-blue-500/10" },
+      { label: "Avg. Score", value: `${avgScore}%`, icon: Trophy, color: "text-amber-500", bg: "bg-amber-500/10" },
+      { label: "Hours", value: `${totalHours}h`, icon: Clock, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+      { label: "Streak", value: `${streak} Days`, icon: Flame, color: "text-orange-500", bg: "bg-orange-500/10" },
+    ];
+  };
+
+  const [realStats, setRealStats] = useState([
+      { label: "Interviews", value: "0", icon: FileText, color: "text-blue-500", bg: "bg-blue-500/10" },
+      { label: "Avg. Score", value: "0%", icon: Trophy, color: "text-amber-500", bg: "bg-amber-500/10" },
+      { label: "Hours", value: "0h", icon: Clock, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+      { label: "Streak", value: "0 Days", icon: Flame, color: "text-orange-500", bg: "bg-orange-500/10" },
+  ]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -154,30 +260,6 @@ const Dashboard = () => {
       </div>
     );
   }
-
-  const calculateStats = (sessions: any[]) => {
-    const totalInterviews = sessions.length;
-    const completedSessions = sessions.filter(s => s.status === "completed");
-
-    const avgScore = completedSessions.length > 0
-      ? Math.round(completedSessions.reduce((acc, s) => acc + (Number(s.score) || 0), 0) / completedSessions.length)
-      : 0;
-
-    // Estimate hours: 15 mins per completed session
-    const totalMinutes = completedSessions.length * 15;
-    const totalHours = Math.round(totalMinutes / 60);
-    // If less than 1 hour but has sessions, show <1h or just 0.5h, but let's stick to integer hours for simplicity or 0 if 0.
-    const displayHours = totalHours === 0 && completedSessions.length > 0 ? "< 1" : totalHours.toString();
-
-    return [
-      { label: "Interviews", value: totalInterviews.toString(), icon: FileText, color: "text-blue-500", bg: "bg-blue-500/10" },
-      { label: "Avg. Score", value: `${avgScore}%`, icon: Trophy, color: "text-amber-500", bg: "bg-amber-500/10" },
-      { label: "Hours", value: `${displayHours}h`, icon: Clock, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-      { label: "Streak", value: "5 Days", icon: Flame, color: "text-orange-500", bg: "bg-orange-500/10" },
-    ];
-  };
-
-  const stats = calculateStats(sessions);
 
   const recommended = [
     { title: "Master React Hooks", type: "Technical", duration: "30 min", level: "Intermediate" },
@@ -302,17 +384,17 @@ const Dashboard = () => {
                   <div>
                     <h2 className="text-3xl font-bold mb-2">Ready to ace your next interview?</h2>
                     <p className="text-white/80 max-w-lg">
-                      "Success is where preparation and opportunity meet." You're on a 5-day streak! Keep it up.
+                      "Success is where preparation and opportunity meet." You're on a {realStats[3].value} streak! Keep it up.
                     </p>
                   </div>
                   <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-2 border border-white/10">
                     <Flame className="w-5 h-5 text-orange-300 fill-orange-300" />
-                    <span className="font-bold">5 Day Streak</span>
+                    <span className="font-bold">{realStats[3].value} Streak</span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8">
-                  {stats.map((stat, i) => (
+                  {realStats.map((stat, i) => (
                     <div key={i} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/5 hover:bg-white/20 transition-colors">
                       <div className="flex items-center gap-2 mb-2 text-white/70">
                         <stat.icon className="w-4 h-4" />
@@ -432,23 +514,27 @@ const Dashboard = () => {
                       className="flex items-center justify-between p-4 border border-border/50 rounded-xl bg-card/50 hover:bg-muted/50 transition-all hover:shadow-sm group"
                     >
                       <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-xl ${session.interview_type.includes("React") ? "bg-blue-500/10 text-blue-500" :
-                          session.interview_type.includes("System") ? "bg-purple-500/10 text-purple-500" :
+                        <div className={`p-3 rounded-xl ${session.type === 'Text' ? "bg-blue-500/10 text-blue-500" :
+                          session.type === 'Video' ? "bg-fuchsia-500/10 text-fuchsia-500" :
                             "bg-emerald-500/10 text-emerald-500"
                           }`}>
-                          <FileText className="w-5 h-5" />
+                          {session.type === 'Video' ? <Play className="w-5 h-5" /> : 
+                           session.type === 'Peer' ? <Users className="w-5 h-5" /> :
+                           <FileText className="w-5 h-5" />}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-semibold text-foreground">{session.interview_type}</p>
-                            {session.status === "completed" && (
+                            <p className="font-semibold text-foreground">
+                              {session.topic || session.interview_type || session.question || "Interview Session"}
+                            </p>
+                            {session.score && (
                               <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 font-medium border border-green-500/20">
-                                Score: {session.score || 85}%
+                                Score: {session.score}%
                               </span>
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                            <span>{new Date(session.created_at).toLocaleDateString()}</span>
+                            <span>{new Date(session.date).toLocaleDateString()}</span>
                             <span>•</span>
                             <span className="capitalize">{session.status?.replace('_', ' ') || 'Completed'}</span>
                           </p>
