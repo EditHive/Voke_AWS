@@ -15,7 +15,6 @@ export interface ProfileContext {
 export async function loadUserProfileContext(): Promise<ProfileContext> {
     try {
         console.log('[ProfileContext] Starting profile context load...');
-
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
             throw new Error('No authenticated user');
@@ -46,7 +45,6 @@ export async function loadUserProfileContext(): Promise<ProfileContext> {
             try {
                 const githubToken = import.meta.env.VITE_GITHUB_TOKEN;
                 const usernameMatch = profile.github_url.match(/github\.com\/([^\/]+)/);
-
                 if (usernameMatch) {
                     const username = usernameMatch[1];
                     const headers: Record<string, string> = {
@@ -107,7 +105,6 @@ export async function loadUserProfileContext(): Promise<ProfileContext> {
                 console.log('[ProfileContext] Fetching resume...');
                 const resumeResponse = await fetch(profile.resume_url);
                 const resumeBlob = await resumeResponse.blob();
-
                 const pdfjsLib = await import('pdfjs-dist');
                 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
                     'pdfjs-dist/build/pdf.worker.min.mjs',
@@ -116,7 +113,6 @@ export async function loadUserProfileContext(): Promise<ProfileContext> {
 
                 const arrayBuffer = await resumeBlob.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-
                 let resumeText = '';
                 for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) {
                     const page = await pdf.getPage(i);

@@ -1,21 +1,66 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Brain, MessageSquare, Sparkles, Mic, LogOut, Play, Settings, Code, FileText, Briefcase, Server, Database, Cloud, Palette, BarChart, Laptop } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
+import { 
+  Brain, MessageSquare, Code, FileText, 
+  Send, User, Bot, Mic, MicOff, LogOut,
+  Settings, Menu, X
+} from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
+import ReactMarkdown from "react-markdown";
+import { useVoiceChat } from "@/hooks/useVoiceChat";
+
+// Mock Data for Categories
+const CATEGORIES = [
+  { id: 'general', label: 'General', icon: MessageSquare, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+  { id: 'technical', label: 'Technical', icon: Code, color: 'text-violet-500', bg: 'bg-violet-500/10' },
+  { id: 'behavioral', label: 'Behavioral', icon: Brain, color: 'text-pink-500', bg: 'bg-pink-500/10' },
+  { id: 'resume', label: 'Resume Based', icon: FileText, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+];
+
+interface Message {
+  role: "assistant" | "user";
+  content: string;
+}
 
 const InterviewNew = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [jobProfiles, setJobProfiles] = useState<any[]>([]);
+  const [activeCategory, setActiveCategory] = useState('general');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // Default open on desktop
+  const [questionCount, setQuestionCount] = useState(0); // Track number of questions asked
+  const [startTime, setStartTime] = useState<number>(Date.now());
+  const [sessionActive, setSessionActive] = useState(true);
+  const [isFinished, setIsFinished] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Voice Chat Hook
+  const { isListening, speak, stopListening, stopSpeaking } = useVoiceChat({
+    onTranscript: (text, isFinal) => {
+      if (isFinal) {
+        setInput(text);
+        setTimeout(() => {
+          if (text.trim()) handleSendMessage(text);
+        }, 1000);
+      }
+    },
+    onError: (error) => toast.error(error),
+  });
 
   useEffect(() => {
     checkAuth();
-    loadJobProfiles();
+    // Initialize with the first message of the active category
+    startSession(activeCategory);
   }, []);
 
   const checkAuth = async () => {
@@ -25,40 +70,150 @@ const InterviewNew = () => {
     }
   };
 
-  const loadJobProfiles = async () => {
-    const { data } = await supabase
-      .from("job_profiles")
-      .select("*")
-      .order("title");
-    setJobProfiles(data || []);
-  };
-
-  const startInterview = async (type: string, jobProfileId?: string) => {
-    setLoading(true);
+  const generateAIQuestion = async (currentMessages: Message[], count: number) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: session, error } = await supabase
-        .from("interview_sessions")
-        .insert({
-          user_id: user.id,
-          interview_type: type,
-          job_profile_id: jobProfileId,
-          status: "in_progress",
-        })
-        .select()
-        .single();
+      setSending(true);
+      const { data, error } = await supabase.functions.invoke('generate-interview-question', {
+        body: {
+          messages: currentMessages,
+          interview_type: CATEGORIES.find(c => c.id === activeCategory)?.label || "General",
+          question_count: count
+        }
+      });
 
       if (error) throw error;
 
-      toast.success("Interview session started!");
-      navigate(`/interview/${session.id}`);
+      if (data) {
+        const aiMsg: Message = { role: "assistant", content: data.question };
+        setMessages(prev => [...prev, aiMsg]);
+        if (voiceMode) speak(data.question);
+        
+        if (data.is_finished) {
+          setIsFinished(true);
+          setSessionActive(false);
+        } else {
+          setQuestionCount(prev => prev + 1);
+        }
+      }
     } catch (error) {
-      console.error("Error starting interview:", error);
-      toast.error("Failed to start interview");
+      console.error("Error generating question:", error);
+      toast.error("Failed to generate question. Please try again.");
     } finally {
-      setLoading(false);
+      setSending(false);
+    }
+  };
+
+  const startSession = (category: string) => {
+    setMessages([]);
+    setQuestionCount(0);
+    setStartTime(Date.now());
+    setSessionActive(true);
+    setIsFinished(false);
+    
+    // Generate opening question
+    generateAIQuestion([], 0);
+  };
+
+  const handleCategoryChange = (categoryId: string) => {
+    setActiveCategory(categoryId);
+    startSession(categoryId);
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  };
+
+  const [isCompleting, setIsCompleting] = useState(false);
+
+  const completeSession = async () => {
+    if (isCompleting) return;
+    setIsCompleting(true);
+    setSessionActive(false);
+    
+    const duration = Math.round((Date.now() - startTime) / 1000 / 60); // in minutes
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Call AI to evaluate the interview
+        const { data: evaluation, error: aiError } = await supabase.functions.invoke('evaluate-interview', {
+          body: {
+            messages: messages,
+            interview_type: CATEGORIES.find(c => c.id === activeCategory)?.label || "General"
+          }
+        });
+
+        if (aiError || !evaluation) {
+          console.error("AI Evaluation Failed:", aiError);
+          toast.error("Could not generate AI score. Please try again.");
+          // Do NOT use a random fallback. Set to 0 to indicate failure/invalidity.
+        }
+
+        console.log("AI Evaluation Result:", evaluation);
+
+        // Use the actual AI score, or 0 if it failed/missing. 
+        // We do NOT want to give free points for broken/spam sessions.
+        const finalScore = evaluation?.score || 0; 
+
+        const { data, error } = await supabase
+          .from("interview_sessions")
+          .insert({
+            user_id: user.id,
+            interview_type: activeCategory, // Use the ID (lowercase) instead of Label
+            status: "completed",
+            // score: finalScore, // Removing score as column doesn't exist
+            job_profile_id: null, 
+          })
+          .select()
+          .single();
+        
+        if (error) {
+          console.error("Supabase error:", error);
+          toast.error(`Failed to save: ${error.message}`);
+          setIsCompleting(false); 
+          setSessionActive(true); 
+          throw error;
+        }
+
+        toast.success(`Session Completed! Score: ${finalScore}%`);
+        // Pass the real AI evaluation data to the results page
+        navigate(`/interview/results/${data.id}`, { 
+          state: { 
+            score: finalScore,
+            evaluation: evaluation // Pass full evaluation object
+          } 
+        });
+      }
+    } catch (error: any) {
+      console.error("Error saving session:", error);
+      toast.error(error.message || "Could not save session");
+      setIsCompleting(false);
+      setSessionActive(true);
+    }
+  };
+
+  const handleSendMessage = async (content: string) => {
+    if (!content.trim() || !sessionActive || isCompleting) return;
+
+    const userMsg: Message = { role: "user", content };
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
+    setInput("");
+    
+    // Generate next question based on updated history
+    await generateAIQuestion(updatedMessages, questionCount);
+  };
+
+  // Removed auto-scroll useEffect as requested by user
+
+  const toggleVoiceMode = () => {
+    if (voiceMode) {
+      stopListening();
+      stopSpeaking();
+      setVoiceMode(false);
+    } else {
+      // startListening(); // Uncomment if you want actual listening
+      setVoiceMode(true);
+      toast.success("Voice mode active");
     }
   };
 
@@ -67,245 +222,203 @@ const InterviewNew = () => {
     navigate("/");
   };
 
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 }
-  };
-
-  const getRoleIcon = (title: string) => {
-    const titleLower = title.toLowerCase();
-
-    if (titleLower.includes('backend')) {
-      return { icon: Server, gradient: 'from-purple-500 to-indigo-600', shadow: 'shadow-purple-500/50' };
-    } else if (titleLower.includes('data') || titleLower.includes('scientist')) {
-      return { icon: BarChart, gradient: 'from-cyan-500 to-blue-600', shadow: 'shadow-cyan-500/50' };
-    } else if (titleLower.includes('devops')) {
-      return { icon: Cloud, gradient: 'from-teal-500 to-cyan-600', shadow: 'shadow-teal-500/50' };
-    } else if (titleLower.includes('frontend')) {
-      return { icon: Palette, gradient: 'from-orange-500 to-amber-600', shadow: 'shadow-orange-500/50' };
-    } else if (titleLower.includes('product')) {
-      return { icon: Briefcase, gradient: 'from-pink-500 to-rose-600', shadow: 'shadow-pink-500/50' };
-    } else if (titleLower.includes('software')) {
-      return { icon: Laptop, gradient: 'from-violet-500 to-purple-600', shadow: 'shadow-violet-500/50' };
-    } else if (titleLower.includes('database')) {
-      return { icon: Database, gradient: 'from-emerald-500 to-green-600', shadow: 'shadow-emerald-500/50' };
-    } else {
-      return { icon: Code, gradient: 'from-blue-500 to-indigo-600', shadow: 'shadow-blue-500/50' };
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-background selection:bg-primary/20">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 cursor-pointer group" onClick={() => navigate("/dashboard")}>
-            <img 
-              src="/images/voke_logo.png" 
-              alt="Voke Logo" 
-              className="w-10 h-10 object-contain group-hover:scale-110 transition-transform duration-300" 
-            />
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">Voke</h1>
-          </div>
-          <nav className="flex items-center gap-2 md:gap-4">
-            <Button variant="ghost" className="hidden md:flex" onClick={() => navigate("/dashboard")}>
-              Dashboard
-            </Button>
-            <ThemeToggle />
-            <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
-              <Settings className="w-5 h-5" />
-            </Button>
-            <Button variant="outline" onClick={handleLogout} className="ml-2">
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
-          </nav>
-        </div>
-      </header>
+    <div className="flex h-screen bg-background overflow-hidden">
+      {/* Sidebar */}
+      <AnimatePresence mode="wait">
+        {sidebarOpen && (
+          <motion.aside
+            initial={{ x: -300, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -300, opacity: 0 }}
+            className="fixed md:relative z-40 w-72 h-full border-r border-border/40 bg-card/50 backdrop-blur-xl flex flex-col"
+          >
+            <div className="p-6 border-b border-border/40 flex items-center justify-between">
+              <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/dashboard")}>
+                <img src="/images/voke_logo.png" alt="Voke" className="w-8 h-8 object-contain" />
+                <span className="font-bold text-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">Voke</span>
+              </div>
+              <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(false)}>
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+
+            <ScrollArea className="flex-1 p-4">
+              <div className="space-y-2">
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Interview Types
+                </div>
+                {CATEGORIES.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => handleCategoryChange(category.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                      activeCategory === category.id
+                        ? "bg-primary/10 text-primary shadow-sm"
+                        : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg ${activeCategory === category.id ? "bg-primary/20" : "bg-muted"} transition-colors`}>
+                      <category.icon className={`w-4 h-4 ${activeCategory === category.id ? "text-primary" : "text-muted-foreground"}`} />
+                    </div>
+                    {category.label}
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
+
+            <div className="p-4 border-t border-border/40 space-y-2">
+              <ThemeToggle />
+              <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground" onClick={handleLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 pt-32 pb-16 max-w-6xl">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-16"
-        >
-          <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent tracking-tight">
-            Choose Your Challenge
-          </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Select an interview type to begin your practice session. Our AI will adapt to your responses in real-time.
-          </p>
-        </motion.div>
-
-        <motion.div
-          variants={container}
-          initial="hidden"
-          animate="show"
-          className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16"
-        >
-          <InterviewCard
-            title="General"
-            description="Master common interview questions and behavioral scenarios."
-            icon={<MessageSquare className="w-8 h-8 text-blue-500" />}
-            gradient="from-blue-500/10 to-cyan-500/10"
-            border="hover:border-blue-500/50"
-            onClick={() => startInterview("general")}
-            loading={loading}
-          />
-          <InterviewCard
-            title="Technical"
-            description="Deep dive into technical skills, coding, and system design."
-            icon={<Code className="w-8 h-8 text-violet-500" />}
-            gradient="from-violet-500/10 to-purple-500/10"
-            border="hover:border-violet-500/50"
-            onClick={() => startInterview("technical")}
-            loading={loading}
-          />
-          <InterviewCard
-            title="Behavioral"
-            description="Perfect your STAR method responses and soft skills."
-            icon={<Brain className="w-8 h-8 text-pink-500" />}
-            gradient="from-pink-500/10 to-rose-500/10"
-            border="hover:border-pink-500/50"
-            onClick={() => startInterview("behavioral")}
-            loading={loading}
-          />
-          <InterviewCard
-            title="Resume Based"
-            description="Tailored questions based on your specific experience."
-            icon={<FileText className="w-8 h-8 text-amber-500" />}
-            gradient="from-amber-500/10 to-orange-500/10"
-            border="hover:border-amber-500/50"
-            onClick={() => startInterview("resume")}
-            loading={loading}
-          />
-        </motion.div>
-
-        {/* Role-Specific Interviews */}
-        {jobProfiles.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-          >
-            <div className="flex items-center gap-4 mb-8">
-              <div className="h-px flex-1 bg-border" />
-              <h3 className="text-2xl font-bold text-foreground/80">Role-Specific Tracks</h3>
-              <div className="h-px flex-1 bg-border" />
+      <main className="flex-1 flex flex-col relative bg-background">
+        {/* Header */}
+        <header className="h-16 border-b border-border/40 bg-background/80 backdrop-blur-md flex items-center justify-between px-4 sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            {!sidebarOpen && (
+              <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
+                <Menu className="w-5 h-5" />
+              </Button>
+            )}
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-lg">{CATEGORIES.find(c => c.id === activeCategory)?.label} Interview</span>
+              <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 text-xs font-medium">Live</span>
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+             <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
+              <Settings className="w-5 h-5" />
+            </Button>
+          </div>
+        </header>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {jobProfiles.map((profile, index) => (
-                <motion.div
-                  key={profile.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 + (index * 0.1) }}
-                >
-                  <Card
-                    className="group relative overflow-hidden border-border/50 bg-card/50 hover:bg-card/80 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 cursor-pointer"
-                    onClick={() => startInterview("role-specific", profile.id)}
+        {/* Chat Area */}
+        <ScrollArea className="flex-1 p-4 md:p-8">
+          <div className="max-w-3xl mx-auto space-y-6 pb-4">
+            {messages.map((message, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex gap-4 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                {message.role === "assistant" && (
+                  <Avatar className="w-8 h-8 mt-1 border border-border shadow-sm">
+                    <AvatarImage src="/ai-avatar.png" />
+                    <AvatarFallback className="bg-gradient-to-br from-violet-600 to-purple-600 text-white">AI</AvatarFallback>
+                  </Avatar>
+                )}
+                
+                <div className={`flex flex-col max-w-[85%] md:max-w-[75%] ${message.role === "user" ? "items-end" : "items-start"}`}>
+                  <div
+                    className={`p-4 rounded-2xl shadow-sm text-sm leading-relaxed ${
+                      message.role === "user"
+                        ? "bg-primary text-primary-foreground rounded-tr-none"
+                        : "bg-card border border-border/50 text-foreground rounded-tl-none"
+                    }`}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <CardHeader>
-                      <div className="flex items-center gap-4 mb-2">
-                        {(() => {
-                          const { icon: Icon, gradient, shadow } = getRoleIcon(profile.title);
-                          return (
-                            <div className={`relative w-14 h-14 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg ${shadow} group-hover:scale-110 group-hover:shadow-xl transition-all duration-300`}>
-                              <Icon className="w-7 h-7 text-white" strokeWidth={2.5} />
-                              <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/20 to-transparent"></div>
-                            </div>
-                          );
-                        })()}
-                        <div>
-                          <CardTitle className="text-lg group-hover:text-primary transition-colors">
-                            {profile.title}
-                          </CardTitle>
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                            <Sparkles className="w-3 h-3" />
-                            <span>Specialized Track</span>
-                          </div>
-                        </div>
-                      </div>
-                      <CardDescription className="line-clamp-2">
-                        {profile.description}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Button
-                        className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300"
-                        variant="secondary"
-                        disabled={loading}
-                      >
-                        <Play className="w-4 h-4 mr-2 group-hover:fill-current" />
-                        Start Interview
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        )}
+                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                  </div>
+                </div>
+
+                {message.role === "user" && (
+                  <Avatar className="w-8 h-8 mt-1 border border-border">
+                    <AvatarFallback className="bg-muted text-muted-foreground">
+                      <User className="w-4 h-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+              </motion.div>
+            ))}
+
+            {/* Auto-navigation handles this now, but we can keep a loading state if needed */}
+            {!sessionActive && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center py-4">
+                 <div className="flex items-center gap-2 text-muted-foreground">
+                    <span className="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+                    Generating Results...
+                 </div>
+              </motion.div>
+            )}
+
+            {sending && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4 justify-start">
+                <Avatar className="w-8 h-8 mt-1 border border-border">
+                  <AvatarFallback className="bg-gradient-to-br from-violet-600 to-purple-600 text-white">AI</AvatarFallback>
+                </Avatar>
+                <div className="p-4 rounded-2xl rounded-tl-none bg-card border border-border/50 shadow-sm">
+                  <div className="flex gap-1 items-center h-4">
+                    <span className="w-1.5 h-1.5 bg-violet-500 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                    <span className="w-1.5 h-1.5 bg-violet-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                    <span className="w-1.5 h-1.5 bg-violet-500 rounded-full animate-bounce"></span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        </ScrollArea>
+
+        {/* Input Area */}
+        <div className="p-4 bg-background/80 backdrop-blur-xl border-t border-border/40">
+          <div className="max-w-3xl mx-auto relative">
+            {isFinished ? (
+              <Button 
+                onClick={completeSession} 
+                className="w-full h-12 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-primary/20"
+                disabled={isCompleting}
+              >
+                {isCompleting ? "Generating Results..." : "Complete Interview & View Results"}
+              </Button>
+            ) : (
+              <div className="relative flex items-end gap-2 p-2 bg-card border border-border/50 rounded-3xl shadow-sm focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className={`rounded-full h-10 w-10 shrink-0 ${voiceMode ? 'text-red-500 bg-red-50 hover:bg-red-100 dark:bg-red-950/30' : 'text-muted-foreground'}`}
+                  onClick={toggleVoiceMode}
+                >
+                  {voiceMode ? <Mic className="w-5 h-5 animate-pulse" /> : <Mic className="w-5 h-5" />}
+                </Button>
+                
+                <Textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage(input);
+                    }
+                  }}
+                  placeholder={voiceMode ? "Listening..." : "Type your answer..."}
+                  className="min-h-[44px] max-h-[120px] py-3 px-2 border-0 focus-visible:ring-0 bg-transparent resize-none shadow-none"
+                  rows={1}
+                  disabled={sending || !sessionActive || isCompleting}
+                />
+                
+                <Button
+                  onClick={() => handleSendMessage(input)}
+                  disabled={!input.trim() || sending || !sessionActive || isCompleting}
+                  size="icon"
+                  className="rounded-full h-10 w-10 shrink-0"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   );
 };
-
-interface InterviewCardProps {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  gradient: string;
-  border: string;
-  onClick: () => void;
-  loading: boolean;
-}
-
-const InterviewCard = ({ title, description, icon, gradient, border, onClick, loading }: InterviewCardProps) => (
-  <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}>
-    <Card
-      className={`group relative h-full overflow-hidden border-border/50 bg-card/50 hover:bg-card/80 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 cursor-pointer ${border}`}
-      onClick={onClick}
-    >
-      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-
-      <CardHeader className="relative z-10">
-        <div className="w-16 h-16 rounded-2xl bg-background/80 backdrop-blur-sm shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500 border border-border/50">
-          {icon}
-        </div>
-        <CardTitle className="text-xl mb-2 group-hover:text-foreground transition-colors">
-          {title}
-        </CardTitle>
-        <CardDescription className="text-base leading-relaxed">
-          {description}
-        </CardDescription>
-      </CardHeader>
-
-      <CardContent className="relative z-10 mt-auto">
-        <Button
-          className="w-full opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-300"
-          disabled={loading}
-        >
-          <Play className="w-4 h-4 mr-2 fill-current" />
-          Start Now
-        </Button>
-      </CardContent>
-    </Card>
-  </motion.div>
-);
 
 export default InterviewNew;
