@@ -487,7 +487,7 @@ const Profile = () => {
                           <p className="text-muted-foreground mt-2 max-w-md mx-auto">
                             Complete a career guidance assessment to discover your personalized skill development plan.
                           </p>
-                          <Button variant="outline" className="mt-6" onClick={() => navigate("/career-guidance")}>
+                          <Button variant="outline" className="mt-6" onClick={() => navigate("/job-market?tab=guidance")}>
                             Start Assessment
                           </Button>
                         </div>

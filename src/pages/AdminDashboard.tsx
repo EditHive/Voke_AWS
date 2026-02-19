@@ -44,18 +44,30 @@ const AdminDashboard = () => {
     sessionTimeout: [30],
     enforce2FA: false
   });
-  const [blogs, setBlogs] = useState([
-    { id: 1, title: "The Future of AI in Tech Interviews", date: "2024-03-15", status: "Published", views: 1234 },
-    { id: 2, title: "Mastering the System Design Interview", date: "2024-03-12", status: "Published", views: 856 },
-    { id: 3, title: "Top 10 Soft Skills for Developers", date: "2024-03-10", status: "Draft", views: 0 },
-  ]);
-  const [newBlog, setNewBlog] = useState({ title: "", image: "", content: "" });
+  const [blogs, setBlogs] = useState<any[]>([]);
+  const [newBlog, setNewBlog] = useState({ title: "", image: "", content: "", category: "General" });
   const [users, setUsers] = useState<any[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
   useEffect(() => {
     fetchUsers();
+    fetchBlogs();
   }, []);
+
+  const fetchBlogs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('blogs')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setBlogs(data || []);
+    } catch (error) {
+      console.error('Error fetching blogs:', error);
+      toast.error("Failed to fetch blogs");
+    }
+  };
 
   const fetchUsers = async () => {
     setIsLoadingUsers(true);
@@ -74,28 +86,55 @@ const AdminDashboard = () => {
     }
   };
 
-  const handlePublishBlog = () => {
+  const handlePublishBlog = async () => {
     if (!newBlog.title || !newBlog.content) {
       toast.error("Please fill in all fields");
       return;
     }
     
-    const blog = {
-      id: blogs.length + 1,
-      title: newBlog.title,
-      date: new Date().toISOString().split('T')[0],
-      status: "Published",
-      views: 0
-    };
-    
-    setBlogs([blog, ...blogs]);
-    setNewBlog({ title: "", image: "", content: "" });
-    toast.success("Blog published successfully!");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const blog = {
+        title: newBlog.title,
+        content: newBlog.content,
+        image_url: newBlog.image,
+        category: newBlog.category,
+        author: user?.email || "Admin",
+        status: "Published",
+        published_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from('blogs')
+        .insert([blog]);
+
+      if (error) throw error;
+      
+      toast.success("Blog published successfully!");
+      setNewBlog({ title: "", image: "", content: "", category: "General" });
+      fetchBlogs();
+    } catch (error: any) {
+      console.error('Error publishing blog:', error);
+      toast.error(`Failed to publish blog: ${error.message || error.error_description || "Unknown error"}`);
+    }
   };
 
-  const handleDeleteBlog = (id: number) => {
-    setBlogs(blogs.filter(b => b.id !== id));
-    toast.success("Blog deleted");
+  const handleDeleteBlog = async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from('blogs')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      toast.success("Blog deleted");
+      fetchBlogs();
+    } catch (error) {
+      console.error('Error deleting blog:', error);
+      toast.error("Failed to delete blog");
+    }
   };
 
   const handleSaveSettings = () => {
@@ -689,6 +728,24 @@ const AdminDashboard = () => {
                           </div>
                         </div>
                         <div className="space-y-2">
+                          <Label className="text-gray-300">Category</Label>
+                          <Select 
+                            value={newBlog.category} 
+                            onValueChange={(value) => setNewBlog({...newBlog, category: value})}
+                          >
+                            <SelectTrigger className="bg-black/20 border-white/10 text-white">
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="General">General</SelectItem>
+                              <SelectItem value="AI & Tech">AI & Tech</SelectItem>
+                              <SelectItem value="Career Advice">Career Advice</SelectItem>
+                              <SelectItem value="Soft Skills">Soft Skills</SelectItem>
+                              <SelectItem value="Interview Tips">Interview Tips</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
                           <Label className="text-gray-300">Content</Label>
                           <Textarea 
                             placeholder="Write your blog content here..." 
@@ -726,8 +783,8 @@ const AdminDashboard = () => {
                             </div>
                             <div className="flex justify-between items-center text-xs text-gray-500 mt-2">
                               <div className="flex gap-3">
-                                <span>{blog.date}</span>
-                                <span>{blog.views} views</span>
+                                <span>{new Date(blog.created_at).toLocaleDateString()}</span>
+                                <span>{blog.views || 0} views</span>
                               </div>
                               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Button variant="ghost" size="icon" className="h-6 w-6 hover:text-blue-400">

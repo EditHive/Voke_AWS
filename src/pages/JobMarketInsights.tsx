@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,6 +74,8 @@ const MOCK_RECOMMENDATIONS = {
 
 export default function JobMarketInsights() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const defaultTab = searchParams.get("tab") || "trends";
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [researching, setResearching] = useState(false);
@@ -282,7 +284,7 @@ export default function JobMarketInsights() {
       </motion.header>
 
       <main className="container mx-auto px-4 pt-32 pb-16 max-w-7xl flex-1">
-        <Tabs defaultValue="trends" className="space-y-8">
+        <Tabs defaultValue={defaultTab} className="space-y-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <TabsList className="grid w-full md:w-auto grid-cols-2 p-1 bg-muted/50 backdrop-blur-sm rounded-xl">
               <TabsTrigger value="trends" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Market Trends</TabsTrigger>

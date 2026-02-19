@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,68 +22,29 @@ const Blog = () => {
         }
     };
 
-    const blogPosts = [
-        {
-            id: 1,
-            title: "10 Essential Tips for Acing Your Technical Interview",
-            excerpt: "Master the art of technical interviews with these proven strategies from industry experts.",
-            category: "Interview Tips",
-            author: "Sarah Chen",
-            date: "Nov 20, 2024",
-            readTime: "5 min read",
-            image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=400&fit=crop"
-        },
-        {
-            id: 2,
-            title: "How AI is Transforming Interview Preparation",
-            excerpt: "Discover how artificial intelligence is revolutionizing the way candidates prepare for job interviews.",
-            category: "Technology",
-            author: "Michael Park",
-            date: "Nov 18, 2024",
-            readTime: "7 min read",
-            image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=400&fit=crop"
-        },
-        {
-            id: 3,
-            title: "Behavioral Interview Questions: A Complete Guide",
-            excerpt: "Learn how to structure your answers using the STAR method and impress your interviewers.",
-            category: "Career Advice",
-            author: "Emily Rodriguez",
-            date: "Nov 15, 2024",
-            readTime: "6 min read",
-            image: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=400&fit=crop"
-        },
-        {
-            id: 4,
-            title: "The Ultimate System Design Interview Checklist",
-            excerpt: "Everything you need to know to excel in system design interviews at top tech companies.",
-            category: "Technical",
-            author: "David Kim",
-            date: "Nov 12, 2024",
-            readTime: "10 min read",
-            image: "https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&h=400&fit=crop"
-        },
-        {
-            id: 5,
-            title: "Remote Interview Best Practices in 2024",
-            excerpt: "Navigate virtual interviews with confidence using these expert tips and tools.",
-            category: "Remote Work",
-            author: "Lisa Thompson",
-            date: "Nov 10, 2024",
-            readTime: "4 min read",
-            image: "https://images.unsplash.com/photo-1588196749597-9ff075ee6b5b?w=800&h=400&fit=crop"
-        },
-        {
-            id: 6,
-            title: "Building Your Personal Brand as a Developer",
-            excerpt: "Stand out in the job market by creating a strong professional presence online.",
-            category: "Career Growth",
-            author: "James Wilson",
-            date: "Nov 8, 2024",
-            readTime: "8 min read",
-            image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&h=400&fit=crop"
+    const [blogPosts, setBlogPosts] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        fetchBlogs();
+    }, []);
+
+    const fetchBlogs = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('blogs')
+                .select('*')
+                .eq('status', 'Published')
+                .order('published_at', { ascending: false });
+            
+            if (error) throw error;
+            setBlogPosts(data || []);
+        } catch (error) {
+            console.error('Error fetching blogs:', error);
+        } finally {
+            setIsLoading(false);
         }
-    ];
+    };
 
     return (
         <div className="min-h-screen bg-background">
@@ -155,11 +117,13 @@ const Blog = () => {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.3 + (index * 0.1) }}
+                                onClick={() => navigate(`/blog/${post.id}`)}
+                                className="cursor-pointer"
                             >
                                 <Card className="group overflow-hidden border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full flex flex-col">
                                     <div className="relative overflow-hidden h-48">
                                         <img
-                                            src={post.image}
+                                            src={post.image_url || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=400&fit=crop"}
                                             alt={post.title}
                                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                         />
@@ -174,7 +138,7 @@ const Blog = () => {
                                             {post.title}
                                         </CardTitle>
                                         <CardDescription className="line-clamp-2 mt-2">
-                                            {post.excerpt}
+                                            {post.content}
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent className="pt-0">
@@ -185,12 +149,12 @@ const Blog = () => {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <Clock className="h-4 w-4" />
-                                                <span>{post.readTime}</span>
+                                                <span>5 min read</span>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
                                             <Calendar className="h-4 w-4" />
-                                            <span>{post.date}</span>
+                                            <span>{new Date(post.published_at || post.created_at).toLocaleDateString()}</span>
                                         </div>
                                     </CardContent>
                                 </Card>

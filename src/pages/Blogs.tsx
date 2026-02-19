@@ -5,69 +5,39 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/Navbar";
 
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
 const Blogs = () => {
-  const blogs = [
-    {
-      id: 1,
-      title: "The Future of AI in Tech Interviews",
-      excerpt: "How artificial intelligence is revolutionizing the way companies hire top talent and what it means for candidates.",
-      author: "Sarah Chen",
-      date: "Mar 15, 2024",
-      readTime: "5 min read",
-      category: "AI & Tech",
-      image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?q=80&w=2000&auto=format&fit=crop"
-    },
-    {
-      id: 2,
-      title: "Mastering the System Design Interview",
-      excerpt: "Key concepts and strategies to ace your next system design round, from load balancing to database sharding.",
-      author: "David Miller",
-      date: "Mar 12, 2024",
-      readTime: "8 min read",
-      category: "Career Advice",
-      image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=2000&auto=format&fit=crop"
-    },
-    {
-      id: 3,
-      title: "Top 10 Soft Skills for Developers",
-      excerpt: "Technical skills get you the interview, but soft skills get you the job. Here are the essential skills you need.",
-      author: "Emily Zhang",
-      date: "Mar 10, 2024",
-      readTime: "4 min read",
-      category: "Soft Skills",
-      image: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=2000&auto=format&fit=crop"
-    },
-    {
-      id: 4,
-      title: "Remote Work: Best Practices for 2024",
-      excerpt: "Navigating the challenges and opportunities of remote work in the modern tech landscape.",
-      author: "James Wilson",
-      date: "Mar 08, 2024",
-      readTime: "6 min read",
-      category: "Work Culture",
-      image: "https://images.unsplash.com/photo-1593642532973-d31b6557fa68?q=80&w=2000&auto=format&fit=crop"
-    },
-    {
-      id: 5,
-      title: "Understanding Big O Notation",
-      excerpt: "A comprehensive guide to time and space complexity analysis for coding interviews.",
-      author: "Michael Brown",
-      date: "Mar 05, 2024",
-      readTime: "10 min read",
-      category: "Algorithms",
-      image: "https://images.unsplash.com/photo-1509228468518-180dd4864904?q=80&w=2000&auto=format&fit=crop"
-    },
-    {
-      id: 6,
-      title: "The Rise of Full Stack Development",
-      excerpt: "Why full stack developers are in high demand and how to become one in 2024.",
-      author: "Lisa Anderson",
-      date: "Mar 01, 2024",
-      readTime: "7 min read",
-      category: "Development",
-      image: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=2000&auto=format&fit=crop"
+  const [blogs, setBlogs] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchBlogs();
+  }, []);
+
+  const fetchBlogs = async () => {
+    try {
+      console.log("Fetching blogs...");
+      const { data, error } = await supabase
+        .from('blogs')
+        .select('*')
+        .eq('status', 'Published')
+        .order('published_at', { ascending: false });
+      
+      console.log("Blogs data:", data);
+      console.log("Blogs error:", error);
+
+      if (error) throw error;
+      setBlogs(data || []);
+    } catch (error) {
+      console.error('Error fetching blogs:', error);
+      toast.error("Failed to fetch blogs");
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-violet-500/30">
@@ -113,7 +83,7 @@ const Blogs = () => {
                   <div className="relative h-56 overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10" />
                     <img 
-                      src={blog.image} 
+                      src={blog.image_url || "https://images.unsplash.com/photo-1677442136019-21780ecad995?q=80&w=2000&auto=format&fit=crop"} 
                       alt={blog.title} 
                       className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
                     />
@@ -126,18 +96,18 @@ const Blogs = () => {
                     <div className="flex items-center gap-4 text-xs text-gray-400">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-3.5 h-3.5" />
-                        {blog.date}
+                        {new Date(blog.published_at || blog.created_at).toLocaleDateString()}
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5" />
-                        {blog.readTime}
+                        5 min read
                       </div>
                     </div>
                     <h3 className="text-2xl font-bold group-hover:text-violet-400 transition-colors line-clamp-2">
                       {blog.title}
                     </h3>
                     <p className="text-gray-400 line-clamp-3 text-sm leading-relaxed">
-                      {blog.excerpt}
+                      {blog.content}
                     </p>
                   </CardHeader>
 

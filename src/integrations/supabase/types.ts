@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      blogs: {
+        Row: {
+          id: number
+          title: string
+          content: string
+          image_url: string | null
+          author: string
+          category: string
+          status: string
+          views: number | null
+          created_at: string
+          published_at: string | null
+        }
+        Insert: {
+          id?: number
+          title: string
+          content: string
+          image_url?: string | null
+          author: string
+          category: string
+          status?: string
+          views?: number | null
+          created_at?: string
+          published_at?: string | null
+        }
+        Update: {
+          id?: number
+          title?: string
+          content?: string
+          image_url?: string | null
+          author?: string
+          category?: string
+          status?: string
+          views?: number | null
+          created_at?: string
+          published_at?: string | null
+        }
+        Relationships: []
+      }
       interview_answers: {
         Row: {
           analyzed_at: string | null

@@ -29,11 +29,13 @@ import PeerSessionRoom from "./pages/PeerSessionRoom";
 import RatePeerSession from "./pages/RatePeerSession";
 import Leaderboard from "./pages/Leaderboard";
 import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 import Community from "./pages/Community";
 import Help from "./pages/Help";
 import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
-// import { Footer } from "./components/Footer";
+import { Footer } from "./components/Footer";
+import GlobalAIChatbot from "./components/GlobalAIChatbot";
 
 const queryClient = new QueryClient();
 
@@ -70,12 +72,14 @@ const App = () => (
           <Route path="/peer-interviews/rate/:sessionId" element={<RatePeerSession />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:id" element={<BlogPost />} />
           <Route path="/community" element={<Community />} />
           <Route path="/help" element={<Help />} />
           <Route path="/privacy" element={<Privacy />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <GlobalAIChatbot />
         {/* <Footer /> */}
       </BrowserRouter>
     </TooltipProvider>
