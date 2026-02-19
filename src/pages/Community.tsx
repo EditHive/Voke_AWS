@@ -11,56 +11,116 @@ import {
   MoreHorizontal, Image as ImageIcon, Send, Search
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 const Community = () => {
-  const [posts, setPosts] = useState([
-    {
-      id: 1,
-      author: { name: "Sarah Chen", avatar: "https://github.com/shadcn.png", role: "Senior Dev" },
-      content: "Just cracked my Google interview! 🚀 The system design round was intense but Voke's mock interviews really helped me prepare for the pressure. Huge thanks to the community for the tips!",
-      image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=60",
-      likes: 234,
-      comments: 45,
-      time: "2h ago",
-      tags: ["Success Story", "Interview Tips"]
-    },
-    {
-      id: 2,
-      author: { name: "Alex Rivera", avatar: "https://github.com/shadcn.png", role: "Full Stack" },
-      content: "Anyone else finding the dynamic programming problems on LeetCode tricky? I've been stuck on the 'Climbing Stairs' variation for hours. Any resources you'd recommend?",
-      likes: 56,
-      comments: 12,
-      time: "4h ago",
-      tags: ["Help Needed", "DSA"]
-    },
-    {
-      id: 3,
-      author: { name: "Emily Zhang", avatar: "https://github.com/shadcn.png", role: "Product Manager" },
-      content: "Hosting a mock interview session tonight at 8 PM EST for PM roles. We'll focus on product sense and execution. Join if you're interested! 📅",
-      likes: 89,
-      comments: 23,
-      time: "6h ago",
-      tags: ["Event", "Mock Interview"]
-    }
-  ]);
+  const [view, setView] = useState<'feed' | 'trending' | 'events'>('feed');
+  const [aiInsights, setAiInsights] = useState<{ trending_topics: any[], suggested_events: any[] } | null>(null);
 
-  const [newPost, setNewPost] = useState("");
+  useEffect(() => {
+    checkAuth();
+    fetchPosts();
+    fetchAIInsights();
 
-  const handlePost = () => {
-    if (!newPost.trim()) return;
-    
-    const post = {
-      id: posts.length + 1,
-      author: { name: "You", avatar: "https://github.com/shadcn.png", role: "User" },
-      content: newPost,
-      likes: 0,
-      comments: 0,
-      time: "Just now",
-      tags: ["General"]
+    // Realtime subscription
+    const channel = supabase
+      .channel('public:posts')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
+        fetchPosts(); // Refresh to get full data with relations
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
+  }, []);
 
-    setPosts([post, ...posts]);
-    setNewPost("");
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    setUser(user);
+  };
+
+  const fetchAIInsights = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-community-trends');
+      if (error) throw error;
+      setAiInsights(data);
+    } catch (error) {
+      console.error('Error fetching AI insights:', error);
+    }
+  };
+
+  const fetchPosts = async () => {
+    try {
+      // First try with relations
+      const { data, error } = await supabase
+        .from('posts' as any)
+        .select(`
+          *,
+          profiles:user_id (full_name, avatar_url, job_title),
+          likes (user_id),
+          comments (count)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching posts with relations:', error);
+        // Fallback to simple fetch if relation fails
+        const { data: simpleData, error: simpleError } = await supabase
+          .from('posts' as any)
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (simpleError) throw simpleError;
+        setPosts(simpleData || []);
+      } else {
+        setPosts(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePost = async () => {
+    if (!newPost.trim() || !user) return;
+
+    try {
+      const { error } = await supabase
+        .from('posts' as any)
+        .insert({
+          user_id: user.id,
+          content: newPost,
+          tags: ["General"] // Simple default for now
+        });
+
+      if (error) throw error;
+      setNewPost("");
+      // Optimistic update or wait for realtime
+    } catch (error) {
+      console.error('Error creating post:', error);
+    }
+  };
+
+  const handleLike = async (postId: string) => {
+    if (!user) return;
+    
+    // Check if already liked
+    const post = posts.find(p => p.id === postId);
+    const isLiked = post?.likes?.some((l: any) => l.user_id === user.id);
+
+    try {
+      if (isLiked) {
+        await supabase.from('likes' as any).delete().eq('post_id', postId).eq('user_id', user.id);
+      } else {
+        await supabase.from('likes' as any).insert({ post_id: postId, user_id: user.id });
+      }
+      fetchPosts(); // Refresh to update counts
+    } catch (error) {
+      console.error('Error toggling like:', error);
+    }
   };
 
   return (
@@ -74,15 +134,27 @@ const Community = () => {
           <div className="hidden lg:block space-y-6">
             <Card className="bg-white/5 border-white/10 backdrop-blur-sm sticky top-24">
               <CardContent className="p-4 space-y-2">
-                <Button variant="ghost" className="w-full justify-start text-lg font-medium bg-white/5 text-white">
+                <Button 
+                  variant="ghost" 
+                  className={`w-full justify-start text-lg font-medium ${view === 'feed' ? 'bg-white/5 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                  onClick={() => setView('feed')}
+                >
                   <MessageSquare className="mr-3 h-5 w-5 text-violet-400" />
                   Feed
                 </Button>
-                <Button variant="ghost" className="w-full justify-start text-lg font-medium text-gray-400 hover:text-white hover:bg-white/5">
+                <Button 
+                  variant="ghost" 
+                  className={`w-full justify-start text-lg font-medium ${view === 'trending' ? 'bg-white/5 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                  onClick={() => setView('trending')}
+                >
                   <TrendingUp className="mr-3 h-5 w-5 text-emerald-400" />
                   Trending
                 </Button>
-                <Button variant="ghost" className="w-full justify-start text-lg font-medium text-gray-400 hover:text-white hover:bg-white/5">
+                <Button 
+                  variant="ghost" 
+                  className={`w-full justify-start text-lg font-medium ${view === 'events' ? 'bg-white/5 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                  onClick={() => setView('events')}
+                >
                   <Users className="mr-3 h-5 w-5 text-blue-400" />
                   Events
                 </Button>
@@ -111,135 +183,229 @@ const Community = () => {
             </Card>
           </div>
 
-          {/* Main Feed */}
+          {/* Main Content Area */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Create Post */}
-            <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
-              <CardContent className="p-4">
-                <div className="flex gap-4">
-                  <Avatar className="h-10 w-10 border border-white/10">
-                    <AvatarImage src="https://github.com/shadcn.png" />
-                    <AvatarFallback>ME</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 space-y-4">
-                    <Textarea 
-                      placeholder="Share your thoughts, questions, or success stories..." 
-                      value={newPost}
-                      onChange={(e) => setNewPost(e.target.value)}
-                      className="bg-black/20 border-white/10 min-h-[100px] resize-none focus:border-violet-500/50"
-                    />
-                    <div className="flex justify-between items-center">
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" className="text-gray-400 hover:text-violet-400 hover:bg-violet-500/10">
-                          <ImageIcon className="h-5 w-5" />
-                        </Button>
-                      </div>
-                      <Button onClick={handlePost} className="bg-violet-600 hover:bg-violet-700 text-white">
-                        <Send className="mr-2 h-4 w-4" /> Post
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Posts Feed */}
-            <div className="space-y-6">
-              {posts.map((post) => (
-                <motion.div
-                  key={post.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Card className="bg-white/5 border-white/10 backdrop-blur-sm overflow-hidden hover:border-white/20 transition-colors">
-                    <CardHeader className="flex flex-row items-start gap-4 p-4">
+            
+            {view === 'feed' && (
+              <>
+                {/* Create Post */}
+                <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                  <CardContent className="p-4">
+                    <div className="flex gap-4">
                       <Avatar className="h-10 w-10 border border-white/10">
-                        <AvatarImage src={post.author.avatar} />
-                        <AvatarFallback>{post.author.name[0]}</AvatarFallback>
+                        <AvatarImage src={user?.user_metadata?.avatar_url} />
+                        <AvatarFallback>{user?.email?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
                       </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-semibold text-white">{post.author.name}</h3>
-                            <p className="text-xs text-gray-400">{post.author.role} • {post.time}</p>
+                      <div className="flex-1 space-y-4">
+                        <Textarea 
+                          placeholder="Share your thoughts, questions, or success stories..." 
+                          value={newPost}
+                          onChange={(e) => setNewPost(e.target.value)}
+                          className="bg-black/20 border-white/10 min-h-[100px] resize-none focus:border-violet-500/50"
+                        />
+                        <div className="flex justify-between items-center">
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="icon" className="text-gray-400 hover:text-violet-400 hover:bg-violet-500/10">
+                              <ImageIcon className="h-5 w-5" />
+                            </Button>
                           </div>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white">
-                            <MoreHorizontal className="h-4 w-4" />
+                          <Button onClick={handlePost} disabled={!newPost.trim()} className="bg-violet-600 hover:bg-violet-700 text-white">
+                            <Send className="mr-2 h-4 w-4" /> Post
                           </Button>
                         </div>
                       </div>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0 space-y-4">
-                      <p className="text-gray-200 leading-relaxed">{post.content}</p>
-                      {post.image && (
-                        <div className="rounded-xl overflow-hidden border border-white/10">
-                          <img src={post.image} alt="Post content" className="w-full h-auto object-cover" />
-                        </div>
-                      )}
-                      <div className="flex flex-wrap gap-2">
-                        {post.tags.map(tag => (
-                          <Badge key={tag} variant="secondary" className="bg-white/5 hover:bg-white/10 text-gray-300 border-0">
-                            #{tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                    <CardFooter className="p-4 border-t border-white/5 flex justify-between">
-                      <Button variant="ghost" size="sm" className="text-gray-400 hover:text-pink-400 hover:bg-pink-500/10 gap-2">
-                        <Heart className="h-4 w-4" /> {post.likes}
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 gap-2">
-                        <MessageSquare className="h-4 w-4" /> {post.comments}
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-gray-400 hover:text-green-400 hover:bg-green-500/10 gap-2">
-                        <Share2 className="h-4 w-4" /> Share
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-
-          {/* Right Sidebar - Trending */}
-          <div className="hidden lg:block space-y-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-              <Input 
-                placeholder="Search community..." 
-                className="pl-10 bg-white/5 border-white/10 text-sm rounded-full focus:bg-white/10 transition-all"
-              />
-            </div>
-
-            <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <TrendingUp className="w-5 h-5 text-emerald-400" />
-                  Trending Topics
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {[
-                  { tag: "SystemDesign", posts: "2.4k" },
-                  { tag: "InterviewPrep", posts: "1.8k" },
-                  { tag: "CareerAdvice", posts: "1.2k" },
-                  { tag: "ResumeReview", posts: "856" },
-                  { tag: "SalaryNegotiation", posts: "643" }
-                ].map((topic) => (
-                  <div key={topic.tag} className="flex justify-between items-center group cursor-pointer">
-                    <div>
-                      <p className="font-medium text-gray-300 group-hover:text-violet-400 transition-colors">#{topic.tag}</p>
-                      <p className="text-xs text-gray-500">{topic.posts} posts</p>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <TrendingUp className="h-4 w-4 text-gray-400" />
-                    </Button>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+
+                {/* Posts Feed */}
+                <div className="space-y-6">
+                  {loading ? (
+                     <div className="text-center py-10 text-gray-500">Loading community...</div>
+                  ) : posts.length === 0 ? (
+                     <div className="text-center py-10 text-gray-500">No posts yet. Be the first to share!</div>
+                  ) : (
+                    posts.map((post) => (
+                      <motion.div
+                        key={post.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <Card className="bg-white/5 border-white/10 backdrop-blur-sm overflow-hidden hover:border-white/20 transition-colors">
+                          <CardHeader className="flex flex-row items-start gap-4 p-4">
+                            <Avatar className="h-10 w-10 border border-white/10">
+                              <AvatarImage src={post.profiles?.avatar_url} />
+                              <AvatarFallback>{post.profiles?.full_name?.[0] || 'U'}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h3 className="font-semibold text-white">{post.profiles?.full_name || 'Anonymous'}</h3>
+                                  <p className="text-xs text-gray-400">
+                                    {post.profiles?.job_title || 'Member'} • {new Date(post.created_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-4 pt-0 space-y-4">
+                            <p className="text-gray-200 leading-relaxed">{post.content}</p>
+                            {post.image_url && (
+                              <div className="rounded-xl overflow-hidden border border-white/10">
+                                <img src={post.image_url} alt="Post content" className="w-full h-auto object-cover" />
+                              </div>
+                            )}
+                            <div className="flex flex-wrap gap-2">
+                              {post.tags?.map((tag: string) => (
+                                <Badge key={tag} variant="secondary" className="bg-white/5 hover:bg-white/10 text-gray-300 border-0">
+                                  #{tag}
+                                </Badge>
+                              ))}
+                            </div>
+                          </CardContent>
+                          <CardFooter className="p-4 border-t border-white/5 flex justify-between">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className={`gap-2 ${post.likes?.some((l: any) => l.user_id === user?.id) ? 'text-pink-500' : 'text-gray-400 hover:text-pink-400'}`}
+                              onClick={() => handleLike(post.id)}
+                            >
+                              <Heart className={`h-4 w-4 ${post.likes?.some((l: any) => l.user_id === user?.id) ? 'fill-current' : ''}`} /> 
+                              {post.likes?.length || 0}
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 gap-2">
+                              <MessageSquare className="h-4 w-4" /> {post.comments?.[0]?.count || 0}
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-green-400 hover:bg-green-500/10 gap-2">
+                              <Share2 className="h-4 w-4" /> Share
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
+
+            {view === 'trending' && (
+              <div className="space-y-6">
+                <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                      <TrendingUp className="w-6 h-6 text-emerald-400" />
+                      AI-Analyzed Trending Topics
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {!aiInsights ? (
+                      <div className="text-center py-8 text-gray-400">Analyzing community conversations...</div>
+                    ) : (
+                      aiInsights.trending_topics?.map((topic: any, i: number) => (
+                        <motion.div 
+                          key={i}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.1 }}
+                          className="flex justify-between items-center p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="text-2xl font-bold text-gray-500">#{i + 1}</div>
+                            <div>
+                              <h3 className="font-semibold text-lg text-white">#{topic.tag}</h3>
+                              <p className="text-sm text-gray-400">{topic.posts} posts</p>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="icon">
+                            <TrendingUp className="h-5 w-5 text-emerald-400" />
+                          </Button>
+                        </motion.div>
+                      ))
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {view === 'events' && (
+              <div className="space-y-6">
+                <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                      <Users className="w-6 h-6 text-blue-400" />
+                      Suggested Community Events
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid gap-4">
+                    {!aiInsights ? (
+                      <div className="text-center py-8 text-gray-400">Generating event suggestions...</div>
+                    ) : (
+                      aiInsights.suggested_events?.map((event: any, i: number) => (
+                        <motion.div 
+                          key={i}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.1 }}
+                          className="p-6 rounded-xl bg-gradient-to-br from-white/5 to-white/10 border border-white/10"
+                        >
+                          <div className="flex justify-between items-start mb-4">
+                            <Badge className="bg-blue-500/20 text-blue-300 hover:bg-blue-500/30">{event.type}</Badge>
+                            <Button size="sm" variant="outline" className="border-white/20 hover:bg-white/10">Register Interest</Button>
+                          </div>
+                          <h3 className="text-xl font-bold text-white mb-2">{event.title}</h3>
+                          <p className="text-gray-300">{event.description}</p>
+                        </motion.div>
+                      ))
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
           </div>
+
+          {/* Right Sidebar - Trending (Visible only on Feed view) */}
+          {view === 'feed' && (
+            <div className="hidden lg:block space-y-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                <Input 
+                  placeholder="Search community..." 
+                  className="pl-10 bg-white/5 border-white/10 text-sm rounded-full focus:bg-white/10 transition-all"
+                />
+              </div>
+
+              <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <TrendingUp className="w-5 h-5 text-emerald-400" />
+                    Trending Topics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {aiInsights?.trending_topics ? (
+                    aiInsights.trending_topics.slice(0, 5).map((topic: any) => (
+                      <div key={topic.tag} className="flex justify-between items-center group cursor-pointer" onClick={() => setView('trending')}>
+                        <div>
+                          <p className="font-medium text-gray-300 group-hover:text-violet-400 transition-colors">#{topic.tag}</p>
+                          <p className="text-xs text-gray-500">{topic.posts} posts</p>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <TrendingUp className="h-4 w-4 text-gray-400" />
+                        </Button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-sm text-gray-500">Loading trends...</div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
         </div>
       </div>
