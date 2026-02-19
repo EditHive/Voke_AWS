@@ -280,9 +280,11 @@ Tell me about a time you had to learn something quickly in order to deliver on a
         {/* Mobile Header */}
         <header className="md:hidden border-b border-border/40 bg-background/80 backdrop-blur-md p-4 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-purple-600 flex items-center justify-center">
-              <Bot className="w-4 h-4 text-white" />
-            </div>
+            <img 
+              src="/images/voke_logo.png" 
+              alt="Voke Logo" 
+              className="w-8 h-8 object-contain"
+            />
             <span className="font-bold">Voke AI</span>
           </div>
           <Button size="sm" variant="ghost" onClick={() => setShowResults(true)}>

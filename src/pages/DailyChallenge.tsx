@@ -6,23 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Play, CheckCircle2, Timer, RotateCcw, Code2, Terminal, Cpu, Share2, Sparkles, Trophy, AlertTriangle, Construction } from "lucide-react";
+import { ArrowLeft, Play, CheckCircle2, Timer, RotateCcw, Code2, Terminal, Cpu, Share2, Sparkles, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import Confetti from "react-confetti";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 const DailyChallenge = () => {
   const navigate = useNavigate();
-  const [showBetaModal, setShowBetaModal] = useState(true);
-
-  // ... existing state ...
   const [code, setCode] = useState(`function reverseList(head) {
   // Your code here
   
@@ -77,230 +67,205 @@ const DailyChallenge = () => {
   };
 
   return (
-    <>
-      <Dialog open={showBetaModal} onOpenChange={setShowBetaModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-500">
-              <Construction className="h-5 w-5" />
-              Under Development
-            </DialogTitle>
-            <DialogDescription>
-              The Daily Challenge feature is currently in <strong>Beta Testing</strong>. You may encounter bugs or incomplete features. We appreciate your feedback!
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end">
-            <Button onClick={() => setShowBetaModal(false)}>I Understand</Button>
+    <div className="min-h-screen bg-background flex flex-col">
+      {isSubmitted && <Confetti width={windowSize.width} height={windowSize.height} recycle={false} numberOfPieces={500} />}
+      
+      {/* Header */}
+      <header className="border-b border-border/40 bg-background/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-lg font-bold flex items-center gap-2">
+                Daily Challenge
+                <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200">
+                  Hard
+                </Badge>
+              </h1>
+              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                <Timer className="h-3 w-3" />
+                Time Remaining: {formatTime(timeLeft)}
+              </p>
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      <div className={`min-h-screen bg-background flex flex-col transition-all duration-500 ${showBetaModal ? 'blur-sm pointer-events-none' : ''}`}>
-        {isSubmitted && <Confetti width={windowSize.width} height={windowSize.height} recycle={false} numberOfPieces={500} />}
-        
-        {/* Beta Banner */}
-        <div className="bg-yellow-500/10 border-b border-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-4 py-2 text-center text-xs font-medium flex items-center justify-center gap-2">
-          <AlertTriangle className="h-3 w-3" />
-          <span>Under Development: This feature is currently in Beta Testing.</span>
+          
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" onClick={() => setCode(`function reverseList(head) {\n  // Reset code\n  \n}`)}>
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Reset
+            </Button>
+            <Button 
+              variant="default" 
+              size="sm" 
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={handleSubmit}
+              disabled={isSubmitted}
+            >
+              {isSubmitted ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Completed
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Submit
+                </>
+              )}
+            </Button>
+          </div>
         </div>
+      </header>
 
-        {/* Header */}
-        <header className="border-b border-border/40 bg-background/80 backdrop-blur-md sticky top-0 z-50">
-          <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-lg font-bold flex items-center gap-2">
-                  Daily Challenge
-                  <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200">
-                    Hard
-                  </Badge>
-                </h1>
-                <p className="text-xs text-muted-foreground flex items-center gap-2">
-                  <Timer className="h-3 w-3" />
-                  Time Remaining: {formatTime(timeLeft)}
-                </p>
+      <main className="flex-1 container mx-auto p-4 lg:p-6 overflow-hidden h-[calc(100vh-64px)]">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+          
+          {/* Left Panel: Problem Description */}
+          <Card className="h-full flex flex-col border-border/50 shadow-lg overflow-hidden">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+              <div className="px-4 pt-4 border-b border-border/50 bg-muted/30">
+                <TabsList className="bg-transparent p-0 gap-4">
+                  <TabsTrigger value="description" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2">
+                    Description
+                  </TabsTrigger>
+                  <TabsTrigger value="hints" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2">
+                    Hints
+                  </TabsTrigger>
+                  <TabsTrigger value="submissions" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2">
+                    Submissions
+                  </TabsTrigger>
+                </TabsList>
               </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" onClick={() => setCode(`function reverseList(head) {\n  // Reset code\n  \n}`)}>
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Reset
-              </Button>
-              <Button 
-                variant="default" 
-                size="sm" 
-                className="bg-green-600 hover:bg-green-700 text-white"
-                onClick={handleSubmit}
-                disabled={isSubmitted}
-              >
-                {isSubmitted ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Completed
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Submit
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </header>
 
-        <main className="flex-1 container mx-auto p-4 lg:p-6 overflow-hidden h-[calc(100vh-64px)]">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
-            
-            {/* Left Panel: Problem Description */}
-            <Card className="h-full flex flex-col border-border/50 shadow-lg overflow-hidden">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-                <div className="px-4 pt-4 border-b border-border/50 bg-muted/30">
-                  <TabsList className="bg-transparent p-0 gap-4">
-                    <TabsTrigger value="description" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2">
-                      Description
-                    </TabsTrigger>
-                    <TabsTrigger value="hints" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2">
-                      Hints
-                    </TabsTrigger>
-                    <TabsTrigger value="submissions" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2">
-                      Submissions
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
+              <ScrollArea className="flex-1">
+                <TabsContent value="description" className="p-6 m-0 space-y-6">
+                  <div>
+                    <h2 className="text-2xl font-bold mb-4">Reverse Linked List</h2>
+                    <p className="text-muted-foreground leading-relaxed">
+                      Given the <code>head</code> of a singly linked list, reverse the list, and return <em>the reversed list</em>.
+                    </p>
+                  </div>
 
-                <ScrollArea className="flex-1">
-                  <TabsContent value="description" className="p-6 m-0 space-y-6">
-                    <div>
-                      <h2 className="text-2xl font-bold mb-4">Reverse Linked List</h2>
-                      <p className="text-muted-foreground leading-relaxed">
-                        Given the <code>head</code> of a singly linked list, reverse the list, and return <em>the reversed list</em>.
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Examples</h3>
+                    
+                    <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                      <p className="font-medium">Example 1:</p>
+                      <div className="flex gap-4 items-center my-2">
+                        <div className="flex items-center gap-2 text-sm bg-background p-2 rounded border">
+                          1 <ArrowLeft className="h-3 w-3 rotate-180" /> 2 <ArrowLeft className="h-3 w-3 rotate-180" /> 3 <ArrowLeft className="h-3 w-3 rotate-180" /> 4 <ArrowLeft className="h-3 w-3 rotate-180" /> 5
+                        </div>
+                        <ArrowLeft className="h-4 w-4 rotate-180 text-muted-foreground" />
+                        <div className="flex items-center gap-2 text-sm bg-background p-2 rounded border">
+                          5 <ArrowLeft className="h-3 w-3 rotate-180" /> 4 <ArrowLeft className="h-3 w-3 rotate-180" /> 3 <ArrowLeft className="h-3 w-3 rotate-180" /> 2 <ArrowLeft className="h-3 w-3 rotate-180" /> 1
+                        </div>
+                      </div>
+                      <code className="text-sm block">Input: head = [1,2,3,4,5]</code>
+                      <code className="text-sm block">Output: [5,4,3,2,1]</code>
+                    </div>
+
+                    <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                      <p className="font-medium">Example 2:</p>
+                      <code className="text-sm block">Input: head = [1,2]</code>
+                      <code className="text-sm block">Output: [2,1]</code>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Constraints</h3>
+                    <ul className="list-disc list-inside text-sm space-y-1 text-muted-foreground">
+                      <li>The number of nodes in the list is the range <code>[0, 5000]</code>.</li>
+                      <li><code>-5000 &lt;= Node.val &lt;= 5000</code></li>
+                    </ul>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="hints" className="p-6 m-0">
+                  <div className="space-y-4">
+                    <div className="p-4 border border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 rounded-lg">
+                      <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2">
+                        <Sparkles className="h-4 w-4" /> Hint 1
+                      </h4>
+                      <p className="text-sm text-blue-700 dark:text-blue-400">
+                        A linked list can be reversed either iteratively or recursively. Could you implement both?
                       </p>
                     </div>
+                  </div>
+                </TabsContent>
 
-                    <div className="space-y-4">
-                      <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Examples</h3>
-                      
-                      <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                        <p className="font-medium">Example 1:</p>
-                        <div className="flex gap-4 items-center my-2">
-                          <div className="flex items-center gap-2 text-sm bg-background p-2 rounded border">
-                            1 <ArrowLeft className="h-3 w-3 rotate-180" /> 2 <ArrowLeft className="h-3 w-3 rotate-180" /> 3 <ArrowLeft className="h-3 w-3 rotate-180" /> 4 <ArrowLeft className="h-3 w-3 rotate-180" /> 5
-                          </div>
-                          <ArrowLeft className="h-4 w-4 rotate-180 text-muted-foreground" />
-                          <div className="flex items-center gap-2 text-sm bg-background p-2 rounded border">
-                            5 <ArrowLeft className="h-3 w-3 rotate-180" /> 4 <ArrowLeft className="h-3 w-3 rotate-180" /> 3 <ArrowLeft className="h-3 w-3 rotate-180" /> 2 <ArrowLeft className="h-3 w-3 rotate-180" /> 1
-                          </div>
-                        </div>
-                        <code className="text-sm block">Input: head = [1,2,3,4,5]</code>
-                        <code className="text-sm block">Output: [5,4,3,2,1]</code>
-                      </div>
+                <TabsContent value="submissions" className="p-6 m-0">
+                  <div className="text-center py-12">
+                    <Trophy className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
+                    <h3 className="text-lg font-medium">No submissions yet</h3>
+                    <p className="text-muted-foreground">Submit your code to see your history.</p>
+                  </div>
+                </TabsContent>
+              </ScrollArea>
+            </Tabs>
+          </Card>
 
-                      <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                        <p className="font-medium">Example 2:</p>
-                        <code className="text-sm block">Input: head = [1,2]</code>
-                        <code className="text-sm block">Output: [2,1]</code>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Constraints</h3>
-                      <ul className="list-disc list-inside text-sm space-y-1 text-muted-foreground">
-                        <li>The number of nodes in the list is the range <code>[0, 5000]</code>.</li>
-                        <li><code>-5000 &lt;= Node.val &lt;= 5000</code></li>
-                      </ul>
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="hints" className="p-6 m-0">
-                    <div className="space-y-4">
-                      <div className="p-4 border border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 rounded-lg">
-                        <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2">
-                          <Sparkles className="h-4 w-4" /> Hint 1
-                        </h4>
-                        <p className="text-sm text-blue-700 dark:text-blue-400">
-                          A linked list can be reversed either iteratively or recursively. Could you implement both?
-                        </p>
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="submissions" className="p-6 m-0">
-                    <div className="text-center py-12">
-                      <Trophy className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
-                      <h3 className="text-lg font-medium">No submissions yet</h3>
-                      <p className="text-muted-foreground">Submit your code to see your history.</p>
-                    </div>
-                  </TabsContent>
-                </ScrollArea>
-              </Tabs>
+          {/* Right Panel: Code Editor */}
+          <div className="flex flex-col gap-4 h-full">
+            <Card className="flex-1 flex flex-col border-border/50 shadow-lg overflow-hidden bg-[#1e1e1e] text-white">
+              <div className="flex items-center justify-between px-4 py-2 bg-[#252526] border-b border-[#3e3e42]">
+                <div className="flex items-center gap-2 text-xs text-gray-400">
+                  <Code2 className="h-4 w-4" />
+                  <span>JavaScript</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-white">
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex-1 relative">
+                <textarea
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  className="absolute inset-0 w-full h-full bg-[#1e1e1e] text-gray-300 font-mono text-sm p-4 resize-none focus:outline-none leading-relaxed"
+                  spellCheck={false}
+                />
+              </div>
             </Card>
 
-            {/* Right Panel: Code Editor */}
-            <div className="flex flex-col gap-4 h-full">
-              <Card className="flex-1 flex flex-col border-border/50 shadow-lg overflow-hidden bg-[#1e1e1e] text-white">
-                <div className="flex items-center justify-between px-4 py-2 bg-[#252526] border-b border-[#3e3e42]">
-                  <div className="flex items-center gap-2 text-xs text-gray-400">
-                    <Code2 className="h-4 w-4" />
-                    <span>JavaScript</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-white">
-                      <Settings className="h-4 w-4" />
-                    </Button>
-                  </div>
+            {/* Console/Output */}
+            <Card className="h-1/3 flex flex-col border-border/50 shadow-lg overflow-hidden bg-card">
+              <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-muted/30">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Terminal className="h-4 w-4 text-muted-foreground" />
+                  Console
                 </div>
-                <div className="flex-1 relative">
-                  <textarea
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    className="absolute inset-0 w-full h-full bg-[#1e1e1e] text-gray-300 font-mono text-sm p-4 resize-none focus:outline-none leading-relaxed"
-                    spellCheck={false}
-                  />
+                <div className="flex items-center gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="secondary" 
+                    onClick={handleRun}
+                    disabled={isRunning}
+                    className="h-7 text-xs"
+                  >
+                    {isRunning ? (
+                      <Cpu className="h-3 w-3 mr-2 animate-spin" />
+                    ) : (
+                      <Play className="h-3 w-3 mr-2" />
+                    )}
+                    Run Code
+                  </Button>
                 </div>
-              </Card>
-
-              {/* Console/Output */}
-              <Card className="h-1/3 flex flex-col border-border/50 shadow-lg overflow-hidden bg-card">
-                <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-muted/30">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Terminal className="h-4 w-4 text-muted-foreground" />
-                    Console
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      size="sm" 
-                      variant="secondary" 
-                      onClick={handleRun}
-                      disabled={isRunning}
-                      className="h-7 text-xs"
-                    >
-                      {isRunning ? (
-                        <Cpu className="h-3 w-3 mr-2 animate-spin" />
-                      ) : (
-                        <Play className="h-3 w-3 mr-2" />
-                      )}
-                      Run Code
-                    </Button>
-                  </div>
-                </div>
-                <ScrollArea className="flex-1 p-4 font-mono text-sm">
-                  {output ? (
-                    <pre className="whitespace-pre-wrap text-foreground">{output}</pre>
-                  ) : (
-                    <div className="text-muted-foreground italic">Run your code to see output...</div>
-                  )}
-                </ScrollArea>
-              </Card>
-            </div>
+              </div>
+              <ScrollArea className="flex-1 p-4 font-mono text-sm">
+                {output ? (
+                  <pre className="whitespace-pre-wrap text-foreground">{output}</pre>
+                ) : (
+                  <div className="text-muted-foreground italic">Run your code to see output...</div>
+                )}
+              </ScrollArea>
+            </Card>
           </div>
-        </main>
-      </div>
-    </>
+        </div>
+      </main>
+    </div>
   );
 };
 

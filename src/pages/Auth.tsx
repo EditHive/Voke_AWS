@@ -188,9 +188,11 @@ const Auth = () => {
             transition={{ duration: 0.8 }}
             className="mb-12"
           >
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-2xl shadow-violet-500/20 mb-8">
-              <Sparkles className="w-8 h-8 text-white" />
-            </div>
+            <img 
+              src="/images/voke_logo.png" 
+              alt="Voke Logo" 
+              className="w-20 h-20 object-contain mb-8 hover:scale-110 transition-transform duration-300"
+            />
             <h1 className="text-5xl font-bold mb-6 leading-tight">
               Master Your <br />
               <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">

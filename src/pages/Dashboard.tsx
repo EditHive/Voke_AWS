@@ -273,9 +273,11 @@ const Dashboard = () => {
       <header className="bg-card/80 backdrop-blur-xl border-b border-border sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/dashboard")}>
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center">
-              <span className="text-white font-bold text-lg">V</span>
-            </div>
+            <img 
+              src="/images/voke_logo.png" 
+              alt="Voke Logo" 
+              className="w-10 h-10 object-contain"
+            />
             <h1 className="text-xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">Voke</h1>
           </div>
 

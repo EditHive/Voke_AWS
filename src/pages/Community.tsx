@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -8,15 +8,23 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { 
   MessageSquare, Heart, Share2, TrendingUp, Users, 
-  MoreHorizontal, Image as ImageIcon, Send, Search
+  MoreHorizontal, Image as ImageIcon, Send, Search, Sparkles, X
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
 
 const Community = () => {
   const [view, setView] = useState<'feed' | 'trending' | 'events'>('feed');
   const [aiInsights, setAiInsights] = useState<{ trending_topics: any[], suggested_events: any[] } | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [newPost, setNewPost] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [expandedPost, setExpandedPost] = useState<string | null>(null);
+  const [postComments, setPostComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [showDevModal, setShowDevModal] = useState(true);
 
   useEffect(() => {
     checkAuth();
@@ -123,11 +131,123 @@ const Community = () => {
     }
   };
 
+  const handleToggleComments = async (postId: string) => {
+    if (expandedPost === postId) {
+      setExpandedPost(null);
+      setPostComments([]);
+      return;
+    }
+
+    setExpandedPost(postId);
+    setCommentLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('comments' as any)
+        .select(`
+          *,
+          profiles:user_id (full_name, avatar_url)
+        `)
+        .eq('post_id', postId)
+        .order('created_at', { ascending: true });
+        
+      if (error) throw error;
+      setPostComments(data || []);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
+  const handleSubmitComment = async (postId: string) => {
+    if (!newComment.trim() || !user) return;
+
+    try {
+      const { error } = await supabase
+        .from('comments' as any)
+        .insert({
+          post_id: postId,
+          user_id: user.id,
+          content: newComment
+        });
+
+      if (error) throw error;
+      
+      setNewComment("");
+      // Refresh comments
+      const { data } = await supabase
+        .from('comments' as any)
+        .select(`
+          *,
+          profiles:user_id (full_name, avatar_url)
+        `)
+        .eq('post_id', postId)
+        .order('created_at', { ascending: true });
+      setPostComments(data || []);
+      
+      // Refresh post comment count
+      fetchPosts();
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-white selection:bg-violet-500/30">
       <Navbar />
       
+      <AnimatePresence>
+        {showDevModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#1e1e1e] border border-white/10 p-6 rounded-2xl max-w-md w-full shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 p-4 opacity-50 hover:opacity-100 cursor-pointer" onClick={() => setShowDevModal(false)}>
+                <X className="h-5 w-5 text-white" />
+              </div>
+              
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-yellow-500/10 flex items-center justify-center mb-2">
+                  <Sparkles className="h-8 w-8 text-yellow-500" />
+                </div>
+                
+                <h2 className="text-2xl font-bold text-white">Under Development</h2>
+                
+                <p className="text-gray-400">
+                  The Community features are currently in beta. You may encounter bugs or incomplete features as we continue to improve the platform.
+                </p>
+
+                <div className="pt-2 w-full">
+                  <Button 
+                    className="w-full bg-violet-600 hover:bg-violet-700 text-white font-semibold h-11"
+                    onClick={() => setShowDevModal(false)}
+                  >
+                    I Understand, Proceed
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12">
+        <div className="flex items-center gap-3 mb-8">
+            <h1 className="text-3xl font-bold text-white">Community Feed</h1>
+            <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20">
+                <Sparkles className="h-3 w-3 mr-1" />
+                Under Development
+            </Badge>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           
           {/* Left Sidebar - Navigation */}
@@ -277,13 +397,75 @@ const Community = () => {
                               <Heart className={`h-4 w-4 ${post.likes?.some((l: any) => l.user_id === user?.id) ? 'fill-current' : ''}`} /> 
                               {post.likes?.length || 0}
                             </Button>
-                            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className={`text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 gap-2 ${expandedPost === post.id ? 'text-blue-400 bg-blue-500/10' : ''}`}
+                              onClick={() => handleToggleComments(post.id)}
+                            >
                               <MessageSquare className="h-4 w-4" /> {post.comments?.[0]?.count || 0}
                             </Button>
                             <Button variant="ghost" size="sm" className="text-gray-400 hover:text-green-400 hover:bg-green-500/10 gap-2">
                               <Share2 className="h-4 w-4" /> Share
                             </Button>
                           </CardFooter>
+
+                          {/* Comments Section */}
+                          {expandedPost === post.id && (
+                            <div className="border-t border-white/5 bg-black/20 p-4 space-y-4">
+                              <div className="space-y-4 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                                {commentLoading ? (
+                                  <div className="text-center text-sm text-gray-500 py-2">Loading comments...</div>
+                                ) : postComments.length === 0 ? (
+                                  <div className="text-center text-sm text-gray-500 py-2">No comments yet. Be the first!</div>
+                                ) : (
+                                  postComments.map((comment) => (
+                                    <div key={comment.id} className="flex gap-3">
+                                      <Avatar className="h-8 w-8 border border-white/10">
+                                        <AvatarImage src={comment.profiles?.avatar_url} />
+                                        <AvatarFallback>{comment.profiles?.full_name?.[0] || 'U'}</AvatarFallback>
+                                      </Avatar>
+                                      <div className="flex-1 bg-white/5 rounded-lg p-3">
+                                        <div className="flex justify-between items-start mb-1">
+                                          <span className="font-semibold text-sm text-white">{comment.profiles?.full_name || 'Anonymous'}</span>
+                                          <span className="text-xs text-gray-500">
+                                            {new Date(comment.created_at).toLocaleDateString()}
+                                          </span>
+                                        </div>
+                                        <p className="text-sm text-gray-300">{comment.content}</p>
+                                      </div>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                              
+                              <div className="flex gap-3 pt-2">
+                                <Avatar className="h-8 w-8 border border-white/10">
+                                  <AvatarImage src={user?.user_metadata?.avatar_url} />
+                                  <AvatarFallback>{user?.email?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 flex gap-2">
+                                  <Input
+                                    placeholder="Write a comment..."
+                                    value={newComment}
+                                    onChange={(e) => setNewComment(e.target.value)}
+                                    className="bg-white/5 border-white/10 h-9 text-sm focus:border-violet-500/50"
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') handleSubmitComment(post.id);
+                                    }}
+                                  />
+                                  <Button 
+                                    size="sm" 
+                                    onClick={() => handleSubmitComment(post.id)}
+                                    disabled={!newComment.trim()}
+                                    className="bg-violet-600 hover:bg-violet-700 h-9"
+                                  >
+                                    <Send className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </Card>
                       </motion.div>
                     ))

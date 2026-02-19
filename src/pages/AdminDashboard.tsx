@@ -246,9 +246,11 @@ const AdminDashboard = () => {
         className="w-72 bg-white/5 backdrop-blur-xl border-r border-white/10 flex flex-col relative z-20"
       >
         <div className="p-8 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
-            <Shield className="w-6 h-6 text-white" />
-          </div>
+          <img 
+            src="/images/voke_logo.png" 
+            alt="Voke Logo" 
+            className="w-10 h-10 object-contain shadow-lg shadow-violet-500/20"
+          />
           <div>
             <span className="text-xl font-bold block leading-none">Voke</span>
             <span className="text-xs text-gray-400 uppercase tracking-wider font-medium">Admin Portal</span>
