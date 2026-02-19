@@ -1,23 +1,54 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import Editor from "@monaco-editor/react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Play, CheckCircle2, Timer, RotateCcw, Code2, Terminal, Cpu, Share2, Sparkles, Trophy } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, Play, CheckCircle2, Timer, RotateCcw, Code2, Terminal, Cpu, Sparkles, Trophy, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import Confetti from "react-confetti";
 
-const DailyChallenge = () => {
-  const navigate = useNavigate();
-  const [code, setCode] = useState(`function reverseList(head) {
+type Language = 'javascript' | 'python' | 'bash';
+
+const TEMPLATES = {
+  javascript: `/**
+ * @param {ListNode} head
+ * @return {ListNode}
+ */
+function reverseList(head) {
   // Your code here
   
-}`);
+}`,
+  python: `# Definition for singly-linked list.
+# class ListNode:
+#     def __init__(self, val=0, next=None):
+#         self.val = val
+#         self.next = next
+class Solution:
+    def reverseList(self, head: Optional[ListNode]) -> Optional[ListNode]:
+        # Your code here
+        pass`,
+  bash: `# Read from the file file.txt and output the tenth line to stdout.
+# Your code here
+`
+};
+
+const FILE_NAMES = {
+  javascript: 'Solution.js',
+  python: 'solution.py',
+  bash: 'solution.sh'
+};
+
+import { executeCode } from "@/utils/codeExecutor";
+
+const DailyChallenge = () => {
+  const navigate = useNavigate();
+  const [language, setLanguage] = useState<Language>('javascript');
+  const [code, setCode] = useState(TEMPLATES.javascript);
   const [output, setOutput] = useState("");
+  const [testResults, setTestResults] = useState<any[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(24 * 60 * 60); // 24 hours in seconds (mock)
@@ -46,14 +77,48 @@ const DailyChallenge = () => {
     return `${h}h ${m}m ${s}s`;
   };
 
-  const handleRun = () => {
+  const handleLanguageChange = (value: Language) => {
+    setLanguage(value);
+    setCode(TEMPLATES[value]);
+  };
+
+  const handleRun = async () => {
     setIsRunning(true);
     setOutput("Running tests...\n");
+    setTestResults([]);
+
+    // Small delay to let UI show loading state
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const result = executeCode(code, language);
     
-    setTimeout(() => {
-      setIsRunning(false);
-      setOutput((prev) => prev + "> Test Case 1: [1,2,3,4,5] -> Passed\n> Test Case 2: [1,2] -> Passed\n> Test Case 3: [] -> Passed\n\nAll test cases passed! Ready to submit.");
-    }, 1500);
+    // Format output
+    let outputText = "";
+    
+    if (result.logs.length > 0) {
+        outputText += "Console Output:\n" + result.logs.map(l => `> ${l}`).join('\n') + "\n\n";
+    }
+
+    if (result.error) {
+        outputText += `Error:\n${result.error}\n`;
+    } else {
+        result.results.forEach(res => {
+            outputText += `> Test Case ${res.caseId}: ${res.input} -> ${res.passed ? 'Passed' : 'Failed'}\n`;
+            if (!res.passed) {
+                outputText += `  Expected: ${res.expected}\n  Actual:   ${res.actual}\n`;
+            }
+        });
+        
+        if (result.passed && language === 'javascript') {
+            outputText += "\nAll test cases passed! Ready to submit.";
+        } else if (language !== 'javascript') {
+            outputText += "\n(Note: Non-JS execution is simulated)";
+        }
+    }
+
+    setOutput(outputText);
+    setTestResults(result.results);
+    setIsRunning(false);
   };
 
   const handleSubmit = () => {
@@ -67,224 +132,309 @@ const DailyChallenge = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-[#0f1117] text-gray-200 flex flex-col overflow-hidden font-sans selection:bg-purple-500/30">
       {isSubmitted && <Confetti width={windowSize.width} height={windowSize.height} recycle={false} numberOfPieces={500} />}
       
-      {/* Header */}
-      <header className="border-b border-border/40 bg-background/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      {/* Vibrant Header */}
+      <header className="h-14 bg-[#161b22] border-b border-[#2d333b] flex items-center px-6 justify-between shrink-0 shadow-md relative overflow-hidden">
+        {/* Top glowing line */}
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-50"></div>
+
+        <div className="flex items-center gap-6 relative z-10">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-9 w-9 text-gray-400 hover:text-white hover:bg-[#2d333b] rounded-full transition-all duration-300" 
+            onClick={() => navigate("/dashboard")}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-lg font-bold flex items-center gap-2">
-                Daily Challenge
-                <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200">
+             <div className="flex items-center gap-3">
+                <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">Reverse Linked List</span>
+                <Badge className="bg-gradient-to-r from-orange-500/20 to-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider shadow-[0_0_10px_rgba(251,191,36,0.1)]">
                   Hard
                 </Badge>
-              </h1>
-              <p className="text-xs text-muted-foreground flex items-center gap-2">
-                <Timer className="h-3 w-3" />
-                Time Remaining: {formatTime(timeLeft)}
-              </p>
-            </div>
+             </div>
           </div>
-          
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={() => setCode(`function reverseList(head) {\n  // Reset code\n  \n}`)}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Reset
-            </Button>
-            <Button 
-              variant="default" 
-              size="sm" 
-              className="bg-green-600 hover:bg-green-700 text-white"
-              onClick={handleSubmit}
-              disabled={isSubmitted}
-            >
-              {isSubmitted ? (
-                <>
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Completed
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Submit
-                </>
-              )}
-            </Button>
-          </div>
+        </div>
+
+        <div className="flex items-center gap-6 relative z-10">
+           <div className="flex items-center gap-2 px-4 py-1.5 bg-[#0d1117] rounded-full border border-[#30363d] shadow-inner">
+              <Timer className="h-4 w-4 text-purple-400" />
+              <span className="text-xs font-mono font-medium text-gray-300">{formatTime(timeLeft)}</span>
+           </div>
+           
+           <div className="flex items-center gap-3">
+              <div className="flex items-center bg-[#21262d] rounded-lg p-1 border border-[#30363d]">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-white hover:bg-[#30363d] rounded-md transition-colors" onClick={() => setCode(TEMPLATES[language])}>
+                   <RotateCcw className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-white hover:bg-[#30363d] rounded-md transition-colors">
+                   <Settings className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <Button 
+                size="sm" 
+                className="h-9 px-6 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold text-xs rounded-lg border-0 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all hover:scale-105 active:scale-95"
+                onClick={handleSubmit}
+                disabled={isSubmitted}
+              >
+                {isSubmitted ? (
+                    <span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4" /> Submitted</span>
+                ) : (
+                    <span className="flex items-center gap-2"><Sparkles className="h-4 w-4" /> Submit</span>
+                )}
+              </Button>
+           </div>
         </div>
       </header>
 
-      <main className="flex-1 container mx-auto p-4 lg:p-6 overflow-hidden h-[calc(100vh-64px)]">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+      {/* Main Workspace - 3 Column Layout */}
+      <main className="flex-1 p-3 min-h-0 bg-[#0d1117]">
+        <div className="h-full grid grid-cols-12 gap-3">
           
-          {/* Left Panel: Problem Description */}
-          <Card className="h-full flex flex-col border-border/50 shadow-lg overflow-hidden">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-              <div className="px-4 pt-4 border-b border-border/50 bg-muted/30">
-                <TabsList className="bg-transparent p-0 gap-4">
-                  <TabsTrigger value="description" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2">
-                    Description
-                  </TabsTrigger>
-                  <TabsTrigger value="hints" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2">
-                    Hints
-                  </TabsTrigger>
-                  <TabsTrigger value="submissions" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-2">
-                    Submissions
-                  </TabsTrigger>
-                </TabsList>
-              </div>
+          {/* LEFT PANEL: Description (30%) */}
+          <div className="col-span-12 lg:col-span-3 flex flex-col bg-[#161b22] rounded-xl border border-[#30363d] overflow-hidden shadow-xl">
+             {/* Panel Tabs */}
+             <div className="h-10 bg-[#0d1117]/50 flex items-center px-1 border-b border-[#30363d] backdrop-blur-sm">
+                <button 
+                  onClick={() => setActiveTab('description')}
+                  className={`px-4 h-full text-xs font-semibold flex items-center gap-2 border-b-2 transition-all duration-200 ${activeTab === 'description' ? 'border-purple-500 text-purple-400 bg-purple-500/5' : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-[#21262d]'}`}
+                >
+                  <Code2 className="h-4 w-4" />
+                  Problem
+                </button>
+                <button 
+                  onClick={() => setActiveTab('hints')}
+                  className={`px-4 h-full text-xs font-semibold flex items-center gap-2 border-b-2 transition-all duration-200 ${activeTab === 'hints' ? 'border-blue-500 text-blue-400 bg-blue-500/5' : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-[#21262d]'}`}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Hints
+                </button>
+                <button 
+                  onClick={() => setActiveTab('submissions')}
+                  className={`px-4 h-full text-xs font-semibold flex items-center gap-2 border-b-2 transition-all duration-200 ${activeTab === 'submissions' ? 'border-green-500 text-green-400 bg-green-500/5' : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-[#21262d]'}`}
+                >
+                  <Trophy className="h-4 w-4" />
+                  <span className="hidden xl:inline">Submissions</span>
+                </button>
+             </div>
 
-              <ScrollArea className="flex-1">
-                <TabsContent value="description" className="p-6 m-0 space-y-6">
-                  <div>
-                    <h2 className="text-2xl font-bold mb-4">Reverse Linked List</h2>
-                    <p className="text-muted-foreground leading-relaxed">
-                      Given the <code>head</code> of a singly linked list, reverse the list, and return <em>the reversed list</em>.
-                    </p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Examples</h3>
-                    
-                    <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                      <p className="font-medium">Example 1:</p>
-                      <div className="flex gap-4 items-center my-2">
-                        <div className="flex items-center gap-2 text-sm bg-background p-2 rounded border">
-                          1 <ArrowLeft className="h-3 w-3 rotate-180" /> 2 <ArrowLeft className="h-3 w-3 rotate-180" /> 3 <ArrowLeft className="h-3 w-3 rotate-180" /> 4 <ArrowLeft className="h-3 w-3 rotate-180" /> 5
-                        </div>
-                        <ArrowLeft className="h-4 w-4 rotate-180 text-muted-foreground" />
-                        <div className="flex items-center gap-2 text-sm bg-background p-2 rounded border">
-                          5 <ArrowLeft className="h-3 w-3 rotate-180" /> 4 <ArrowLeft className="h-3 w-3 rotate-180" /> 3 <ArrowLeft className="h-3 w-3 rotate-180" /> 2 <ArrowLeft className="h-3 w-3 rotate-180" /> 1
-                        </div>
+             <ScrollArea className="flex-1 bg-[#161b22]">
+                {activeTab === 'description' && (
+                  <div className="p-5 space-y-6 text-[#c9d1d9] text-sm">
+                    <div>
+                      <h2 className="text-xl font-bold mb-4 text-white">Reverse Linked List</h2>
+                      <div className="flex items-center gap-2 mb-4 flex-wrap">
+                        <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors cursor-pointer">Easy</Badge>
+                        <Badge className="bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-colors cursor-pointer">Linked List</Badge>
+                        <Badge className="bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors cursor-pointer">Recursion</Badge>
                       </div>
-                      <code className="text-sm block">Input: head = [1,2,3,4,5]</code>
-                      <code className="text-sm block">Output: [5,4,3,2,1]</code>
-                    </div>
-
-                    <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                      <p className="font-medium">Example 2:</p>
-                      <code className="text-sm block">Input: head = [1,2]</code>
-                      <code className="text-sm block">Output: [2,1]</code>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Constraints</h3>
-                    <ul className="list-disc list-inside text-sm space-y-1 text-muted-foreground">
-                      <li>The number of nodes in the list is the range <code>[0, 5000]</code>.</li>
-                      <li><code>-5000 &lt;= Node.val &lt;= 5000</code></li>
-                    </ul>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="hints" className="p-6 m-0">
-                  <div className="space-y-4">
-                    <div className="p-4 border border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 rounded-lg">
-                      <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2">
-                        <Sparkles className="h-4 w-4" /> Hint 1
-                      </h4>
-                      <p className="text-sm text-blue-700 dark:text-blue-400">
-                        A linked list can be reversed either iteratively or recursively. Could you implement both?
+                      <p className="leading-relaxed text-gray-300">
+                        Given the <code className="bg-[#21262d] px-1.5 py-0.5 rounded text-gray-200 font-mono text-xs border border-[#30363d]">head</code> of a singly linked list, reverse the list, and return <em>the reversed list</em>.
                       </p>
                     </div>
-                  </div>
-                </TabsContent>
 
-                <TabsContent value="submissions" className="p-6 m-0">
-                  <div className="text-center py-12">
-                    <Trophy className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
-                    <h3 className="text-lg font-medium">No submissions yet</h3>
-                    <p className="text-muted-foreground">Submit your code to see your history.</p>
-                  </div>
-                </TabsContent>
-              </ScrollArea>
-            </Tabs>
-          </Card>
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <p className="font-bold text-xs text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Example 1
+                        </p>
+                        <div className="bg-[#0d1117] rounded-lg p-3 border border-[#30363d] space-y-2">
+                             <div className="font-mono text-xs text-blue-300/90">
+                                <span className="text-gray-500 select-none mr-2">Input :</span> head = [1,2,3,4,5]
+                             </div>
+                             <div className="font-mono text-xs text-green-300/90">
+                                <span className="text-gray-500 select-none mr-2">Output:</span> [5,4,3,2,1]
+                             </div>
+                        </div>
+                      </div>
 
-          {/* Right Panel: Code Editor */}
-          <div className="flex flex-col gap-4 h-full">
-            <Card className="flex-1 flex flex-col border-border/50 shadow-lg overflow-hidden bg-[#1e1e1e] text-white">
-              <div className="flex items-center justify-between px-4 py-2 bg-[#252526] border-b border-[#3e3e42]">
-                <div className="flex items-center gap-2 text-xs text-gray-400">
-                  <Code2 className="h-4 w-4" />
-                  <span>JavaScript</span>
+                      <div className="space-y-2">
+                        <p className="font-bold text-xs text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span> Example 2
+                        </p>
+                        <div className="bg-[#0d1117] rounded-lg p-3 border border-[#30363d] space-y-2">
+                             <div className="font-mono text-xs text-blue-300/90">
+                                <span className="text-gray-500 select-none mr-2">Input :</span> head = [1,2]
+                             </div>
+                             <div className="font-mono text-xs text-green-300/90">
+                                <span className="text-gray-500 select-none mr-2">Output:</span> [2,1]
+                             </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {activeTab === 'hints' && (
+                  <div className="p-5 space-y-4">
+                     <div className="p-4 bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20 rounded-lg text-sm text-blue-200 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-2 opacity-10">
+                            <Sparkles className="h-20 w-20 text-blue-500" />
+                        </div>
+                        <h4 className="font-bold text-blue-400 mb-2 flex items-center gap-2"><Sparkles className="h-4 w-4" /> Hint 1</h4>
+                        <p className="relative z-10">A linked list can be reversed either iteratively or recursively. Could you implement both?</p>
+                     </div>
+                  </div>
+                )}
+
+                {activeTab === 'submissions' && (
+                  <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                     <div className="h-16 w-16 bg-[#21262d] rounded-full flex items-center justify-center mb-4 ring-1 ring-[#30363d]">
+                        <Trophy className="h-8 w-8 opacity-50 text-yellow-500" />
+                     </div>
+                     <p className="text-sm font-medium text-gray-400">No submissions yet</p>
+                     <p className="text-xs text-gray-600 mt-1">Solve the problem to see your history</p>
+                  </div>
+                )}
+             </ScrollArea>
+          </div>
+
+          {/* MIDDLE PANEL: Code Editor (6/12) */}
+          <div className="col-span-12 lg:col-span-6 flex flex-col bg-[#161b22] rounded-xl border border-[#30363d] overflow-hidden relative shadow-xl ring-1 ring-white/5">
+             {/* Editor Header */}
+             <div className="h-10 bg-[#0d1117]/80 flex items-center justify-between px-4 border-b border-[#30363d] backdrop-blur-md">
+                <div className="flex items-center gap-3">
+                   <div className="flex items-center gap-2">
+                        <Select value={language} onValueChange={(v: Language) => handleLanguageChange(v)}>
+                          <SelectTrigger className="h-7 w-[130px] bg-[#21262d] border-[#30363d] text-xs font-medium text-gray-200 focus:ring-0 focus:ring-offset-0">
+                            <SelectValue placeholder="Language" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#161b22] border-[#30363d] text-gray-200">
+                            <SelectItem value="javascript">JavaScript</SelectItem>
+                            <SelectItem value="python">Python</SelectItem>
+                            <SelectItem value="bash">Bash</SelectItem>
+                          </SelectContent>
+                        </Select>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-white">
-                    <Settings className="h-4 w-4" />
-                  </Button>
+                <div className="flex items-center gap-3">
+                    <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{FILE_NAMES[language]}</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
                 </div>
-              </div>
-              <div className="flex-1 relative">
-                <textarea
+             </div>
+             
+             {/* Editor Canvas */}
+             <div className="flex-1 relative group bg-[#1e1e1e]">
+                <Editor
+                  height="100%"
+                  defaultLanguage="javascript"
+                  language={language}
+                  theme="vs-dark"
                   value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  className="absolute inset-0 w-full h-full bg-[#1e1e1e] text-gray-300 font-mono text-sm p-4 resize-none focus:outline-none leading-relaxed"
-                  spellCheck={false}
+                  onChange={(value) => setCode(value || "")}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    lineNumbers: "on",
+                    roundedSelection: false,
+                    scrollBeyondLastLine: false,
+                    readOnly: false,
+                    automaticLayout: true,
+                    fontFamily: 'monospace',
+                    padding: { top: 16 },
+                  }}
                 />
-              </div>
-            </Card>
-
-            {/* Console/Output */}
-            <Card className="h-1/3 flex flex-col border-border/50 shadow-lg overflow-hidden bg-card">
-              <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-muted/30">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <Terminal className="h-4 w-4 text-muted-foreground" />
-                  Console
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    size="sm" 
-                    variant="secondary" 
+             </div>
+             
+             {/* Floating Run Button */}
+             <div className="absolute bottom-6 right-6 z-20">
+                 <Button 
+                    size="sm"
                     onClick={handleRun}
                     disabled={isRunning}
-                    className="h-7 text-xs"
-                  >
+                    className="h-10 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0 shadow-[0_4px_20px_rgba(37,99,235,0.4)] font-bold text-xs px-6 rounded-full transition-all hover:scale-105 active:scale-95"
+                 >
                     {isRunning ? (
-                      <Cpu className="h-3 w-3 mr-2 animate-spin" />
+                      <Cpu className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
-                      <Play className="h-3 w-3 mr-2" />
+                      <Play className="h-4 w-4 mr-2 fill-current" />
                     )}
                     Run Code
-                  </Button>
-                </div>
-              </div>
-              <ScrollArea className="flex-1 p-4 font-mono text-sm">
-                {output ? (
-                  <pre className="whitespace-pre-wrap text-foreground">{output}</pre>
-                ) : (
-                  <div className="text-muted-foreground italic">Run your code to see output...</div>
-                )}
-              </ScrollArea>
-            </Card>
+                 </Button>
+             </div>
           </div>
+
+          {/* RIGHT PANEL: Output (3/12) */}
+          <div className="col-span-12 lg:col-span-3 flex flex-col gap-3 h-full">
+             {/* Output Section */}
+             <div className="flex-1 flex flex-col bg-[#161b22] rounded-xl border border-[#30363d] overflow-hidden shadow-xl">
+                 <div className="h-10 bg-[#0d1117]/80 flex items-center px-4 border-b border-[#30363d] justify-between backdrop-blur-sm">
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <Terminal className="h-4 w-4 text-gray-500" /> Console
+                    </span>
+                    <div className="flex gap-1.5">
+                         <div className="w-2.5 h-2.5 rounded-full bg-[#fa7970] opacity-50 hover:opacity-100 transition-opacity"></div>
+                         <div className="w-2.5 h-2.5 rounded-full bg-[#faa356] opacity-50 hover:opacity-100 transition-opacity"></div>
+                         <div className="w-2.5 h-2.5 rounded-full bg-[#7ce38b] opacity-50 hover:opacity-100 transition-opacity"></div>
+                    </div>
+                 </div>
+
+                 <ScrollArea className="flex-1 p-4 font-mono text-xs bg-[#0d1117]">
+                    {output ? (
+                        <div className="space-y-1">
+                             {output.split('\n').map((line, i) => (
+                                 <div key={i} className={`p-2 rounded border-l-2 ${line.includes('Passed') ? 'bg-green-500/5 text-green-400 border-green-500' : line.includes('Error') ? 'bg-red-500/5 text-red-400 border-red-500' : 'text-gray-400 border-transparent'}`}>
+                                     {line}
+                                 </div>
+                             ))}
+                             {output.includes('All test cases passed') && (
+                                 <div className="mt-4 p-4 bg-gradient-to-r from-emerald-500/10 to-transparent border border-emerald-500/20 rounded-lg text-emerald-400 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2">
+                                     <div className="p-2 bg-emerald-500/20 rounded-full">
+                                         <CheckCircle2 className="h-4 w-4" />
+                                     </div>
+                                     <div>
+                                         <p className="font-bold text-sm">All Tests Passed!</p>
+                                         <p className="text-[10px] text-emerald-400/70">You are ready to submit.</p>
+                                     </div>
+                                 </div>
+                             )}
+                        </div>
+                    ) : (
+                        <div className="h-full flex flex-col items-center justify-center text-gray-600 space-y-3">
+                            <div className="h-12 w-12 rounded-xl bg-[#21262d] flex items-center justify-center shadow-lg border border-[#30363d] group-hover:border-blue-500/50 transition-colors">
+                                <Play className="h-6 w-6 fill-current text-gray-500" />
+                            </div>
+                            <p className="text-center text-xs font-medium">Run code to see output</p>
+                        </div>
+                    )}
+                 </ScrollArea>
+             </div>
+             
+             {/* Test Cases / Info */}
+             <div className="h-1/3 bg-[#161b22] rounded-xl border border-[#30363d] overflow-hidden flex flex-col shadow-xl">
+                 <div className="h-9 bg-[#0d1117]/80 flex items-center px-4 border-b border-[#30363d]">
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Test Cases</span>
+                 </div>
+                 <div className="flex-1 p-4 bg-[#161b22]">
+                     <div className="flex gap-2 mb-3">
+                         <div className="px-3 py-1 bg-[#238636]/20 text-[#3fb950] border border-[#238636]/50 rounded text-xs font-medium cursor-pointer transition-all hover:bg-[#238636]/30">Case 1</div>
+                         <div className="px-3 py-1 bg-[#21262d] text-gray-400 border border-[#30363d] rounded text-xs font-medium cursor-pointer transition-all hover:text-gray-200 hover:border-gray-500">Case 2</div>
+                         <div className="px-3 py-1 bg-[#21262d] text-gray-400 border border-[#30363d] rounded text-xs font-medium cursor-pointer transition-all hover:text-gray-200 hover:border-gray-500">Case 3</div>
+                     </div>
+                     <div className="space-y-2 font-mono text-xs text-gray-400 bg-[#0d1117] p-3 rounded-lg border border-[#30363d]">
+                         <div className="flex gap-2">
+                            <span className="text-blue-400 select-none">Input:</span> 
+                            <span className="text-gray-300">[1,2,3,4,5]</span>
+                         </div>
+                         <div className="flex gap-2">
+                             <span className="text-green-400 select-none">Output:</span> 
+                             <span className="text-gray-300">[5,4,3,2,1]</span>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+          </div>
+
         </div>
       </main>
     </div>
   );
 };
 
-function Settings({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  )
-}
 
 export default DailyChallenge;
