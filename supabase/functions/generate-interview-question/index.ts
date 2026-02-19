@@ -14,11 +14,10 @@ serve(async (req) => {
 
   try {
     const { messages, interview_type, question_count, coding_stats, profile_context } = await req.json();
-    // Hardcoded API key as requested by user
-    const GOOGLE_API_KEY = "AIzaSyBtjFkWMoGRn-vv9XeXydBq_PBx2zm4BKc";
 
-    if (!GOOGLE_API_KEY) {
-      throw new Error("GOOGLE_API_KEY is not configured");
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+    if (!GROQ_API_KEY) {
+      throw new Error("GROQ_API_KEY is not configured");
     }
 
     // Check if interview should end
@@ -50,68 +49,104 @@ serve(async (req) => {
 
     const systemPrompt = `You are an expert technical interviewer conducting a ${interview_type} interview.${statsContext}
     
-    Your goal is to ask the NEXT question based on the candidate's previous answers and their coding profile (if available).
+    CRITICAL VERIFICATION RULES:
+    1. **IMMEDIATELY CALL OUT LIES**: If the candidate claims a project/skill NOT in their GitHub/Resume context above, you MUST:
+       - State clearly in verification_note: "I did not find any project named '[project name]' in your GitHub profile or resume."
+       - Challenge them directly: "Can you provide specific implementation details to verify this claim?"
+       - Be skeptical of vague answers
     
-    RULES:
-    1. If this is the start (no history), ask a welcoming opening question relevant to ${interview_type}.
-    2. If the candidate answered the previous question:
-       - Analyze their answer.
-       - If vague/shallow: Ask a follow-up clarification question.
-       - If correct/good: Move to a slightly harder or related topic.
-       - If incorrect: Gently correct them and ask a simpler related question.
-    3. Keep questions concise (1-2 sentences).
-    4. Do NOT repeat questions.
-    5. Do NOT say "Great answer" or "Correct" too often. Be professional but encouraging.
-    6. If the candidate has a high Codeforces rating (>1600) or many LeetCode problems solved (>500), ask more challenging, algorithmic, or system design questions suitable for their level.
+    2. **VERIFIED vs UNVERIFIED**:
+       - ✅ VERIFIED: Projects/skills explicitly listed in the GitHub/Resume context above
+       - ❌ UNVERIFIED: Anything the candidate mentions that is NOT in the context
+       - For UNVERIFIED claims, ALWAYS add a verification_note calling it out
     
-    CRITICAL: Respond with ONLY a valid JSON object.
+    3. **Cross-reference EVERYTHING**:
+       - GitHub projects listed above = VERIFIED
+       - Resume content above = VERIFIED
+       - LeetCode/Codeforces stats above = VERIFIED
+       - Anything else = UNVERIFIED (call it out!)
+    
+    RESPONSE FORMAT:
+    
+    **CRITICAL: You MUST respond with valid JSON only.**
+    
+    **For the FIRST message (no history):**
     {
-      "question": "The text of your next question",
+      "question": "Welcome! Let's begin. [Your opening question]",
       "is_finished": false
-    }`;
+    }
+    
+    **For SUBSEQUENT messages (after user answers):**
+    You MUST provide detailed feedback on their previous answer, then ask the next question.
+    {
+      "feedback": {
+        "what_went_well": ["Specific point 1", "Specific point 2"],
+        "what_needs_improvement": ["Specific issue 1", "Specific issue 2"],
+        "model_answer": "A comprehensive, detailed answer showing how they should have responded. Include specific technical details, best practices, and examples.",
+        "verification_note": "REQUIRED if they mentioned ANYTHING not in their GitHub/Resume. Format: 'I did not find any project/skill named [X] in your GitHub profile or resume. Please provide specific implementation details to verify this claim.'"
+      },
+      "question": "Your next question based on their performance",
+      "is_finished": false
+    }
+    
+    FEEDBACK GUIDELINES:
+    - Be specific and constructive
+    - ALWAYS check claims against GitHub/Resume context
+    - Call out discrepancies immediately and directly
+    - Model answer should be 2-3 sentences minimum
+    - Adjust next question difficulty based on their performance
+    
+    VERIFICATION EXAMPLES:
+    - ✅ User says "I worked on the React dashboard" AND it's in their GitHub → No verification_note needed
+    - ❌ User says "I built a blockchain app" but it's NOT in GitHub → verification_note: "I did not find any blockchain project in your GitHub profile or resume. Please provide specific implementation details."
+    - ❌ User says "I know Kubernetes" but it's not in resume/GitHub → verification_note: "I did not find Kubernetes mentioned in your resume or GitHub projects. Can you explain where you used it?"
+    
+    Keep questions concise but feedback detailed. BE STRICT about verification.`;
 
-    // Construct history for Gemini
-    const chatHistory = messages.map((msg: any) => ({
-      role: msg.role === "assistant" ? "model" : "user",
-      parts: [{ text: msg.content }]
-    }));
+    // Format messages for Groq
+    const formattedMessages = [
+      { role: "system", content: systemPrompt },
+      ...messages
+    ];
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GOOGLE_API_KEY}`,
+      "https://api.groq.com/openai/v1/chat/completions",
       {
         method: "POST",
         headers: {
+          Authorization: `Bearer ${GROQ_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: systemPrompt }]
-            },
-            ...chatHistory
-          ],
-          generationConfig: {
-            temperature: 0.7, // Higher temp for more variety in questions
-            responseMimeType: "application/json",
-          },
+          model: "llama-3.3-70b-versatile",
+          messages: formattedMessages,
+          temperature: 0.7,
+          response_format: { type: "json_object" },
         }),
       }
     );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Gemini API error:", response.status, errorText);
-      throw new Error(`Gemini API error: ${response.status}`);
+      console.error("Groq API error:", response.status, errorText);
+      console.error("Request details:", {
+        interview_type,
+        question_count,
+        has_coding_stats: !!coding_stats,
+        has_profile_context: !!profile_context,
+        message_count: messages?.length || 0
+      });
+      throw new Error(`Groq API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    let aiContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    let aiContent = data.choices[0]?.message?.content;
 
     if (!aiContent) {
-      throw new Error("No content received from Gemini");
+      throw new Error("No content received from Groq");
     }
 
+    // Clean up potential markdown formatting
     aiContent = aiContent.replace(/```json/g, "").replace(/```/g, "").trim();
     const result = JSON.parse(aiContent);
 
@@ -121,8 +156,12 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Error in generate-interview-question:", error);
+    console.error("Error stack:", error.stack);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({
+        error: error.message || "Unknown error occurred",
+        details: "Check edge function logs for more information"
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

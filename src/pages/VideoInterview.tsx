@@ -412,7 +412,7 @@ const TimedVideoInterview = () => {
         });
 
         // Navigate to results
-        navigate(`/interview-results/${sessionId}`);
+        navigate(`/video-interview/results/${sessionId}`);
       } catch (error) {
         console.error("Error generating overall feedback:", error);
         toast.error("Failed to generate overall feedback");
@@ -539,8 +539,19 @@ const TimedVideoInterview = () => {
               <span className="font-mono font-semibold">{formatTimeRemaining(timeRemaining)}</span>
             </div>
           </div>
-          <div className="text-sm text-muted-foreground">
-            Question {currentQuestionIndex + 1}
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-muted-foreground">
+              Question {currentQuestionIndex + 1}
+            </div>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={endInterview}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              <StopCircle className="w-4 h-4 mr-2" />
+              End Interview
+            </Button>
           </div>
         </div>
       </header>

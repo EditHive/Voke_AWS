@@ -291,12 +291,12 @@ export function useGroqVoice(): UseGroqVoiceReturn {
             mediaRecorderRef.current = mediaRecorder;
             mediaRecorder.start();
 
-            // Auto-stop after 10 seconds (or when user stops speaking)
+            // Auto-stop after 30 seconds (increased from 10s to allow longer responses)
             setTimeout(() => {
                 if (mediaRecorder.state === 'recording') {
                     mediaRecorder.stop();
                 }
-            }, 10000);
+            }, 30000);
 
         } catch (error) {
             console.error('DEBUG: Microphone error:', error);

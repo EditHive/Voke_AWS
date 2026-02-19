@@ -109,7 +109,6 @@ const InterviewNew = () => {
       const { data, error } = await supabase.functions.invoke('generate-interview-question', {
         body: {
           messages: currentMessages,
-          messages: currentMessages,
           interview_type: CATEGORIES.find(c => c.id === activeCategory)?.label || "General",
           question_count: count,
           coding_stats: codingStats,
@@ -120,6 +119,24 @@ const InterviewNew = () => {
       if (error) throw error;
 
       if (data) {
+        // If there's feedback, add it as a separate message before the question
+        if (data.feedback) {
+          const feedbackContent = `### ✅ What Went Well
+${data.feedback.what_went_well?.map((point: string) => `- ${point}`).join('\n') || '- Good effort'}
+
+### ⚠️ What Needs Improvement
+${data.feedback.what_needs_improvement?.map((point: string) => `- ${point}`).join('\n') || '- Keep practicing'}
+
+### 📝 Model Answer
+${data.feedback.model_answer || 'N/A'}
+
+${data.feedback.verification_note ? `### 🔍 Verification Note\n${data.feedback.verification_note}` : ''}`;
+
+          const feedbackMsg: Message = { role: "assistant", content: feedbackContent };
+          setMessages(prev => [...prev, feedbackMsg]);
+        }
+
+        // Then add the next question
         const aiMsg: Message = { role: "assistant", content: data.question };
         setMessages(prev => [...prev, aiMsg]);
         if (voiceMode) speak(data.question);

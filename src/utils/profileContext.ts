@@ -26,25 +26,27 @@ export async function loadUserProfileContext(): Promise<ProfileContext> {
             .eq('id', user.id)
             .single();
 
-        if (profileError || !profile) {
+        const userProfile = profile as any;
+
+        if (profileError || !userProfile) {
             throw new Error('Failed to load profile');
         }
 
         console.log('[ProfileContext] Profile loaded:', {
-            hasGithub: !!profile.github_url,
-            hasResume: !!profile.resume_url
+            hasGithub: !!userProfile.github_url,
+            hasResume: !!userProfile.resume_url
         });
 
-        let context = `User Name: ${profile.full_name || 'Candidate'}\n`;
+        let context = `User Name: ${userProfile.full_name || 'Candidate'}\n`;
         let projectCount = 0;
         let hasGithub = false;
         let hasResume = false;
 
         // Fetch GitHub context
-        if (profile.github_url) {
+        if (userProfile.github_url) {
             try {
                 const githubToken = import.meta.env.VITE_GITHUB_TOKEN;
-                const usernameMatch = profile.github_url.match(/github\.com\/([^\/]+)/);
+                const usernameMatch = userProfile.github_url.match(/github\.com\/([^\/]+)/);
                 if (usernameMatch) {
                     const username = usernameMatch[1];
                     const headers: Record<string, string> = {
@@ -95,15 +97,51 @@ export async function loadUserProfileContext(): Promise<ProfileContext> {
                 }
             } catch (e) {
                 console.error('[ProfileContext] GitHub fetch error:', e);
-                context += `GitHub Profile: ${profile.github_url}\n`;
+                context += `GitHub Profile: ${userProfile.github_url}\n`;
+            }
+        }
+
+        // Fetch LeetCode data
+        if (userProfile.leetcode_id) {
+            try {
+                console.log('[ProfileContext] Fetching LeetCode data...');
+                const { data, error } = await supabase.functions.invoke('fetch-leetcode-data', {
+                    body: { username: userProfile.leetcode_id }
+                });
+
+                if (!error && data && !data.error) {
+                    const solved = data.submitStats?.find((s: any) => s.difficulty === "All")?.count || 0;
+                    const rating = Math.round(data.contestRanking?.rating || 0);
+                    context += `\nLEETCODE PROFILE:\n- Username: ${userProfile.leetcode_id}\n- Problems Solved: ${solved}\n- Contest Rating: ${rating}\n`;
+                    console.log('[ProfileContext] ✓ LeetCode data loaded');
+                }
+            } catch (e) {
+                console.error('[ProfileContext] LeetCode fetch error:', e);
+            }
+        }
+
+        // Fetch Codeforces data
+        if (userProfile.codeforces_id) {
+            try {
+                console.log('[ProfileContext] Fetching Codeforces data...');
+                const { data, error } = await supabase.functions.invoke('fetch-codeforces-data', {
+                    body: { handle: userProfile.codeforces_id }
+                });
+
+                if (!error && data && !data.error) {
+                    context += `\nCODEFORCES PROFILE:\n- Handle: ${userProfile.codeforces_id}\n- Rating: ${data.rating}\n- Rank: ${data.rank}\n- Max Rating: ${data.maxRating}\n`;
+                    console.log('[ProfileContext] ✓ Codeforces data loaded');
+                }
+            } catch (e) {
+                console.error('[ProfileContext] Codeforces fetch error:', e);
             }
         }
 
         // Parse resume PDF
-        if (profile.resume_url) {
+        if (userProfile.resume_url) {
             try {
                 console.log('[ProfileContext] Fetching resume...');
-                const resumeResponse = await fetch(profile.resume_url);
+                const resumeResponse = await fetch(userProfile.resume_url);
                 const resumeBlob = await resumeResponse.blob();
                 const pdfjsLib = await import('pdfjs-dist');
                 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -127,18 +165,18 @@ export async function loadUserProfileContext(): Promise<ProfileContext> {
                 console.log('[ProfileContext] ✓ Resume parsed, length:', resumeText.length);
             } catch (e) {
                 console.error('[ProfileContext] Resume parse error:', e);
-                context += `Resume URL: ${profile.resume_url}\n`;
+                context += `Resume URL: ${userProfile.resume_url}\n`;
             }
         }
 
-        if (profile.linkedin_url) {
-            context += `LinkedIn Profile: ${profile.linkedin_url}\n`;
+        if (userProfile.linkedin_url) {
+            context += `LinkedIn Profile: ${userProfile.linkedin_url}\n`;
         }
 
         console.log('[ProfileContext] Context loaded successfully, length:', context.length);
 
         return {
-            fullName: profile.full_name || 'Candidate',
+            fullName: userProfile.full_name || 'Candidate',
             context,
             projectCount,
             hasResume,

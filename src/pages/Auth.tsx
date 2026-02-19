@@ -137,10 +137,17 @@ const Auth = () => {
       });
 
       if (error) {
+        console.error('[Auth] Sign in error:', error);
         if (error.message.includes("Invalid login credentials")) {
           toast({
             title: "Error",
             description: "Invalid email or password. Please try again.",
+            variant: "destructive",
+          });
+        } else if (error.message.includes("fetch")) {
+          toast({
+            title: "Connection Error",
+            description: "Unable to connect to authentication server. Please check your internet connection and try again.",
             variant: "destructive",
           });
         } else {
@@ -152,9 +159,10 @@ const Auth = () => {
         }
       }
     } catch (error: any) {
+      console.error('[Auth] Sign in exception:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -180,18 +188,18 @@ const Auth = () => {
             transition={{ duration: 0.8 }}
             className="mb-12"
           >
-             <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-2xl shadow-violet-500/20 mb-8">
-                <Sparkles className="w-8 h-8 text-white" />
-              </div>
-              <h1 className="text-5xl font-bold mb-6 leading-tight">
-                Master Your <br />
-                <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
-                  Interview Skills
-                </span>
-              </h1>
-              <p className="text-xl text-gray-400 leading-relaxed">
-                Join thousands of candidates who are acing their interviews with our AI-powered practice platform.
-              </p>
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-2xl shadow-violet-500/20 mb-8">
+              <Sparkles className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-5xl font-bold mb-6 leading-tight">
+              Master Your <br />
+              <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+                Interview Skills
+              </span>
+            </h1>
+            <p className="text-xl text-gray-400 leading-relaxed">
+              Join thousands of candidates who are acing their interviews with our AI-powered practice platform.
+            </p>
           </motion.div>
 
           <motion.div
@@ -224,13 +232,13 @@ const Auth = () => {
       {/* Right Side - Auth Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative bg-black/95">
         <div className="absolute top-6 right-6 flex items-center gap-4">
-           <Button 
-             variant="ghost" 
-             onClick={() => navigate("/")}
-             className="text-gray-400 hover:text-white hover:bg-white/10"
-           >
-             Back to Home
-           </Button>
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/")}
+            className="text-gray-400 hover:text-white hover:bg-white/10"
+          >
+            Back to Home
+          </Button>
         </div>
 
         <div className="w-full max-w-md space-y-8">
@@ -239,8 +247,8 @@ const Auth = () => {
               {authMode === "signin" ? "Welcome Back" : "Create Account"}
             </h2>
             <p className="text-gray-400">
-              {authMode === "signin" 
-                ? "Enter your details to access your account" 
+              {authMode === "signin"
+                ? "Enter your details to access your account"
                 : "Start your journey to interview mastery"}
             </p>
           </div>
@@ -258,17 +266,15 @@ const Auth = () => {
             />
             <button
               onClick={() => setAuthMode("signin")}
-              className={`flex-1 py-3 text-sm font-medium rounded-xl relative z-10 transition-colors duration-200 ${
-                authMode === "signin" ? "text-white" : "text-gray-400 hover:text-white"
-              }`}
+              className={`flex-1 py-3 text-sm font-medium rounded-xl relative z-10 transition-colors duration-200 ${authMode === "signin" ? "text-white" : "text-gray-400 hover:text-white"
+                }`}
             >
               Sign In
             </button>
             <button
               onClick={() => setAuthMode("signup")}
-              className={`flex-1 py-3 text-sm font-medium rounded-xl relative z-10 transition-colors duration-200 ${
-                authMode === "signup" ? "text-white" : "text-gray-400 hover:text-white"
-              }`}
+              className={`flex-1 py-3 text-sm font-medium rounded-xl relative z-10 transition-colors duration-200 ${authMode === "signup" ? "text-white" : "text-gray-400 hover:text-white"
+                }`}
             >
               Sign Up
             </button>
@@ -371,8 +377,8 @@ const Auth = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="h-12 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 hover:text-white text-gray-300"
               disabled
             >
@@ -396,8 +402,8 @@ const Auth = () => {
               </svg>
               Google
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="h-12 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 hover:text-white text-gray-300"
               disabled
             >

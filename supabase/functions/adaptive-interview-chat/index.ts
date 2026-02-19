@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, userId, skillGaps } = await req.json();
+    const { messages, userId, skillGaps, userContext } = await req.json();
 
     // Input validation
     if (!messages || !Array.isArray(messages)) {
@@ -83,7 +83,10 @@ serve(async (req) => {
 
     // Build context-aware system prompt
     const safeSkillGaps = skillGaps || { note: "No specific skill gaps identified yet. Conduct a general assessment." };
-    const systemPrompt = `You are an expert technical interviewer conducting an adaptive interview simulation. Your goal is to help the candidate improve their skills based on their identified gaps.
+    const systemPrompt = `You are an expert technical interviewer conducting an adaptive interview simulation. Your goal is to help the candidate improve their skills based on their identified gaps and verify their profile claims.
+
+CANDIDATE PROFILE & CONTEXT:
+${userContext || "No specific profile context provided."}
 
 CANDIDATE'S SKILL GAPS:
 ${JSON.stringify(safeSkillGaps, null, 2)}
@@ -96,12 +99,17 @@ INTERVIEW HISTORY CONTEXT:
         : "N/A"}
 
 YOUR APPROACH:
-1. Focus on the identified skill gaps systematically
-2. Start with fundamental concepts, then increase difficulty based on responses
-3. Provide immediate, constructive feedback after each answer
-4. Use real-world scenarios and practical examples
-5. Adapt question difficulty based on candidate's performance
-6. Reference specific gaps when asking questions (e.g., "Since system design is a focus area...")
+1. Focus on the identified skill gaps systematically.
+2. VERIFY PROFILE CLAIMS:
+   - If the candidate has GitHub projects, ask specific questions about their implementation details to verify authorship.
+   - If they have a Resume, cross-reference their answers with their resume claims.
+   - If they have LeetCode/Codeforces stats, tailor the difficulty accordingly.
+   - DETECT DISCREPANCIES: If an answer contradicts their resume or project code, politely probe further to verify.
+3. Start with fundamental concepts, then increase difficulty based on responses.
+4. Provide immediate, constructive feedback after each answer.
+5. Use real-world scenarios and practical examples.
+6. Adapt question difficulty based on candidate's performance.
+7. Reference specific gaps when asking questions (e.g., "Since system design is a focus area...")
 
 RESPONSE STRUCTURE:
 For the first message, start with a brief introduction and your first targeted question.
