@@ -67,7 +67,26 @@ const VoiceInterviewResults = () => {
                 }
             });
 
-            if (error) throw error;
+            console.log("Edge Function response:", { data, error });
+
+            if (error) {
+                console.error("Edge Function error:", error);
+                throw new Error(error.message || "Edge Function failed");
+            }
+
+            // Check if data contains an error field (from the Edge Function's error response)
+            if (data && data.error) {
+                console.error("Edge Function returned error:", data.error);
+                throw new Error(data.error);
+            }
+
+            // Check if score exists (allow 0 as a valid score)
+            if (!data || data.score === null || data.score === undefined) {
+                console.error("Invalid response from Edge Function. Full data:", JSON.stringify(data, null, 2));
+                throw new Error(`Invalid response from analysis service. Missing score field. Data: ${JSON.stringify(data)}`);
+            }
+
+            console.log("Analysis successful:", data);
 
             // Update session with results
             const { error: updateError } = await supabase
@@ -77,9 +96,6 @@ const VoiceInterviewResults = () => {
                     six_q_score: data.six_q_score,
                     personality_cluster: data.personality_cluster,
                     status: 'completed',
-                    // Store other metrics if needed, or just rely on the JSON response
-                    // For now we'll just use what we have columns for or add more if needed
-                    // We might want to store the full evaluation json somewhere if we had a column for it
                 })
                 .eq("id", id);
 

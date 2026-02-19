@@ -14,11 +14,10 @@ Deno.serve(async (req: Request) => {
 
   try {
     const { messages, interview_type } = await req.json();
-    // Hardcoded API key as requested by user
-    const GOOGLE_API_KEY = "AIzaSyBtjFkWMoGRn-vv9XeXydBq_PBx2zm4BKc";
 
-    if (!GOOGLE_API_KEY) {
-      throw new Error("GOOGLE_API_KEY is not configured");
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+    if (!GROQ_API_KEY) {
+      throw new Error("GROQ_API_KEY is not configured");
     }
 
     const systemPrompt = `You are an expert technical interviewer. Evaluate the candidate's performance in this ${interview_type} interview based on the provided conversation transcript.
@@ -137,52 +136,43 @@ Deno.serve(async (req: Request) => {
       "personality_cluster": "Cluster Name"
     }`;
 
-    // Construct the conversation history for Gemini
-    // Gemini expects "parts" with "text"
-    const chatHistory = messages.map((msg: any) => ({
-      role: msg.role === "assistant" ? "model" : "user",
-      parts: [{ text: msg.content }]
-    }));
+    // Format messages for Groq
+    const formattedMessages = [
+      { role: "system", content: systemPrompt },
+      ...messages
+    ];
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GOOGLE_API_KEY}`,
+      "https://api.groq.com/openai/v1/chat/completions",
       {
         method: "POST",
         headers: {
+          Authorization: `Bearer ${GROQ_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: systemPrompt }]
-            },
-            ...chatHistory
-          ],
-          generationConfig: {
-            temperature: 0.3,
-            responseMimeType: "application/json", // Force JSON response
-          },
+          model: "llama-3.3-70b-versatile",
+          messages: formattedMessages,
+          temperature: 0.3,
+          response_format: { type: "json_object" },
         }),
       }
     );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Gemini API error:", response.status, errorText);
-      throw new Error(`Gemini API error: ${response.status}`);
+      console.error("Groq API error:", response.status, errorText);
+      throw new Error(`Groq API error: ${response.status}`);
     }
 
     const data = await response.json();
-
-    // Gemini response structure is different
-    let aiContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    let aiContent = data.choices[0]?.message?.content;
 
     if (!aiContent) {
-      throw new Error("No content received from Gemini");
+      throw new Error("No content received from Groq");
     }
 
-    // Clean up potential markdown formatting if the model ignores instructions
+    // Clean up potential markdown formatting
     aiContent = aiContent.replace(/```json/g, "").replace(/```/g, "").trim();
 
     const evaluation = JSON.parse(aiContent);
