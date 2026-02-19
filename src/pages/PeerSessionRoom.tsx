@@ -71,7 +71,19 @@ const PeerSessionRoom = () => {
 
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
+      console.log("Setting remote stream:", remoteStream.id, remoteStream.getTracks());
       remoteVideoRef.current.srcObject = remoteStream;
+      
+      remoteVideoRef.current.onloadedmetadata = () => {
+        console.log("Remote video loaded metadata. Trying to play...");
+        remoteVideoRef.current?.play().catch(e => console.error("Error playing remote video:", e));
+      };
+      
+      // Listen for track mute/unmute events
+      remoteStream.getTracks().forEach(track => {
+        track.onmute = () => console.log(`Remote track ${track.kind} muted`);
+        track.onunmute = () => console.log(`Remote track ${track.kind} unmuted`);
+      });
     }
   }, [remoteStream]);
 
