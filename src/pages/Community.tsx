@@ -1,402 +1,248 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   MessageSquare, Heart, Share2, TrendingUp, Users, 
-  Search, Bell, MoreHorizontal, Image as ImageIcon, 
-  Smile, Send, Hash, Bookmark, LogOut, ArrowLeft,
-  CheckCircle2, Plus
+  MoreHorizontal, Image as ImageIcon, Send, Search
 } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { motion, AnimatePresence } from "motion/react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-
-// Mock Data
-const TRENDING_TOPICS = [
-  { tag: "#ReactJS", posts: "12.5k" },
-  { tag: "#SystemDesign", posts: "8.2k" },
-  { tag: "#InterviewTips", posts: "5.1k" },
-  { tag: "#CareerGrowth", posts: "3.4k" },
-  { tag: "#RemoteWork", posts: "2.8k" },
-];
-
-const SUGGESTED_USERS = [
-  { name: "Sarah Chen", role: "Senior Frontend Dev", avatar: "/avatars/sarah.jpg" },
-  { name: "Alex Rivera", role: "Tech Lead @ Google", avatar: "/avatars/alex.jpg" },
-  { name: "Emily Zhang", role: "Product Designer", avatar: "/avatars/emily.jpg" },
-];
-
-const INITIAL_POSTS = [
-  {
-    id: 1,
-    author: { name: "David Kim", role: "Software Engineer", avatar: "/avatars/david.jpg" },
-    content: "Just landed my dream job at a FAANG company! 🚀 The system design rounds were tough, but practicing with Voke's AI interviewer really helped me articulate my thoughts clearly. Huge thanks to this community for the resources!",
-    tags: ["#SuccessStory", "#FAANG", "#InterviewPrep"],
-    likes: 342,
-    comments: 56,
-    shares: 12,
-    timeAgo: "2h ago",
-    isLiked: false
-  },
-  {
-    id: 2,
-    author: { name: "Maria Garcia", role: "Backend Developer", avatar: "/avatars/maria.jpg" },
-    content: "What are your go-to resources for learning distributed systems? I've been reading DDIA but looking for more practical examples.",
-    tags: ["#SystemDesign", "#Learning", "#Backend"],
-    likes: 89,
-    comments: 24,
-    shares: 5,
-    timeAgo: "5h ago",
-    isLiked: true
-  },
-  {
-    id: 3,
-    author: { name: "James Wilson", role: "DevOps Engineer", avatar: "/avatars/james.jpg" },
-    content: "Here's a quick cheat sheet I made for Kubernetes commands. Hope it helps someone preparing for DevOps interviews! 🐳",
-    image: "https://images.unsplash.com/photo-1667372393119-c85c020799a3?q=80&w=1000&auto=format&fit=crop",
-    tags: ["#DevOps", "#Kubernetes", "#CheatSheet"],
-    likes: 567,
-    comments: 45,
-    shares: 89,
-    timeAgo: "1d ago",
-    isLiked: false
-  }
-];
+import { Navbar } from "@/components/Navbar";
 
 const Community = () => {
-  const navigate = useNavigate();
-  const [posts, setPosts] = useState(INITIAL_POSTS);
-  const [newPostContent, setNewPostContent] = useState("");
-  const [isJoined, setIsJoined] = useState(false);
-  const [activeTab, setActiveTab] = useState("feed");
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      setUser(user);
-      setIsJoined(true); // Assume joined if logged in for demo
+  const [posts, setPosts] = useState([
+    {
+      id: 1,
+      author: { name: "Sarah Chen", avatar: "https://github.com/shadcn.png", role: "Senior Dev" },
+      content: "Just cracked my Google interview! 🚀 The system design round was intense but Voke's mock interviews really helped me prepare for the pressure. Huge thanks to the community for the tips!",
+      image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=60",
+      likes: 234,
+      comments: 45,
+      time: "2h ago",
+      tags: ["Success Story", "Interview Tips"]
+    },
+    {
+      id: 2,
+      author: { name: "Alex Rivera", avatar: "https://github.com/shadcn.png", role: "Full Stack" },
+      content: "Anyone else finding the dynamic programming problems on LeetCode tricky? I've been stuck on the 'Climbing Stairs' variation for hours. Any resources you'd recommend?",
+      likes: 56,
+      comments: 12,
+      time: "4h ago",
+      tags: ["Help Needed", "DSA"]
+    },
+    {
+      id: 3,
+      author: { name: "Emily Zhang", avatar: "https://github.com/shadcn.png", role: "Product Manager" },
+      content: "Hosting a mock interview session tonight at 8 PM EST for PM roles. We'll focus on product sense and execution. Join if you're interested! 📅",
+      likes: 89,
+      comments: 23,
+      time: "6h ago",
+      tags: ["Event", "Mock Interview"]
     }
-  };
+  ]);
 
-  const handleJoin = () => {
-    setIsJoined(!isJoined);
-    if (!isJoined) {
-      toast.success("Welcome to the Voke Community! 🎉");
-    } else {
-      toast.info("You've left the community.");
-    }
-  };
-
-  const handleLike = (postId: number) => {
-    setPosts(posts.map(post => {
-      if (post.id === postId) {
-        return {
-          ...post,
-          likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-          isLiked: !post.isLiked
-        };
-      }
-      return post;
-    }));
-  };
+  const [newPost, setNewPost] = useState("");
 
   const handlePost = () => {
-    if (!newPostContent.trim()) return;
-
-    const newPost = {
-      id: Date.now(),
-      author: { 
-        name: "You", 
-        role: "Aspiring Developer", 
-        avatar: "/placeholder-user.jpg" 
-      },
-      content: newPostContent,
-      tags: ["#General"],
+    if (!newPost.trim()) return;
+    
+    const post = {
+      id: posts.length + 1,
+      author: { name: "You", avatar: "https://github.com/shadcn.png", role: "User" },
+      content: newPost,
       likes: 0,
       comments: 0,
-      shares: 0,
-      timeAgo: "Just now",
-      isLiked: false
+      time: "Just now",
+      tags: ["General"]
     };
 
-    setPosts([newPost, ...posts]);
-    setNewPostContent("");
-    toast.success("Post published successfully!");
+    setPosts([post, ...posts]);
+    setNewPost("");
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex items-center gap-2" onClick={() => navigate("/dashboard")}>
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center">
-                <Users className="h-5 w-5 text-white" />
-              </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent hidden md:block">
-                Community
-              </h1>
-            </div>
-          </div>
+    <div className="min-h-screen bg-black text-white selection:bg-violet-500/30">
+      <Navbar />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          
+          {/* Left Sidebar - Navigation */}
+          <div className="hidden lg:block space-y-6">
+            <Card className="bg-white/5 border-white/10 backdrop-blur-sm sticky top-24">
+              <CardContent className="p-4 space-y-2">
+                <Button variant="ghost" className="w-full justify-start text-lg font-medium bg-white/5 text-white">
+                  <MessageSquare className="mr-3 h-5 w-5 text-violet-400" />
+                  Feed
+                </Button>
+                <Button variant="ghost" className="w-full justify-start text-lg font-medium text-gray-400 hover:text-white hover:bg-white/5">
+                  <TrendingUp className="mr-3 h-5 w-5 text-emerald-400" />
+                  Trending
+                </Button>
+                <Button variant="ghost" className="w-full justify-start text-lg font-medium text-gray-400 hover:text-white hover:bg-white/5">
+                  <Users className="mr-3 h-5 w-5 text-blue-400" />
+                  Events
+                </Button>
+              </CardContent>
+            </Card>
 
-          <div className="flex-1 max-w-md mx-8 hidden md:block">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search discussions, people, or topics..." 
-                className="pl-10 bg-muted/50 border-border/50 focus:bg-background transition-all"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button 
-              variant={isJoined ? "outline" : "default"}
-              className={!isJoined ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white border-0" : ""}
-              onClick={handleJoin}
-            >
-              {isJoined ? "Joined" : "Join Community"}
-            </Button>
-            <Button variant="ghost" size="icon">
-              <Bell className="h-5 w-5" />
-            </Button>
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1 container mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Sidebar - Navigation */}
-        <aside className="hidden lg:block lg:col-span-3 space-y-6 sticky top-24 h-fit">
-          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-            <CardContent className="p-4 space-y-4">
-              <div className="flex items-center gap-3 mb-6">
-                <Avatar className="w-12 h-12 border-2 border-violet-500/20">
-                  <AvatarImage src="/placeholder-user.jpg" />
-                  <AvatarFallback>ME</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-semibold">Your Profile</h3>
-                  <p className="text-xs text-muted-foreground">Software Engineer</p>
-                </div>
-              </div>
-              
-              <nav className="space-y-1">
-                {[
-                  { icon: MessageSquare, label: "Feed", id: "feed" },
-                  { icon: Hash, label: "Topics", id: "topics" },
-                  { icon: Bookmark, label: "Saved", id: "saved" },
-                  { icon: Users, label: "Mentorship", id: "mentorship" },
-                ].map((item) => (
-                  <Button
-                    key={item.id}
-                    variant={activeTab === item.id ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                    onClick={() => setActiveTab(item.id)}
-                  >
-                    <item.icon className="w-4 h-4 mr-3" />
-                    {item.label}
-                  </Button>
+            <Card className="bg-white/5 border-white/10 backdrop-blur-sm sticky top-64">
+              <CardHeader>
+                <CardTitle className="text-sm font-medium text-gray-400 uppercase tracking-wider">Top Contributors</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8 border border-white/10">
+                      <AvatarImage src={`https://github.com/shadcn.png`} />
+                      <AvatarFallback>U{i}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-200 truncate">User {i}</p>
+                      <p className="text-xs text-gray-500 truncate">1.2k points</p>
+                    </div>
+                    <Badge variant="outline" className="text-xs border-violet-500/30 text-violet-400">Top 1%</Badge>
+                  </div>
                 ))}
-              </nav>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
 
-          <Card className="border-border/50 bg-gradient-to-br from-violet-500/5 to-fuchsia-500/5">
-            <CardContent className="p-4">
-              <h3 className="font-semibold mb-2">Daily Challenge</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Solve today's system design problem and earn badges!
-              </p>
-              <Button className="w-full" variant="outline" size="sm">
-                View Challenge
-              </Button>
-            </CardContent>
-          </Card>
-        </aside>
-
-        {/* Center - Feed */}
-        <div className="lg:col-span-6 space-y-6">
-          {/* Create Post */}
-          {isJoined && (
-            <Card className="border-border/50 shadow-sm">
+          {/* Main Feed */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Create Post */}
+            <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
               <CardContent className="p-4">
                 <div className="flex gap-4">
-                  <Avatar>
-                    <AvatarImage src="/placeholder-user.jpg" />
+                  <Avatar className="h-10 w-10 border border-white/10">
+                    <AvatarImage src="https://github.com/shadcn.png" />
                     <AvatarFallback>ME</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 space-y-4">
                     <Textarea 
-                      placeholder="Share your interview experience or ask a question..." 
-                      className="min-h-[100px] resize-none border-0 bg-muted/30 focus:bg-background transition-all"
-                      value={newPostContent}
-                      onChange={(e) => setNewPostContent(e.target.value)}
+                      placeholder="Share your thoughts, questions, or success stories..." 
+                      value={newPost}
+                      onChange={(e) => setNewPost(e.target.value)}
+                      className="bg-black/20 border-white/10 min-h-[100px] resize-none focus:border-violet-500/50"
                     />
-                    <div className="flex items-center justify-between">
+                    <div className="flex justify-between items-center">
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-violet-500">
-                          <ImageIcon className="w-5 h-5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-violet-500">
-                          <Hash className="w-5 h-5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-violet-500">
-                          <Smile className="w-5 h-5" />
+                        <Button variant="ghost" size="icon" className="text-gray-400 hover:text-violet-400 hover:bg-violet-500/10">
+                          <ImageIcon className="h-5 w-5" />
                         </Button>
                       </div>
-                      <Button 
-                        onClick={handlePost}
-                        disabled={!newPostContent.trim()}
-                        className="bg-violet-600 hover:bg-violet-700 text-white"
-                      >
-                        <Send className="w-4 h-4 mr-2" />
-                        Post
+                      <Button onClick={handlePost} className="bg-violet-600 hover:bg-violet-700 text-white">
+                        <Send className="mr-2 h-4 w-4" /> Post
                       </Button>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          )}
 
-          {/* Posts Feed */}
-          <div className="space-y-4">
-            <AnimatePresence>
+            {/* Posts Feed */}
+            <div className="space-y-6">
               {posts.map((post) => (
                 <motion.div
                   key={post.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <Card className="border-border/50 hover:border-border transition-colors">
-                    <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                      <div className="flex gap-3">
-                        <Avatar>
-                          <AvatarImage src={post.author.avatar} />
-                          <AvatarFallback>{post.author.name[0]}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h4 className="font-semibold text-sm">{post.author.name}</h4>
-                          <p className="text-xs text-muted-foreground">{post.author.role} • {post.timeAgo}</p>
+                  <Card className="bg-white/5 border-white/10 backdrop-blur-sm overflow-hidden hover:border-white/20 transition-colors">
+                    <CardHeader className="flex flex-row items-start gap-4 p-4">
+                      <Avatar className="h-10 w-10 border border-white/10">
+                        <AvatarImage src={post.author.avatar} />
+                        <AvatarFallback>{post.author.name[0]}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold text-white">{post.author.name}</h3>
+                            <p className="text-xs text-gray-400">{post.author.role} • {post.time}</p>
+                          </div>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                        {post.content}
-                      </p>
+                    <CardContent className="p-4 pt-0 space-y-4">
+                      <p className="text-gray-200 leading-relaxed">{post.content}</p>
                       {post.image && (
-                        <div className="rounded-xl overflow-hidden border border-border/50">
-                          <img src={post.image} alt="Post content" className="w-full h-auto object-cover max-h-[400px]" />
+                        <div className="rounded-xl overflow-hidden border border-white/10">
+                          <img src={post.image} alt="Post content" className="w-full h-auto object-cover" />
                         </div>
                       )}
                       <div className="flex flex-wrap gap-2">
                         {post.tags.map(tag => (
-                          <Badge key={tag} variant="secondary" className="text-xs font-normal bg-violet-500/10 text-violet-600 hover:bg-violet-500/20">
-                            {tag}
+                          <Badge key={tag} variant="secondary" className="bg-white/5 hover:bg-white/10 text-gray-300 border-0">
+                            #{tag}
                           </Badge>
                         ))}
                       </div>
-                      
-                      <div className="flex items-center justify-between pt-4 border-t border-border/40">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className={`gap-2 ${post.isLiked ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground'}`}
-                          onClick={() => handleLike(post.id)}
-                        >
-                          <Heart className={`w-4 h-4 ${post.isLiked ? 'fill-current' : ''}`} />
-                          {post.likes}
-                        </Button>
-                        <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
-                          <MessageSquare className="w-4 h-4" />
-                          {post.comments}
-                        </Button>
-                        <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
-                          <Share2 className="w-4 h-4" />
-                          {post.shares}
-                        </Button>
-                      </div>
                     </CardContent>
+                    <CardFooter className="p-4 border-t border-white/5 flex justify-between">
+                      <Button variant="ghost" size="sm" className="text-gray-400 hover:text-pink-400 hover:bg-pink-500/10 gap-2">
+                        <Heart className="h-4 w-4" /> {post.likes}
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 gap-2">
+                        <MessageSquare className="h-4 w-4" /> {post.comments}
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-gray-400 hover:text-green-400 hover:bg-green-500/10 gap-2">
+                        <Share2 className="h-4 w-4" /> Share
+                      </Button>
+                    </CardFooter>
                   </Card>
                 </motion.div>
               ))}
-            </AnimatePresence>
+            </div>
           </div>
-        </div>
 
-        {/* Right Sidebar - Trending */}
-        <aside className="hidden lg:block lg:col-span-3 space-y-6 sticky top-24 h-fit">
-          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-violet-500" />
-                Trending Topics
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {TRENDING_TOPICS.map((topic, i) => (
-                <div key={i} className="flex items-center justify-between group cursor-pointer">
-                  <div>
-                    <p className="font-medium text-sm group-hover:text-violet-500 transition-colors">{topic.tag}</p>
-                    <p className="text-xs text-muted-foreground">{topic.posts} posts</p>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          {/* Right Sidebar - Trending */}
+          <div className="hidden lg:block space-y-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Input 
+                placeholder="Search community..." 
+                className="pl-10 bg-white/5 border-white/10 text-sm rounded-full focus:bg-white/10 transition-all"
+              />
+            </div>
 
-          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Who to Follow</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {SUGGESTED_USERS.map((user, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={user.avatar} />
-                      <AvatarFallback>{user.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="overflow-hidden">
-                      <p className="font-medium text-sm truncate">{user.name}</p>
-                      <p className="text-xs text-muted-foreground truncate max-w-[100px]">{user.role}</p>
+            <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <TrendingUp className="w-5 h-5 text-emerald-400" />
+                  Trending Topics
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {[
+                  { tag: "SystemDesign", posts: "2.4k" },
+                  { tag: "InterviewPrep", posts: "1.8k" },
+                  { tag: "CareerAdvice", posts: "1.2k" },
+                  { tag: "ResumeReview", posts: "856" },
+                  { tag: "SalaryNegotiation", posts: "643" }
+                ].map((topic) => (
+                  <div key={topic.tag} className="flex justify-between items-center group cursor-pointer">
+                    <div>
+                      <p className="font-medium text-gray-300 group-hover:text-violet-400 transition-colors">#{topic.tag}</p>
+                      <p className="text-xs text-gray-500">{topic.posts} posts</p>
                     </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <TrendingUp className="h-4 w-4 text-gray-400" />
+                    </Button>
                   </div>
-                  <Button variant="outline" size="sm" className="h-7 text-xs">
-                    Follow
-                  </Button>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </aside>
-      </main>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 };

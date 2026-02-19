@@ -19,6 +19,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Footer } from "@/components/Footer";
 
 interface Notification {
   id: string;
@@ -469,17 +470,53 @@ const Dashboard = () => {
             {/* Profile Strength */}
             <Card className="bg-gradient-to-br from-card to-muted/50 border-border/50">
               <CardContent className="p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-semibold">Profile Strength</h3>
-                  <span className="text-sm font-bold text-violet-600">85%</span>
-                </div>
-                <Progress value={85} className="h-2 mb-4" />
-                <p className="text-xs text-muted-foreground mb-4">
-                  Complete your bio and add 2 more skills to reach 100%.
-                </p>
-                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate("/profile")}>
-                  Complete Profile
-                </Button>
+                {(() => {
+                  const calculateStrength = () => {
+                    if (!profile) return { score: 0, missing: [] };
+                    
+                    const fields = [
+                      { key: 'full_name', label: 'Full Name', weight: 25 },
+                      { key: 'linkedin_url', label: 'LinkedIn', weight: 25 },
+                      { key: 'github_url', label: 'GitHub', weight: 25 },
+                      { key: 'resume_url', label: 'Resume', weight: 25 },
+                    ];
+
+                    let score = 0;
+                    const missing: string[] = [];
+
+                    fields.forEach(field => {
+                      if (profile[field.key] && profile[field.key].length > 0) {
+                        score += field.weight;
+                      } else {
+                        missing.push(field.label);
+                      }
+                    });
+
+                    return { score, missing };
+                  };
+
+                  const { score, missing } = calculateStrength();
+                  
+                  return (
+                    <>
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-semibold">Profile Strength</h3>
+                        <span className={`text-sm font-bold ${score === 100 ? 'text-green-600' : 'text-violet-600'}`}>
+                          {score}%
+                        </span>
+                      </div>
+                      <Progress value={score} className="h-2 mb-4" />
+                      <p className="text-xs text-muted-foreground mb-4">
+                        {score === 100 
+                          ? "Great job! Your profile is fully complete." 
+                          : `Add your ${missing[0] || 'details'} ${missing.length > 1 ? `and ${missing.length - 1} more` : ''} to reach 100%.`}
+                      </p>
+                      <Button variant="outline" size="sm" className="w-full" onClick={() => navigate("/profile")}>
+                        {score === 100 ? "Edit Profile" : "Complete Profile"}
+                      </Button>
+                    </>
+                  );
+                })()}
               </CardContent>
             </Card>
 
@@ -562,6 +599,7 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 };

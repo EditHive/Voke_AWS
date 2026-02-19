@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   LayoutDashboard, Users, Settings, LogOut, Activity, 
   Shield, AlertTriangle, Search, Bell, Database, TrendingUp,
-  MoreVertical, CheckCircle2, XCircle, Clock
+  MoreVertical, CheckCircle2, XCircle, Clock, FileText, Plus, Image as ImageIcon, Trash2, Edit, MessageSquare, Flag, Ban
 } from "lucide-react";
 import {
   Table,
@@ -16,18 +16,94 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ADMIN_EMAIL } from "@/config/admin";
 import { motion, AnimatePresence } from "framer-motion";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [settings, setSettings] = useState({
+    siteName: "Voke AI",
+    maintenanceMode: false,
+    allowRegistrations: true,
+    emailNotifications: true,
+    systemAnnouncements: "",
+    sessionTimeout: [30],
+    enforce2FA: false
+  });
+  const [blogs, setBlogs] = useState([
+    { id: 1, title: "The Future of AI in Tech Interviews", date: "2024-03-15", status: "Published", views: 1234 },
+    { id: 2, title: "Mastering the System Design Interview", date: "2024-03-12", status: "Published", views: 856 },
+    { id: 3, title: "Top 10 Soft Skills for Developers", date: "2024-03-10", status: "Draft", views: 0 },
+  ]);
+  const [newBlog, setNewBlog] = useState({ title: "", image: "", content: "" });
+  const [users, setUsers] = useState<any[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*');
+      
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast.error("Failed to fetch users");
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  const handlePublishBlog = () => {
+    if (!newBlog.title || !newBlog.content) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    
+    const blog = {
+      id: blogs.length + 1,
+      title: newBlog.title,
+      date: new Date().toISOString().split('T')[0],
+      status: "Published",
+      views: 0
+    };
+    
+    setBlogs([blog, ...blogs]);
+    setNewBlog({ title: "", image: "", content: "" });
+    toast.success("Blog published successfully!");
+  };
+
+  const handleDeleteBlog = (id: number) => {
+    setBlogs(blogs.filter(b => b.id !== id));
+    toast.success("Blog deleted");
+  };
+
+  const handleSaveSettings = () => {
+    // In a real app, this would make an API call
+    setTimeout(() => {
+      toast.success("System settings saved successfully");
+    }, 500);
+  };
 
   useEffect(() => {
     checkAdminAuth();
@@ -144,6 +220,8 @@ const AdminDashboard = () => {
           {[
             { id: "overview", label: "Overview", icon: LayoutDashboard },
             { id: "users", label: "User Management", icon: Users },
+            { id: "community", label: "Community", icon: MessageSquare },
+            { id: "blogs", label: "Blog Management", icon: FileText },
             { id: "settings", label: "System Settings", icon: Settings },
           ].map((item) => (
             <button
@@ -403,13 +481,490 @@ const AdminDashboard = () => {
                 transition={{ duration: 0.3 }}
               >
                 <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle>User Management</CardTitle>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="w-5 h-5 text-blue-400" />
+                      User Management
+                    </CardTitle>
+                    <Button variant="outline" size="sm" onClick={fetchUsers} className="border-white/10 hover:bg-white/5">
+                      Refresh List
+                    </Button>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-400">Full user management table goes here...</p>
+                    <div className="rounded-md border border-white/10 overflow-hidden">
+                      <Table>
+                        <TableHeader className="bg-white/5">
+                          <TableRow className="border-white/10 hover:bg-white/5">
+                            <TableHead className="text-gray-300">Name</TableHead>
+                            <TableHead className="text-gray-300">Email</TableHead>
+                            <TableHead className="text-gray-300">Joined Date</TableHead>
+                            <TableHead className="text-gray-300">Status</TableHead>
+                            <TableHead className="text-right text-gray-300">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {isLoadingUsers ? (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center py-8 text-gray-400">
+                                Loading users...
+                              </TableCell>
+                            </TableRow>
+                          ) : users.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center py-8 text-gray-400">
+                                No users found
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            users.map((user) => (
+                              <TableRow key={user.id} className="border-white/10 hover:bg-white/5">
+                                <TableCell className="font-medium text-gray-200">
+                                  {user.full_name || "N/A"}
+                                </TableCell>
+                                <TableCell className="text-gray-400">{user.email || "N/A"}</TableCell>
+                                <TableCell className="text-gray-400">
+                                  {new Date(user.created_at).toLocaleDateString()}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-0">
+                                    Active
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-red-400">
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </CardContent>
                 </Card>
+              </motion.div>
+            )}
+
+            {activeTab === "community" && (
+              <motion.div
+                key="community"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-6"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                    <CardContent className="p-6 flex items-center gap-4">
+                      <div className="p-3 rounded-xl bg-blue-500/10 text-blue-400">
+                        <MessageSquare className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-400">Total Posts</p>
+                        <h3 className="text-2xl font-bold">1,234</h3>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                    <CardContent className="p-6 flex items-center gap-4">
+                      <div className="p-3 rounded-xl bg-red-500/10 text-red-400">
+                        <Flag className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-400">Reported Content</p>
+                        <h3 className="text-2xl font-bold">15</h3>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                    <CardContent className="p-6 flex items-center gap-4">
+                      <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400">
+                        <Activity className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-400">Active Users</p>
+                        <h3 className="text-2xl font-bold">423</h3>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Flag className="w-5 h-5 text-red-400" />
+                      Moderation Queue
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader className="bg-white/5">
+                        <TableRow className="border-white/10 hover:bg-white/5">
+                          <TableHead className="text-gray-300">Author</TableHead>
+                          <TableHead className="text-gray-300">Content</TableHead>
+                          <TableHead className="text-gray-300">Reason</TableHead>
+                          <TableHead className="text-gray-300">Time</TableHead>
+                          <TableHead className="text-right text-gray-300">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {[
+                          { id: 1, author: "SpamBot9000", content: "Buy cheap crypto now!!!", reason: "Spam", time: "10m ago" },
+                          { id: 2, author: "AngryUser", content: "This platform sucks...", reason: "Harassment", time: "1h ago" },
+                        ].map((item) => (
+                          <TableRow key={item.id} className="border-white/10 hover:bg-white/5">
+                            <TableCell className="font-medium text-gray-200">{item.author}</TableCell>
+                            <TableCell className="text-gray-400 max-w-xs truncate">{item.content}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="bg-red-500/10 text-red-400 border-0">
+                                {item.reason}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-gray-400">{item.time}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button variant="ghost" size="sm" className="text-green-400 hover:bg-green-500/10">
+                                  <CheckCircle2 className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="text-red-400 hover:bg-red-500/10">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" className="text-gray-400 hover:bg-white/10">
+                                  <Ban className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {activeTab === "blogs" && (
+              <motion.div
+                key="blogs"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-6"
+              >
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Create Blog Form */}
+                  <div className="lg:col-span-2 space-y-6">
+                    <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Plus className="w-5 h-5 text-violet-400" />
+                          Create New Blog
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                          <Label className="text-gray-300">Blog Title</Label>
+                          <Input 
+                            placeholder="Enter blog title..." 
+                            value={newBlog.title}
+                            onChange={(e) => setNewBlog({...newBlog, title: e.target.value})}
+                            className="bg-black/20 border-white/10 text-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-gray-300">Cover Image URL</Label>
+                          <div className="flex gap-2">
+                            <Input 
+                              placeholder="https://..." 
+                              value={newBlog.image}
+                              onChange={(e) => setNewBlog({...newBlog, image: e.target.value})}
+                              className="bg-black/20 border-white/10 text-white"
+                            />
+                            <Button variant="outline" size="icon" className="border-white/10 hover:bg-white/5">
+                              <ImageIcon className="w-4 h-4 text-gray-400" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-gray-300">Content</Label>
+                          <Textarea 
+                            placeholder="Write your blog content here..." 
+                            value={newBlog.content}
+                            onChange={(e) => setNewBlog({...newBlog, content: e.target.value})}
+                            className="bg-black/20 border-white/10 text-white min-h-[300px]"
+                          />
+                        </div>
+                        <div className="flex justify-end">
+                          <Button onClick={handlePublishBlog} className="bg-violet-600 hover:bg-violet-700">
+                            Publish Blog
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Existing Blogs List */}
+                  <div className="space-y-6">
+                    <Card className="bg-white/5 border-white/10 backdrop-blur-sm h-full">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <FileText className="w-5 h-5 text-emerald-400" />
+                          Recent Blogs
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {blogs.map((blog) => (
+                          <div key={blog.id} className="p-4 rounded-lg bg-black/20 border border-white/5 group hover:border-white/10 transition-all">
+                            <div className="flex justify-between items-start mb-2">
+                              <h4 className="font-medium text-gray-200 line-clamp-1">{blog.title}</h4>
+                              <Badge variant="outline" className={`border-0 ${blog.status === 'Published' ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-400'}`}>
+                                {blog.status}
+                              </Badge>
+                            </div>
+                            <div className="flex justify-between items-center text-xs text-gray-500 mt-2">
+                              <div className="flex gap-3">
+                                <span>{blog.date}</span>
+                                <span>{blog.views} views</span>
+                              </div>
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" className="h-6 w-6 hover:text-blue-400">
+                                  <Edit className="w-3 h-3" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 hover:text-red-400" onClick={() => handleDeleteBlog(blog.id)}>
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === "settings" && (
+              <motion.div
+                key="settings"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className="relative pb-24"
+              >
+                <div className="mb-8">
+                  <h3 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-fuchsia-400">
+                    System Control Center
+                  </h3>
+                  <p className="text-gray-400 mt-2">Manage global configurations and security policies.</p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {/* Platform Settings Card */}
+                  <motion.div 
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.1 }}
+                  >
+                    <Card className="h-full bg-black/40 border-white/10 backdrop-blur-xl hover:border-violet-500/30 transition-all duration-500 group overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-3 text-xl">
+                          <div className="p-2 rounded-lg bg-violet-500/10 text-violet-400 group-hover:text-violet-300 transition-colors">
+                            <Settings className="w-6 h-6" />
+                          </div>
+                          Platform
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-8 relative">
+                        <div className="space-y-3">
+                          <Label htmlFor="siteName" className="text-gray-300 font-medium">Site Name</Label>
+                          <Input 
+                            id="siteName" 
+                            value={settings.siteName} 
+                            onChange={(e) => setSettings({...settings, siteName: e.target.value})}
+                            className="bg-white/5 border-white/10 text-white focus:border-violet-500/50 focus:ring-violet-500/20 transition-all h-11"
+                          />
+                        </div>
+                        
+                        <div className="space-y-6">
+                          <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors">
+                            <div className="space-y-1">
+                              <Label className="text-base text-gray-200 font-medium">Maintenance Mode</Label>
+                              <p className="text-xs text-gray-500">Disable user access</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className={`text-xs font-medium ${settings.maintenanceMode ? 'text-violet-400' : 'text-gray-600'}`}>
+                                {settings.maintenanceMode ? 'ON' : 'OFF'}
+                              </span>
+                              <Switch 
+                                checked={settings.maintenanceMode}
+                                onCheckedChange={(checked) => setSettings({...settings, maintenanceMode: checked})}
+                                className="data-[state=checked]:bg-violet-600"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors">
+                            <div className="space-y-1">
+                              <Label className="text-base text-gray-200 font-medium">Registrations</Label>
+                              <p className="text-xs text-gray-500">Allow new sign-ups</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className={`text-xs font-medium ${settings.allowRegistrations ? 'text-emerald-400' : 'text-gray-600'}`}>
+                                {settings.allowRegistrations ? 'OPEN' : 'CLOSED'}
+                              </span>
+                              <Switch 
+                                checked={settings.allowRegistrations}
+                                onCheckedChange={(checked) => setSettings({...settings, allowRegistrations: checked})}
+                                className="data-[state=checked]:bg-emerald-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+
+                  {/* Security Policy Card */}
+                  <motion.div 
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <Card className="h-full bg-black/40 border-white/10 backdrop-blur-xl hover:border-emerald-500/30 transition-all duration-500 group overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-3 text-xl">
+                          <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:text-emerald-300 transition-colors">
+                            <Shield className="w-6 h-6" />
+                          </div>
+                          Security
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-8 relative">
+                        <div className="space-y-6">
+                          <div className="space-y-4">
+                            <div className="flex justify-between items-end">
+                              <Label className="text-gray-300 font-medium">Session Timeout</Label>
+                              <div className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 text-xs font-mono border border-emerald-500/20">
+                                {settings.sessionTimeout[0]} min
+                              </div>
+                            </div>
+                            <Slider 
+                              value={settings.sessionTimeout} 
+                              onValueChange={(val) => setSettings({...settings, sessionTimeout: val})}
+                              max={120} 
+                              step={5}
+                              className="py-2 [&>.relative>.absolute]:bg-emerald-500"
+                            />
+                            <div className="flex justify-between text-xs text-gray-600 font-mono">
+                              <span>5m</span>
+                              <span>120m</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors">
+                          <div className="space-y-1">
+                            <Label className="text-base text-gray-200 font-medium">Enforce 2FA</Label>
+                            <p className="text-xs text-gray-500">Mandatory for admins</p>
+                          </div>
+                          <Switch 
+                            checked={settings.enforce2FA}
+                            onCheckedChange={(checked) => setSettings({...settings, enforce2FA: checked})}
+                            className="data-[state=checked]:bg-emerald-500"
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+
+                  {/* Notifications Card */}
+                  <motion.div 
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="lg:col-span-2 xl:col-span-1"
+                  >
+                    <Card className="h-full bg-black/40 border-white/10 backdrop-blur-xl hover:border-orange-500/30 transition-all duration-500 group overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-3 text-xl">
+                          <div className="p-2 rounded-lg bg-orange-500/10 text-orange-400 group-hover:text-orange-300 transition-colors">
+                            <Bell className="w-6 h-6" />
+                          </div>
+                          Notifications
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-8 relative">
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors">
+                          <div className="space-y-1">
+                            <Label className="text-base text-gray-200 font-medium">Email Alerts</Label>
+                            <p className="text-xs text-gray-500">Daily system reports</p>
+                          </div>
+                          <Switch 
+                            checked={settings.emailNotifications}
+                            onCheckedChange={(checked) => setSettings({...settings, emailNotifications: checked})}
+                            className="data-[state=checked]:bg-orange-500"
+                          />
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label className="text-gray-300 font-medium">System Announcement</Label>
+                          <Textarea 
+                            placeholder="Broadcast message to all users..." 
+                            value={settings.systemAnnouncements}
+                            onChange={(e) => setSettings({...settings, systemAnnouncements: e.target.value})}
+                            className="bg-white/5 border-white/10 text-white min-h-[120px] focus:border-orange-500/50 focus:ring-orange-500/20 transition-all resize-none"
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </div>
+
+                {/* Floating Action Bar */}
+                <motion.div 
+                  initial={{ y: 100 }}
+                  animate={{ y: 0 }}
+                  className="fixed bottom-8 right-8 left-8 md:left-80 z-40"
+                >
+                  <div className="bg-gray-900/80 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl flex items-center justify-between max-w-4xl mx-auto">
+                    <div className="flex items-center gap-3 text-sm text-gray-400 px-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      All systems operational
+                    </div>
+                    <div className="flex gap-4">
+                      <Button 
+                        variant="ghost" 
+                        className="text-gray-400 hover:text-white hover:bg-white/10"
+                        onClick={() => setSettings({
+                          siteName: "Voke AI",
+                          maintenanceMode: false,
+                          allowRegistrations: true,
+                          emailNotifications: true,
+                          systemAnnouncements: "",
+                          sessionTimeout: [30],
+                          enforce2FA: false
+                        })}
+                      >
+                        Reset Defaults
+                      </Button>
+                      <Button 
+                        onClick={handleSaveSettings} 
+                        className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white shadow-lg shadow-violet-500/25"
+                      >
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Save Changes
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>

@@ -66,6 +66,20 @@ export const Navbar = () => {
                         >
                             AI Voice Agent
                         </Button>
+                        <Button
+                            variant="ghost"
+                            onClick={() => navigate("/blogs")}
+                            className="text-gray-700 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors"
+                        >
+                            Blogs
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            onClick={() => navigate("/community")}
+                            className="text-gray-700 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors"
+                        >
+                            Community
+                        </Button>
                     </div>
 
                     {/* Right Side - Theme Toggle & CTA */}

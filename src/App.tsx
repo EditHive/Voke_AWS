@@ -8,6 +8,8 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Profile from "./pages/Profile";
+import Blogs from "./pages/Blogs";
+
 import LearningPaths from "./pages/LearningPaths";
 import InterviewNew from "./pages/InterviewNew";
 import InterviewResults from "./pages/InterviewResults";
@@ -47,6 +49,8 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/blogs" element={<Blogs />} />
+          <Route path="/community" element={<Community />} />
           <Route path="/learning-paths" element={<LearningPaths />} />
           <Route path="/interview/new" element={<InterviewNew />} />
           <Route path="/interview/results/:id" element={<InterviewResults />} />
