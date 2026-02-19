@@ -33,6 +33,7 @@ import BlogPost from "./pages/BlogPost";
 import Community from "./pages/Community";
 import Help from "./pages/Help";
 import Privacy from "./pages/Privacy";
+import DailyChallenge from "./pages/DailyChallenge";
 import NotFound from "./pages/NotFound";
 import { Footer } from "./components/Footer";
 import GlobalAIChatbot from "./components/GlobalAIChatbot";
@@ -76,6 +77,7 @@ const App = () => (
           <Route path="/community" element={<Community />} />
           <Route path="/help" element={<Help />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/daily-challenge" element={<DailyChallenge />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

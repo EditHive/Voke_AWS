@@ -537,7 +537,7 @@ const Dashboard = () => {
                 <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                   Given the head of a singly linked list, reverse the list, and return the reversed list.
                 </p>
-                <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white">
+                <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white" onClick={() => navigate("/daily-challenge")}>
                   Solve Now <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </CardContent>
