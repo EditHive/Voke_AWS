@@ -15,6 +15,17 @@ serve(async (req) => {
   try {
     const { messages, interview_type, question_count, coding_stats, profile_context } = await req.json();
 
+    // ALWAYS return the introduction question as the first question
+    if (!messages || messages.length === 0) {
+      return new Response(
+        JSON.stringify({
+          question: "Welcome! Let's begin with a classic interview question: Tell me about yourself.",
+          is_finished: false
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     if (!GROQ_API_KEY) {
       throw new Error("GROQ_API_KEY is not configured");
@@ -72,7 +83,7 @@ serve(async (req) => {
     
     **For the FIRST message (no history):**
     {
-      "question": "Welcome! Let's begin. [Your opening question]",
+      "question": "Welcome! Let's begin with a classic interview question: Tell me about yourself.",
       "is_finished": false
     }
     
@@ -82,7 +93,7 @@ serve(async (req) => {
       "feedback": {
         "what_went_well": ["Specific point 1", "Specific point 2"],
         "what_needs_improvement": ["Specific issue 1", "Specific issue 2"],
-        "model_answer": "A comprehensive, detailed answer showing how they should have responded. Include specific technical details, best practices, and examples.",
+        "model_answer": "Provide the PERFECT ANSWER to the question you asked - this should be the actual ideal response a candidate would give, not instructions. Write it as if you are the perfect candidate answering the question. Include specific technical details, best practices, code examples if relevant, and real-world context.",
         "verification_note": "REQUIRED if they mentioned ANYTHING not in their GitHub/Resume. Format: 'I did not find any project/skill named [X] in your GitHub profile or resume. Please provide specific implementation details to verify this claim.'"
       },
       "question": "Your next question based on their performance",
@@ -93,7 +104,7 @@ serve(async (req) => {
     - Be specific and constructive
     - ALWAYS check claims against GitHub/Resume context
     - Call out discrepancies immediately and directly
-    - Model answer should be 2-3 sentences minimum
+    - Model answer should be the ACTUAL perfect answer (3-5 sentences minimum), written as if you're the candidate
     - Adjust next question difficulty based on their performance
     
     VERIFICATION EXAMPLES:
