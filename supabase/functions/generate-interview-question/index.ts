@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, interview_type, question_count } = await req.json();
+    const { messages, interview_type, question_count, coding_stats, profile_context } = await req.json();
     // Hardcoded API key as requested by user
     const GOOGLE_API_KEY = "AIzaSyBtjFkWMoGRn-vv9XeXydBq_PBx2zm4BKc";
 
@@ -32,9 +32,25 @@ serve(async (req) => {
       );
     }
 
-    const systemPrompt = `You are an expert technical interviewer conducting a ${interview_type} interview.
+    let statsContext = "";
+    if (coding_stats) {
+      const cfRating = coding_stats.codeforces?.rating;
+      const lcSolved = coding_stats.leetcode?.submitStats?.find((s: any) => s.difficulty === "All")?.count;
+
+      if (cfRating || lcSolved) {
+        statsContext += `\n    CODING PROFILE:\n`;
+        if (cfRating) statsContext += `    - Codeforces Rating: ${cfRating} (Adjust difficulty accordingly)\n`;
+        if (lcSolved) statsContext += `    - LeetCode Problems Solved: ${lcSolved}\n`;
+      }
+    }
+
+    if (profile_context) {
+      statsContext += `\n    RESUME & GITHUB CONTEXT:\n${profile_context}\n`;
+    }
+
+    const systemPrompt = `You are an expert technical interviewer conducting a ${interview_type} interview.${statsContext}
     
-    Your goal is to ask the NEXT question based on the candidate's previous answers.
+    Your goal is to ask the NEXT question based on the candidate's previous answers and their coding profile (if available).
     
     RULES:
     1. If this is the start (no history), ask a welcoming opening question relevant to ${interview_type}.
@@ -46,6 +62,7 @@ serve(async (req) => {
     3. Keep questions concise (1-2 sentences).
     4. Do NOT repeat questions.
     5. Do NOT say "Great answer" or "Correct" too often. Be professional but encouraging.
+    6. If the candidate has a high Codeforces rating (>1600) or many LeetCode problems solved (>500), ask more challenging, algorithmic, or system design questions suitable for their level.
     
     CRITICAL: Respond with ONLY a valid JSON object.
     {
@@ -94,7 +111,7 @@ serve(async (req) => {
     if (!aiContent) {
       throw new Error("No content received from Gemini");
     }
-    
+
     aiContent = aiContent.replace(/```json/g, "").replace(/```/g, "").trim();
     const result = JSON.parse(aiContent);
 

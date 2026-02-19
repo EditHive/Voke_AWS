@@ -23,9 +23,12 @@ const Profile = () => {
   const [profile, setProfile] = useState<any>(null);
   const [formData, setFormData] = useState({
     full_name: "",
-    linkedin_url: "",
+    codeforces_id: "",
+    leetcode_id: "",
     github_url: "",
   });
+  const [codingStats, setCodingStats] = useState<any>(null);
+  const [syncing, setSyncing] = useState(false);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [stats, setStats] = useState({
     totalInterviews: 0,
@@ -63,12 +66,17 @@ const Profile = () => {
         .single();
 
       if (profileData) {
-        setProfile(profileData);
+        const profile = profileData as any;
+        setProfile(profile);
         setFormData({
-          full_name: profileData.full_name || "",
-          linkedin_url: profileData.linkedin_url || "",
-          github_url: profileData.github_url || "",
+          full_name: profile.full_name || "",
+          codeforces_id: profile.codeforces_id || "",
+          leetcode_id: profile.leetcode_id || "",
+          github_url: profile.github_url || "",
         });
+        if (profile.coding_stats) {
+          setCodingStats(profile.coding_stats);
+        }
       }
     } catch (error) {
       console.error("Error loading profile:", error);
@@ -172,6 +180,77 @@ const Profile = () => {
       toast.error("Failed to save profile");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSyncStats = async () => {
+    if (!formData.codeforces_id && !formData.leetcode_id) {
+      toast.error("Please enter Codeforces or LeetCode handle first");
+      return;
+    }
+
+    setSyncing(true);
+    const newStats: any = { ...codingStats };
+
+    try {
+      // Fetch Codeforces
+      if (formData.codeforces_id) {
+        try {
+          const { data, error } = await supabase.functions.invoke('fetch-codeforces-data', {
+            body: { handle: formData.codeforces_id }
+          });
+          if (error) throw error;
+          if (data.error) throw new Error(data.error);
+
+          newStats.codeforces = data;
+          toast.success("Codeforces stats synced!");
+        } catch (e: any) {
+          console.error("Codeforces sync error:", e);
+          toast.error(`Codeforces: ${e.message || "Failed to sync"}`);
+        }
+      }
+
+      // Fetch LeetCode
+      if (formData.leetcode_id) {
+        try {
+          const { data, error } = await supabase.functions.invoke('fetch-leetcode-data', {
+            body: { username: formData.leetcode_id }
+          });
+          if (error) throw error;
+          if (data.error) throw new Error(data.error);
+
+          newStats.leetcode = data;
+          toast.success("LeetCode stats synced!");
+        } catch (e: any) {
+          console.error("LeetCode sync error:", e);
+          toast.error(`LeetCode: ${e.message || "Failed to sync"}`);
+        }
+      }
+
+      setCodingStats(newStats);
+
+      // Save to profile
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const updateData: any = {
+          coding_stats: newStats,
+          codeforces_id: formData.codeforces_id,
+          leetcode_id: formData.leetcode_id
+        };
+
+        const { error: updateError } = await supabase
+          .from("profiles")
+          .update(updateData)
+          .eq("id", user.id);
+
+        if (updateError) throw updateError;
+      }
+
+    } catch (error: any) {
+      console.error("Error syncing stats:", error);
+      toast.error(`Sync failed: ${error.message}`);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -383,15 +462,59 @@ const Profile = () => {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="linkedin_url">LinkedIn Profile</Label>
-                          <Input
-                            id="linkedin_url"
-                            value={formData.linkedin_url}
-                            onChange={(e) => setFormData({ ...formData, linkedin_url: e.target.value })}
-                            placeholder="https://linkedin.com/in/yourprofile"
-                            className="focus:ring-2 focus:ring-primary/20 transition-all"
-                          />
+                          <Label htmlFor="codeforces_id">Codeforces Handle</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="codeforces_id"
+                              value={formData.codeforces_id}
+                              onChange={(e) => setFormData({ ...formData, codeforces_id: e.target.value })}
+                              placeholder="e.g. tourist"
+                              className="focus:ring-2 focus:ring-primary/20 transition-all"
+                            />
+                          </div>
                         </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="leetcode_id">LeetCode Username</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              id="leetcode_id"
+                              value={formData.leetcode_id}
+                              onChange={(e) => setFormData({ ...formData, leetcode_id: e.target.value })}
+                              placeholder="e.g. neal_wu"
+                              className="focus:ring-2 focus:ring-primary/20 transition-all"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Coding Stats Display */}
+                        {(codingStats?.codeforces || codingStats?.leetcode) && (
+                          <div className="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            {codingStats.codeforces && (
+                              <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Activity className="h-5 w-5 text-blue-500" />
+                                  <h3 className="font-semibold text-blue-500">Codeforces</h3>
+                                </div>
+                                <div className="space-y-1 text-sm">
+                                  <p>Rating: <span className="font-bold">{codingStats.codeforces.rating}</span> ({codingStats.codeforces.rank})</p>
+                                  <p>Max Rating: <span className="font-bold">{codingStats.codeforces.maxRating}</span></p>
+                                </div>
+                              </div>
+                            )}
+                            {codingStats.leetcode && (
+                              <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Activity className="h-5 w-5 text-yellow-500" />
+                                  <h3 className="font-semibold text-yellow-500">LeetCode</h3>
+                                </div>
+                                <div className="space-y-1 text-sm">
+                                  <p>Solved: <span className="font-bold">{codingStats.leetcode.submitStats?.find((s: any) => s.difficulty === "All")?.count}</span></p>
+                                  <p>Rating: <span className="font-bold">{Math.round(codingStats.leetcode.contestRanking?.rating || 0)}</span></p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                         <div className="space-y-2">
                           <Label htmlFor="github_url">GitHub Profile</Label>
                           <Input
@@ -403,7 +526,26 @@ const Profile = () => {
                           />
                         </div>
                       </div>
-                      <div className="flex justify-end pt-4">
+                      <div className="flex justify-end pt-4 gap-3">
+                        <Button
+                          variant="outline"
+                          onClick={handleSyncStats}
+                          disabled={syncing || (!formData.codeforces_id && !formData.leetcode_id)}
+                          className="w-full md:w-auto min-w-[150px]"
+                        >
+                          {syncing ? (
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                              className="mr-2"
+                            >
+                              <Activity className="h-4 w-4" />
+                            </motion.div>
+                          ) : (
+                            <Activity className="h-4 w-4 mr-2" />
+                          )}
+                          {syncing ? "Syncing..." : "Sync Stats"}
+                        </Button>
                         <Button
                           onClick={handleSave}
                           disabled={saving}

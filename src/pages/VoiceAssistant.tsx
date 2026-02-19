@@ -88,6 +88,19 @@ const VoiceAssistant: React.FC = () => {
                 let context = `User Name: ${profile.full_name || 'Candidate'}\n`;
                 let projectCount = 0;
 
+                // Add coding stats if available
+                const codingStats = (profile as any).coding_stats;
+                if (codingStats) {
+                    const cfRating = codingStats.codeforces?.rating;
+                    const lcSolved = codingStats.leetcode?.submitStats?.find((s: any) => s.difficulty === "All")?.count;
+
+                    if (cfRating || lcSolved) {
+                        context += `\nCODING PROFILE:\n`;
+                        if (cfRating) context += `- Codeforces Rating: ${cfRating}\n`;
+                        if (lcSolved) context += `- LeetCode Problems Solved: ${lcSolved}\n`;
+                    }
+                }
+
                 // Fetch GitHub context
                 if (profile.github_url) {
                     console.log('[VoiceAssistant] Fetching GitHub context for:', profile.github_url);

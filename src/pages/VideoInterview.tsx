@@ -16,6 +16,7 @@ import {
   formatTimeRemaining,
   InterviewState,
 } from "@/utils/interviewHelpers";
+import { loadUserProfileContext, ProfileContext } from "@/utils/profileContext";
 
 const getGroqClient = () => {
   const apiKey = import.meta.env.VITE_GROQ_API_KEY;
@@ -111,8 +112,14 @@ const TimedVideoInterview = () => {
   const [currentFeedback, setCurrentFeedback] = useState<any>(null);
   const [currentAnswerId, setCurrentAnswerId] = useState<string | null>(null);
 
+  // Context state
+  const [codingStats, setCodingStats] = useState<any>(null);
+  const [profileContext, setProfileContext] = useState<ProfileContext | null>(null);
+
   useEffect(() => {
     checkAuth();
+    loadCodingStats();
+    loadContext();
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
       if (stream) {
@@ -120,6 +127,34 @@ const TimedVideoInterview = () => {
       }
     };
   }, []);
+
+  const loadCodingStats = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("coding_stats")
+        .eq("id", user.id)
+        .single();
+
+      if (profile && (profile as any).coding_stats) {
+        setCodingStats((profile as any).coding_stats);
+      }
+    } catch (error) {
+      console.error("Error loading coding stats:", error);
+    }
+  };
+
+  const loadContext = async () => {
+    try {
+      const context = await loadUserProfileContext();
+      setProfileContext(context);
+    } catch (error) {
+      console.error("Error loading profile context:", error);
+    }
+  };
 
   useEffect(() => {
     if (stream && videoRef.current && !videoRef.current.srcObject) {
@@ -329,6 +364,8 @@ const TimedVideoInterview = () => {
             question: questions[currentQuestionIndex],
             transcript: transcribedText,
             role: selectedRole,
+            coding_stats: codingStats,
+            profile_context: profileContext?.context
           }
         }
       ).then(({ error }) => {

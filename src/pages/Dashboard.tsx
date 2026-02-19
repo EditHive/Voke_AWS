@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   FileText, LogOut, TrendingUp, Upload, Play, Target, Users, Mic, Settings,
   Flame, Trophy, Clock, Star, ArrowRight, Zap, Code, MessageSquare, Bell, Search,
-  Globe, BookOpen
+  Globe, BookOpen, Briefcase
 } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
@@ -158,11 +158,11 @@ const Dashboard = () => {
   const calculateStats = (sessions: any[]) => {
     const totalInterviews = sessions.length;
     const completedSessions = sessions.filter(s => s.status === "completed");
-    
+
     const avgScore = completedSessions.length > 0
       ? Math.round(completedSessions.reduce((acc, s) => acc + (Number(s.score) || 0), 0) / completedSessions.length)
       : 0;
-    
+
     // Estimate hours: 15 mins per completed session
     const totalMinutes = completedSessions.length * 15;
     const totalHours = Math.round(totalMinutes / 60);
@@ -332,6 +332,16 @@ const Dashboard = () => {
                 Quick Actions
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card className="hover:shadow-lg transition-all cursor-pointer group border-l-4 border-l-violet-500" onClick={() => navigate("/job-recommendations")}>
+                  <CardContent className="p-4 flex flex-col items-center text-center pt-6">
+                    <div className="w-12 h-12 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <Briefcase className="w-6 h-6 text-violet-600 dark:text-violet-400" />
+                    </div>
+                    <h4 className="font-semibold text-sm">Job Matches</h4>
+                    <p className="text-xs text-muted-foreground mt-1">AI Recommendations</p>
+                  </CardContent>
+                </Card>
+
                 <Card className="hover:shadow-lg transition-all cursor-pointer group border-l-4 border-l-violet-500" onClick={() => navigate("/interview/new")}>
                   <CardContent className="p-4 flex flex-col items-center text-center pt-6">
                     <div className="w-12 h-12 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
@@ -432,8 +442,8 @@ const Dashboard = () => {
                     >
                       <div className="flex items-center gap-4">
                         <div className={`p-3 rounded-xl ${session.interview_type.includes("React") ? "bg-blue-500/10 text-blue-500" :
-                            session.interview_type.includes("System") ? "bg-purple-500/10 text-purple-500" :
-                              "bg-emerald-500/10 text-emerald-500"
+                          session.interview_type.includes("System") ? "bg-purple-500/10 text-purple-500" :
+                            "bg-emerald-500/10 text-emerald-500"
                           }`}>
                           <FileText className="w-5 h-5" />
                         </div>

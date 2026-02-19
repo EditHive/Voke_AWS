@@ -34,6 +34,8 @@ import Community from "./pages/Community";
 import Help from "./pages/Help";
 import Privacy from "./pages/Privacy";
 import DailyChallenge from "./pages/DailyChallenge";
+import JobRecommendations from "./pages/JobRecommendations";
+import CareerPlanView from "./pages/CareerPlanView";
 import NotFound from "./pages/NotFound";
 import { Footer } from "./components/Footer";
 import GlobalAIChatbot from "./components/GlobalAIChatbot";
@@ -72,6 +74,8 @@ const App = () => (
           <Route path="/peer-interviews/session/:sessionId" element={<PeerSessionRoom />} />
           <Route path="/peer-interviews/rate/:sessionId" element={<RatePeerSession />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/job-recommendations" element={<JobRecommendations />} />
+          <Route path="/career-plan/:planId" element={<CareerPlanView />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:id" element={<BlogPost />} />
           <Route path="/community" element={<Community />} />

@@ -6,8 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Brain, MessageSquare, Code, FileText, 
+import {
+  Brain, MessageSquare, Code, FileText,
   Send, User, Bot, Mic, MicOff, LogOut,
   Settings, Menu, X
 } from "lucide-react";
@@ -16,6 +16,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { motion, AnimatePresence } from "motion/react";
 import ReactMarkdown from "react-markdown";
 import { useVoiceChat } from "@/hooks/useVoiceChat";
+import { loadUserProfileContext, ProfileContext } from "@/utils/profileContext";
 
 // Mock Data for Categories
 const CATEGORIES = [
@@ -42,6 +43,8 @@ const InterviewNew = () => {
   const [startTime, setStartTime] = useState<number>(Date.now());
   const [sessionActive, setSessionActive] = useState(true);
   const [isFinished, setIsFinished] = useState(false);
+  const [codingStats, setCodingStats] = useState<any>(null);
+  const [profileContext, setProfileContext] = useState<ProfileContext | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Voice Chat Hook
@@ -59,9 +62,39 @@ const InterviewNew = () => {
 
   useEffect(() => {
     checkAuth();
+    loadCodingStats();
+    loadContext();
     // Initialize with the first message of the active category
     startSession(activeCategory);
   }, []);
+
+  const loadContext = async () => {
+    try {
+      const context = await loadUserProfileContext();
+      setProfileContext(context);
+    } catch (error) {
+      console.error("Error loading profile context:", error);
+    }
+  };
+
+  const loadCodingStats = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("coding_stats")
+        .eq("id", user.id)
+        .single();
+
+      if (profile && (profile as any).coding_stats) {
+        setCodingStats((profile as any).coding_stats);
+      }
+    } catch (error) {
+      console.error("Error loading coding stats:", error);
+    }
+  };
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -76,8 +109,11 @@ const InterviewNew = () => {
       const { data, error } = await supabase.functions.invoke('generate-interview-question', {
         body: {
           messages: currentMessages,
+          messages: currentMessages,
           interview_type: CATEGORIES.find(c => c.id === activeCategory)?.label || "General",
-          question_count: count
+          question_count: count,
+          coding_stats: codingStats,
+          profile_context: profileContext?.context
         }
       });
 
@@ -87,7 +123,7 @@ const InterviewNew = () => {
         const aiMsg: Message = { role: "assistant", content: data.question };
         setMessages(prev => [...prev, aiMsg]);
         if (voiceMode) speak(data.question);
-        
+
         if (data.is_finished) {
           setIsFinished(true);
           setSessionActive(false);
@@ -109,7 +145,7 @@ const InterviewNew = () => {
     setStartTime(Date.now());
     setSessionActive(true);
     setIsFinished(false);
-    
+
     // Generate opening question
     generateAIQuestion([], 0);
   };
@@ -128,9 +164,9 @@ const InterviewNew = () => {
     if (isCompleting) return;
     setIsCompleting(true);
     setSessionActive(false);
-    
+
     const duration = Math.round((Date.now() - startTime) / 1000 / 60); // in minutes
-    
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -152,7 +188,7 @@ const InterviewNew = () => {
 
         // Use the actual AI score, or 0 if it failed/missing. 
         // We do NOT want to give free points for broken/spam sessions.
-        const finalScore = evaluation?.score || 0; 
+        const finalScore = evaluation?.score || 0;
 
         const { data, error } = await supabase
           .from("interview_sessions")
@@ -161,26 +197,26 @@ const InterviewNew = () => {
             interview_type: activeCategory, // Use the ID (lowercase) instead of Label
             status: "completed",
             // score: finalScore, // Removing score as column doesn't exist
-            job_profile_id: null, 
+            job_profile_id: null,
           })
           .select()
           .single();
-        
+
         if (error) {
           console.error("Supabase error:", error);
           toast.error(`Failed to save: ${error.message}`);
-          setIsCompleting(false); 
-          setSessionActive(true); 
+          setIsCompleting(false);
+          setSessionActive(true);
           throw error;
         }
 
         toast.success(`Session Completed! Score: ${finalScore}%`);
         // Pass the real AI evaluation data to the results page
-        navigate(`/interview/results/${data.id}`, { 
-          state: { 
+        navigate(`/interview/results/${data.id}`, {
+          state: {
             score: finalScore,
             evaluation: evaluation // Pass full evaluation object
-          } 
+          }
         });
       }
     } catch (error: any) {
@@ -198,7 +234,7 @@ const InterviewNew = () => {
     const updatedMessages = [...messages, userMsg];
     setMessages(updatedMessages);
     setInput("");
-    
+
     // Generate next question based on updated history
     await generateAIQuestion(updatedMessages, questionCount);
   };
@@ -252,11 +288,10 @@ const InterviewNew = () => {
                   <button
                     key={category.id}
                     onClick={() => handleCategoryChange(category.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                      activeCategory === category.id
-                        ? "bg-primary/10 text-primary shadow-sm"
-                        : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
-                    }`}
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${activeCategory === category.id
+                      ? "bg-primary/10 text-primary shadow-sm"
+                      : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                      }`}
                   >
                     <div className={`p-2 rounded-lg ${activeCategory === category.id ? "bg-primary/20" : "bg-muted"} transition-colors`}>
                       <category.icon className={`w-4 h-4 ${activeCategory === category.id ? "text-primary" : "text-muted-foreground"}`} />
@@ -294,7 +329,7 @@ const InterviewNew = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-             <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
               <Settings className="w-5 h-5" />
             </Button>
           </div>
@@ -316,14 +351,13 @@ const InterviewNew = () => {
                     <AvatarFallback className="bg-gradient-to-br from-violet-600 to-purple-600 text-white">AI</AvatarFallback>
                   </Avatar>
                 )}
-                
+
                 <div className={`flex flex-col max-w-[85%] md:max-w-[75%] ${message.role === "user" ? "items-end" : "items-start"}`}>
                   <div
-                    className={`p-4 rounded-2xl shadow-sm text-sm leading-relaxed ${
-                      message.role === "user"
-                        ? "bg-primary text-primary-foreground rounded-tr-none"
-                        : "bg-card border border-border/50 text-foreground rounded-tl-none"
-                    }`}
+                    className={`p-4 rounded-2xl shadow-sm text-sm leading-relaxed ${message.role === "user"
+                      ? "bg-primary text-primary-foreground rounded-tr-none"
+                      : "bg-card border border-border/50 text-foreground rounded-tl-none"
+                      }`}
                   >
                     <ReactMarkdown>{message.content}</ReactMarkdown>
                   </div>
@@ -342,10 +376,10 @@ const InterviewNew = () => {
             {/* Auto-navigation handles this now, but we can keep a loading state if needed */}
             {!sessionActive && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center py-4">
-                 <div className="flex items-center gap-2 text-muted-foreground">
-                    <span className="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
-                    Generating Results...
-                 </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <span className="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+                  Generating Results...
+                </div>
               </motion.div>
             )}
 
@@ -371,8 +405,8 @@ const InterviewNew = () => {
         <div className="p-4 bg-background/80 backdrop-blur-xl border-t border-border/40">
           <div className="max-w-3xl mx-auto relative">
             {isFinished ? (
-              <Button 
-                onClick={completeSession} 
+              <Button
+                onClick={completeSession}
                 className="w-full h-12 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-primary/20"
                 disabled={isCompleting}
               >
@@ -388,7 +422,7 @@ const InterviewNew = () => {
                 >
                   {voiceMode ? <Mic className="w-5 h-5 animate-pulse" /> : <Mic className="w-5 h-5" />}
                 </Button>
-                
+
                 <Textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -403,7 +437,7 @@ const InterviewNew = () => {
                   rows={1}
                   disabled={sending || !sessionActive || isCompleting}
                 />
-                
+
                 <Button
                   onClick={() => handleSendMessage(input)}
                   disabled={!input.trim() || sending || !sessionActive || isCompleting}

@@ -110,7 +110,7 @@ export default function JobMarketInsights() {
   const loadData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (user) {
         const { data: profileData } = await supabase
           .from("profiles")
@@ -236,7 +236,7 @@ export default function JobMarketInsights() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <motion.div 
+        <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
         >
@@ -248,7 +248,7 @@ export default function JobMarketInsights() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <motion.header 
+      <motion.header
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl"
@@ -290,21 +290,21 @@ export default function JobMarketInsights() {
               <TabsTrigger value="trends" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Market Trends</TabsTrigger>
               <TabsTrigger value="guidance" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Personal Guidance</TabsTrigger>
             </TabsList>
-            
+
             <div className="flex gap-2 w-full md:w-auto">
-               <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="flex-1 md:w-48 px-4 py-2 border border-border rounded-lg bg-background text-sm font-medium hover:bg-accent transition-colors focus:ring-2 focus:ring-primary/20 outline-none"
-                >
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-                <Button onClick={researchTrends} disabled={researching} className="shrink-0">
-                  <RefreshCw className={`h-4 w-4 mr-2 ${researching ? "animate-spin" : ""}`} />
-                  Research
-                </Button>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="flex-1 md:w-48 px-4 py-2 border border-border rounded-lg bg-background text-sm font-medium hover:bg-accent transition-colors focus:ring-2 focus:ring-primary/20 outline-none"
+              >
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+              <Button onClick={researchTrends} disabled={researching} className="shrink-0">
+                <RefreshCw className={`h-4 w-4 mr-2 ${researching ? "animate-spin" : ""}`} />
+                Research
+              </Button>
             </div>
           </div>
 
@@ -330,7 +330,7 @@ export default function JobMarketInsights() {
                       >
                         <Card className={`group relative overflow-hidden border-l-4 ${demandStyle.border} hover:shadow-2xl transition-all duration-300 bg-card/50 backdrop-blur-sm`}>
                           <div className={`absolute inset-0 bg-gradient-to-br ${demandStyle.bg} opacity-50 group-hover:opacity-70 transition-opacity`} />
-                          
+
                           <CardHeader className="relative z-10 pb-4">
                             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                               <div className="flex-1">
@@ -467,9 +467,19 @@ export default function JobMarketInsights() {
                     <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
                       <Brain className="h-10 w-10 text-primary" />
                     </div>
-                    <h3 className="text-xl font-semibold mb-2">No Guidance Generated Yet</h3>
-                    <p className="text-muted-foreground mb-6">Click regenerate to get your personalized career path.</p>
-                    <Button onClick={generateGuidance}>Generate Now</Button>
+                    <h3 className="text-xl font-semibold mb-2">AI Job Recommendations</h3>
+                    <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                      Get personalized job matches and a 3-month career plan based on your interview performance.
+                    </p>
+                    <div className="flex gap-4 justify-center">
+                      <Button onClick={() => navigate("/job-recommendations")} className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700">
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        View Recommendations
+                      </Button>
+                      <Button variant="outline" onClick={generateGuidance}>
+                        Regenerate Roadmap
+                      </Button>
+                    </div>
                   </Card>
                 ) : (
                   <div className="space-y-8">
