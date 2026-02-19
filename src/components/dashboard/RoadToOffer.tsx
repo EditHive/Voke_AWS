@@ -193,21 +193,21 @@ export const RoadToOffer = ({ profile, onUpdate }: RoadToOfferProps) => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
     >
-        <Card className="relative overflow-hidden group border-0 shadow-xl bg-gradient-to-br from-[#0f0f13] to-[#1a1a23] dark:ring-1 dark:ring-white/10 ring-1 ring-black/5">
-            {/* Ambient Glows */}
-            <div className="absolute -top-20 -right-20 w-40 h-40 bg-violet-600/20 rounded-full blur-[50px] group-hover:bg-violet-600/30 transition-all duration-700" />
-            <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-fuchsia-600/20 rounded-full blur-[50px] group-hover:bg-fuchsia-600/30 transition-all duration-700" />
+        <Card className="relative overflow-hidden group border-0 shadow-xl bg-white dark:bg-gradient-to-br dark:from-[#0f0f13] dark:to-[#1a1a23] ring-1 ring-black/5 dark:ring-white/10">
+            {/* Ambient Glows - Light Mode */}
+            <div className="absolute -top-20 -right-20 w-40 h-40 bg-violet-600/10 dark:bg-violet-600/20 rounded-full blur-[50px] group-hover:bg-violet-600/20 dark:group-hover:bg-violet-600/30 transition-all duration-700" />
+            <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-fuchsia-600/10 dark:bg-fuchsia-600/20 rounded-full blur-[50px] group-hover:bg-fuchsia-600/20 dark:group-hover:bg-fuchsia-600/30 transition-all duration-700" />
 
             <CardHeader className="pb-2 relative z-10">
                 <div className="flex justify-between items-start">
                     <div>
-                        <CardTitle className="text-lg flex items-center gap-2 text-white">
-                            <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent font-bold">
+                        <CardTitle className="text-lg flex items-center gap-2 text-gray-900 dark:text-white">
+                            <span className="bg-gradient-to-r from-violet-600 to-fuchsia-600 dark:from-violet-400 dark:to-fuchsia-400 bg-clip-text text-transparent font-bold">
                                 Road to {company || "Offer"}
                             </span>
-                            <Sparkles className="w-4 h-4 text-yellow-400 fill-yellow-400 animate-pulse" />
+                            <Sparkles className="w-4 h-4 text-yellow-500 dark:text-yellow-400 fill-yellow-500 dark:fill-yellow-400 animate-pulse" />
                         </CardTitle>
-                        <CardDescription className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                        <CardDescription className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
                              Goal set for {date ? format(date, 'MMMM do, yyyy') : '...'}
                         </CardDescription>
                     </div>
@@ -216,14 +216,14 @@ export const RoadToOffer = ({ profile, onUpdate }: RoadToOfferProps) => {
                         <motion.button 
                             whileHover={{ scale: 1.05 }} 
                             whileTap={{ scale: 0.95 }}
-                            className="bg-white/5 hover:bg-white/10 text-xs px-3 py-1 rounded-full text-gray-300 border border-white/5 transition-colors"
+                            className="bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-xs px-3 py-1 rounded-full text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-white/5 transition-colors"
                             onClick={() => setIsEditing(true)}
                         >
                             Edit
                         </motion.button>
                         {company && (
                              <motion.div 
-                                className="w-10 h-10 rounded-xl bg-white p-1.5 shadow-lg overflow-hidden flex items-center justify-center ring-2 ring-white/10"
+                                className="w-10 h-10 rounded-xl bg-white p-1.5 shadow-lg overflow-hidden flex items-center justify-center ring-1 ring-gray-100 dark:ring-white/10 border border-gray-100 dark:border-transparent"
                                 whileHover={{ rotate: [0, -5, 5, 0], scale: 1.1 }}
                              >
                                 <img 
@@ -247,22 +247,22 @@ export const RoadToOffer = ({ profile, onUpdate }: RoadToOfferProps) => {
                     <div className="flex flex-col">
                         <div className="flex items-baseline gap-1">
                             <motion.span 
-                                className="text-5xl font-black text-white tracking-tighter"
+                                className="text-5xl font-black text-gray-900 dark:text-white tracking-tighter"
                                 key={daysRemaining} 
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                             >
                                 {daysRemaining}
                             </motion.span>
-                            <span className="text-sm font-medium text-gray-400 mb-1">DAYS LEFT</span>
+                            <span className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">DAYS LEFT</span>
                         </div>
                     </div>
                     
                     <div className="text-right flex flex-col items-end">
-                         <div className={cn("text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider mb-1 bg-gradient-to-r text-white shadow-sm", intensityData.gradient)}>
+                         <div className={cn("text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider mb-1 shadow-sm text-white", intensityData.gradient)}>
                              {intensityData.intensity} INTENSITY
                          </div>
-                         <div className="flex items-center gap-1 text-xs text-violet-300">
+                         <div className="flex items-center gap-1 text-xs text-violet-600 dark:text-violet-300 font-medium">
                              <Flame className="w-3 h-3 fill-orange-500 text-orange-500" />
                              Recommended Pace
                          </div>
@@ -271,20 +271,20 @@ export const RoadToOffer = ({ profile, onUpdate }: RoadToOfferProps) => {
                 
                 {/* Motivational Quote & Plan */}
                 <motion.div 
-                    className="relative bg-white/5 rounded-xl p-4 border border-white/10 backdrop-blur-sm overflow-hidden"
+                    className="relative bg-gray-50/50 dark:bg-white/5 rounded-xl p-4 border border-gray-100 dark:border-white/10 backdrop-blur-sm overflow-hidden"
                     whileHover={{ scale: 1.01, backgroundColor: "rgba(255,255,255,0.07)" }}
                 >
                     <div className={cn("absolute left-0 top-0 w-1 h-full bg-gradient-to-b", intensityData.gradient)} />
                     <div className="flex gap-3">
-                        <div className="min-w-[40px] h-[40px] rounded-full bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center border border-white/5">
-                            <Trophy className="w-5 h-5 text-violet-300" />
+                        <div className="min-w-[40px] h-[40px] rounded-full bg-violet-100 dark:bg-gradient-to-br dark:from-violet-500/20 dark:to-fuchsia-500/20 flex items-center justify-center border border-violet-200 dark:border-white/5">
+                            <Trophy className="w-5 h-5 text-violet-600 dark:text-violet-300" />
                         </div>
                         <div>
-                            <h4 className="text-sm font-semibold text-white mb-0.5 flex items-center gap-2">
+                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-0.5 flex items-center gap-2">
                                 Current Mission
-                                <ChevronRight className="w-3 h-3 text-gray-500" />
+                                <ChevronRight className="w-3 h-3 text-gray-400 dark:text-gray-500" />
                             </h4>
-                            <p className="text-xs text-gray-300 leading-relaxed font-medium">
+                            <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
                                 {intensityData.text}
                             </p>
                         </div>
@@ -293,11 +293,11 @@ export const RoadToOffer = ({ profile, onUpdate }: RoadToOfferProps) => {
 
                 {/* Animated Progress Bar */}
                 <div className="space-y-2">
-                    <div className="flex justify-between text-[10px] uppercase tracking-wider font-semibold text-gray-500">
+                    <div className="flex justify-between text-[10px] uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500">
                         <span>Start</span>
                         <span>Interview Day</span>
                     </div>
-                    <div className="h-2 w-full bg-gray-800 rounded-full overflow-hidden relative shadow-inner">
+                    <div className="h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden relative shadow-inner">
                         <motion.div 
                             className={cn("h-full bg-gradient-to-r relative", intensityData.gradient)}
                             initial={{ width: 0 }}
@@ -309,8 +309,8 @@ export const RoadToOffer = ({ profile, onUpdate }: RoadToOfferProps) => {
                         </motion.div>
                         
                         {/* Milestones / Ticks */}
-                        <div className="absolute top-0 left-1/3 w-[1px] h-full bg-black/40" />
-                        <div className="absolute top-0 left-2/3 w-[1px] h-full bg-black/40" />
+                        <div className="absolute top-0 left-1/3 w-[1px] h-full bg-white/50 dark:bg-black/40 mix-blend-overlay" />
+                        <div className="absolute top-0 left-2/3 w-[1px] h-full bg-white/50 dark:bg-black/40 mix-blend-overlay" />
                     </div>
                 </div>
 

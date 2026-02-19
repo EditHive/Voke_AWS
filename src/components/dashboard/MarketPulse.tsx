@@ -47,25 +47,25 @@ export const MarketPulse = ({ profile }: MarketPulseProps) => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
     >
-        <Card className="border-0 shadow-xl bg-gradient-to-br from-indigo-950/50 to-purple-950/20 backdrop-blur-xl border-white/5 overflow-hidden relative group">
+        <Card className="border-0 shadow-xl bg-white dark:bg-slate-900/50 dark:bg-gradient-to-br dark:from-indigo-950/50 dark:to-purple-950/20 backdrop-blur-xl border-gray-100 dark:border-white/5 overflow-hidden relative group">
             
             {/* Background Decor */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2" />
             
             <CardHeader className="pb-2 relative z-10">
                 <div className="flex justify-between items-start">
                     <div>
-                        <CardTitle className="text-lg flex items-center gap-2 text-white">
-                            <TrendingUp className="w-5 h-5 text-emerald-400" />
+                        <CardTitle className="text-lg flex items-center gap-2 text-gray-900 dark:text-white">
+                            <TrendingUp className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
                             Market Pulse
                         </CardTitle>
-                        <CardDescription className="text-gray-400">Live insights for your target role</CardDescription>
+                        <CardDescription className="text-gray-500 dark:text-gray-400">Live insights for your target role</CardDescription>
                     </div>
                     <Select value={role} onValueChange={handleRoleChange}>
-                        <SelectTrigger className="w-[180px] h-8 text-xs bg-white/5 border-white/10 text-white/90">
+                        <SelectTrigger className="w-[180px] h-8 text-xs bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-900 dark:text-white/90">
                             <SelectValue placeholder="Select Role" />
                         </SelectTrigger>
-                        <SelectContent className="bg-[#1a1a23] border-white/10 text-white">
+                        <SelectContent className="bg-white dark:bg-[#1a1a23] border-gray-200 dark:border-white/10 text-gray-900 dark:text-white">
                             {Object.keys(MOCK_DATA).map(r => (
                                 <SelectItem key={r} value={r}>{r}</SelectItem>
                             ))}
@@ -78,23 +78,23 @@ export const MarketPulse = ({ profile }: MarketPulseProps) => {
                 <div className="grid grid-cols-2 gap-4">
                     {/* Salary Card */}
                     <motion.div 
-                        className="p-4 rounded-xl bg-white/5 border border-white/5 flex flex-col justify-between group/salary hover:bg-white/10 transition-colors cursor-default"
+                        className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex flex-col justify-between group/salary hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-default"
                         whileHover={{ scale: 1.02 }}
                     >
-                        <div className="flex items-center gap-2 text-sm text-gray-400 mb-1">
-                            <DollarSign className="w-4 h-4 text-emerald-400" />
+                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
+                            <DollarSign className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                             Avg. Salary
                         </div>
                         <div>
                              <motion.div 
-                                className="text-3xl font-bold text-white tracking-tight"
+                                className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight"
                                 key={data.salary}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                              >
                                  {data.salary}
                              </motion.div>
-                             <div className="text-xs text-emerald-400 font-medium flex items-center gap-1 mt-1">
+                             <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1 mt-1">
                                 <ArrowUpRight className="w-3 h-3" />
                                 {data.growth} YoY Growth
                              </div>
@@ -103,16 +103,16 @@ export const MarketPulse = ({ profile }: MarketPulseProps) => {
 
                      {/* Hiring Status Card */}
                      <motion.div 
-                        className="p-4 rounded-xl bg-white/5 border border-white/5 flex flex-col justify-between group/status hover:bg-white/10 transition-colors"
+                        className="p-4 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex flex-col justify-between group/status hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                         whileHover={{ scale: 1.02 }}
                     >
-                        <div className="flex items-center gap-2 text-sm text-gray-400 mb-1">
-                            <Building2 className="w-4 h-4 text-blue-400" />
+                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
+                            <Building2 className="w-4 h-4 text-blue-500 dark:text-blue-400" />
                             Hiring Volume
                         </div>
                         <div>
                              <div className="flex items-center gap-2">
-                                <span className="text-2xl font-bold text-white">{data.status}</span>
+                                <span className="text-2xl font-bold text-gray-900 dark:text-white">{data.status}</span>
                                 {data.status === "Hot" && (
                                     <span className="relative flex h-3 w-3">
                                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -120,23 +120,23 @@ export const MarketPulse = ({ profile }: MarketPulseProps) => {
                                     </span>
                                 )}
                              </div>
-                             <div className="text-xs text-gray-400 mt-1">
-                                High demand in <span className="text-white">Tech, FinTech</span>
+                             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                High demand in <span className="text-gray-900 dark:text-white">Tech, FinTech</span>
                              </div>
                         </div>
                     </motion.div>
                 </div>
 
                 {/* Top Companies Ticker */}
-                <div className="bg-black/20 rounded-lg p-3 border border-white/5">
-                    <div className="flex items-center gap-2 text-xs text-gray-400 mb-2 uppercase tracking-wider font-semibold">
+                <div className="bg-gray-50 dark:bg-black/20 rounded-lg p-3 border border-gray-100 dark:border-white/5">
+                    <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-400 mb-2 uppercase tracking-wider font-semibold">
                         <Users className="w-3 h-3" /> Top Companies Hiring Now
                     </div>
                     <div className="flex gap-2 overflow-hidden mask-linear-fade">
                         {data.companies.map((company, i) => (
                              <motion.div 
                                 key={company}
-                                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-xs text-white whitespace-nowrap"
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/5 text-xs text-gray-700 dark:text-white whitespace-nowrap shadow-sm dark:shadow-none"
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: i * 0.1 }}
@@ -150,7 +150,7 @@ export const MarketPulse = ({ profile }: MarketPulseProps) => {
                              </motion.div>
                         ))}
                          <motion.div 
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-xs text-gray-400 whitespace-nowrap hover:bg-white/10 cursor-pointer transition-colors"
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/5 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap hover:bg-gray-50 dark:hover:bg-white/10 cursor-pointer transition-colors shadow-sm dark:shadow-none"
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.4 }}
