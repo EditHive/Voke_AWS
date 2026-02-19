@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Play, CheckCircle2, Timer, RotateCcw, Code2, Terminal, Cpu, Sparkles, Trophy, Settings } from "lucide-react";
+import { ArrowLeft, Play, CheckCircle2, Timer, RotateCcw, Code2, Terminal, Cpu, Sparkles, Trophy, Settings, Brain } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import Confetti from "react-confetti";
@@ -41,7 +41,12 @@ const FILE_NAMES = {
   bash: 'solution.sh'
 };
 
+import { supabase } from "@/integrations/supabase/client";
 import { executeCode } from "@/utils/codeExecutor";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
 
 const DailyChallenge = () => {
   const navigate = useNavigate();
@@ -54,6 +59,18 @@ const DailyChallenge = () => {
   const [timeLeft, setTimeLeft] = useState(24 * 60 * 60); // 24 hours in seconds (mock)
   const [activeTab, setActiveTab] = useState("description");
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  
+  // AI Hints State
+  const [hints, setHints] = useState<string[]>([]);
+  const [isGeneratingHint, setIsGeneratingHint] = useState(false);
+
+  // Editor Settings State
+  const [editorOptions, setEditorOptions] = useState({
+    fontSize: 14,
+    minimap: false,
+    wordWrap: 'off' as 'off' | 'on',
+    lineNumbers: 'on' as 'on' | 'off'
+  });
 
   useEffect(() => {
     const handleResize = () => {
@@ -131,6 +148,41 @@ const DailyChallenge = () => {
     toast.success("Challenge Completed! +50 XP");
   };
 
+  const handleGenerateHint = async () => {
+    if (isGeneratingHint) return;
+    
+    setIsGeneratingHint(true);
+    try {
+        const { data, error } = await supabase.functions.invoke("interview-coach-chat", {
+            body: {
+                messages: [
+                    {
+                        role: "user",
+                        content: `I am solving the "Reverse Linked List" problem. 
+                        My current code in ${language} is:
+                        ${code}
+                        
+                        Please give me a small, conceptual hint to help me move forward. Do NOT give me the full solution code. Keep it brief and encouraging.`
+                    }
+                ],
+                userContext: "You are a helpful coding tutor. Provide hints, not solutions."
+            }
+        });
+
+        if (error) throw error;
+        
+        if (data?.response) {
+            setHints(prev => [...prev, data.response]);
+            toast.success("New hint generated!");
+        }
+    } catch (error) {
+        console.error("Error generating hint:", error);
+        toast.error("Failed to generate hint. Please try again.");
+    } finally {
+        setIsGeneratingHint(false);
+    }
+  };
+
   return (
     <div className="h-screen bg-[#0f1117] text-gray-200 flex flex-col overflow-hidden font-sans selection:bg-purple-500/30">
       {isSubmitted && <Confetti width={windowSize.width} height={windowSize.height} recycle={false} numberOfPieces={500} />}
@@ -171,9 +223,60 @@ const DailyChallenge = () => {
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-white hover:bg-[#30363d] rounded-md transition-colors" onClick={() => setCode(TEMPLATES[language])}>
                    <RotateCcw className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-white hover:bg-[#30363d] rounded-md transition-colors">
-                   <Settings className="h-4 w-4" />
-                </Button>
+                
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-white hover:bg-[#30363d] rounded-md transition-colors">
+                           <Settings className="h-4 w-4" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 bg-[#161b22] border-[#30363d] text-gray-200 p-4 shadow-xl mr-4">
+                        <div className="space-y-4">
+                            <h4 className="font-medium text-sm text-gray-100 border-b border-[#30363d] pb-2">Editor Settings</h4>
+                            
+                            {/* Font Size */}
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center text-xs text-gray-400">
+                                    <Label>Font Size</Label>
+                                    <span className="font-mono">{editorOptions.fontSize}px</span>
+                                </div>
+                                <Slider 
+                                    value={[editorOptions.fontSize]} 
+                                    min={12} 
+                                    max={24} 
+                                    step={1}
+                                    onValueChange={([val]) => setEditorOptions(prev => ({ ...prev, fontSize: val }))}
+                                    className="cursor-pointer"
+                                />
+                            </div>
+
+                            {/* Switches */}
+                            <div className="flex items-center justify-between">
+                                <Label className="text-xs text-gray-400">Minimap</Label>
+                                <Switch 
+                                    checked={editorOptions.minimap}
+                                    onCheckedChange={(checked) => setEditorOptions(prev => ({ ...prev, minimap: checked }))}
+                                />
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                                <Label className="text-xs text-gray-400">Word Wrap</Label>
+                                <Switch 
+                                    checked={editorOptions.wordWrap === 'on'}
+                                    onCheckedChange={(checked) => setEditorOptions(prev => ({ ...prev, wordWrap: checked ? 'on' : 'off' }))}
+                                />
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                                <Label className="text-xs text-gray-400">Line Numbers</Label>
+                                <Switch 
+                                    checked={editorOptions.lineNumbers === 'on'}
+                                    onCheckedChange={(checked) => setEditorOptions(prev => ({ ...prev, lineNumbers: checked ? 'on' : 'off' }))}
+                                />
+                            </div>
+                        </div>
+                    </PopoverContent>
+                </Popover>
               </div>
 
               <Button 
@@ -279,6 +382,31 @@ const DailyChallenge = () => {
                         <h4 className="font-bold text-blue-400 mb-2 flex items-center gap-2"><Sparkles className="h-4 w-4" /> Hint 1</h4>
                         <p className="relative z-10">A linked list can be reversed either iteratively or recursively. Could you implement both?</p>
                      </div>
+                     
+                     {hints.map((hint, i) => (
+                        <div key={i} className="p-4 bg-gradient-to-br from-purple-500/10 to-transparent border border-purple-500/20 rounded-lg text-sm text-purple-200 shadow-sm relative animate-in fade-in slide-in-from-bottom-2">
+                             <h4 className="font-bold text-purple-400 mb-2 flex items-center gap-2"><Brain className="h-4 w-4" /> AI Hint {i + 2}</h4>
+                             <p className="relative z-10">{hint}</p>
+                        </div>
+                     ))}
+                     
+                     <Button 
+                        onClick={handleGenerateHint} 
+                        disabled={isGeneratingHint}
+                        className="w-full bg-[#21262d] hover:bg-[#30363d] text-blue-400 border border-blue-500/30 gap-2"
+                     >
+                        {isGeneratingHint ? (
+                            <>
+                                <span className="w-4 h-4 rounded-full border-2 border-blue-400/30 border-t-blue-400 animate-spin"></span>
+                                Asking AI...
+                            </>
+                        ) : (
+                            <>
+                                <Sparkles className="h-4 w-4" />
+                                Get AI Hint
+                            </>
+                        )}
+                     </Button>
                   </div>
                 )}
 
@@ -328,9 +456,10 @@ const DailyChallenge = () => {
                   value={code}
                   onChange={(value) => setCode(value || "")}
                   options={{
-                    minimap: { enabled: false },
-                    fontSize: 14,
-                    lineNumbers: "on",
+                    minimap: { enabled: editorOptions.minimap },
+                    fontSize: editorOptions.fontSize,
+                    lineNumbers: editorOptions.lineNumbers,
+                    wordWrap: editorOptions.wordWrap,
                     roundedSelection: false,
                     scrollBeyondLastLine: false,
                     readOnly: false,

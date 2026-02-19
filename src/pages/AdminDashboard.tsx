@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   LayoutDashboard, Users, Settings, LogOut, Activity, 
   Shield, AlertTriangle, Search, Bell, Database, TrendingUp,
-  MoreVertical, CheckCircle2, XCircle, Clock, FileText, Plus, Image as ImageIcon, Trash2, Edit, MessageSquare, Flag, Ban
+  MoreVertical, CheckCircle2, XCircle, Clock, FileText, Plus, Image as ImageIcon, Trash2, Edit, MessageSquare, Flag, Ban, Code2
 } from "lucide-react";
 import {
   Table,
@@ -46,6 +46,13 @@ const AdminDashboard = () => {
   });
   const [blogs, setBlogs] = useState<any[]>([]);
   const [newBlog, setNewBlog] = useState({ title: "", image: "", content: "", category: "General" });
+  const [newChallenge, setNewChallenge] = useState({ 
+    title: "", 
+    difficulty: "Easy", 
+    description: "", 
+    testCases: '[\n  { "input": "[1,2,3]", "output": "[3,2,1]" }\n]', 
+    starterCode: "// Write your solution here..." 
+  });
   const [users, setUsers] = useState<any[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
@@ -141,6 +148,24 @@ const AdminDashboard = () => {
     // In a real app, this would make an API call
     setTimeout(() => {
       toast.success("System settings saved successfully");
+    }, 500);
+  };
+
+  const handlePublishChallenge = () => {
+    if (!newChallenge.title || !newChallenge.description) {
+      toast.error("Please fill in the required fields");
+      return;
+    }
+    // Simulate API call
+    setTimeout(() => {
+      toast.success("Challenge published successfully!");
+      setNewChallenge({ 
+        title: "", 
+        difficulty: "Easy", 
+        description: "", 
+        testCases: '[\n  { "input": "[1,2,3]", "output": "[3,2,1]" }\n]', 
+        starterCode: "// Write your solution here..." 
+      });
     }, 500);
   };
 
@@ -262,6 +287,7 @@ const AdminDashboard = () => {
             { id: "overview", label: "Overview", icon: LayoutDashboard },
             { id: "users", label: "User Management", icon: Users },
             { id: "community", label: "Community", icon: MessageSquare },
+            { id: "challenges", label: "Daily Challenges", icon: Code2 },
             { id: "blogs", label: "Blog Management", icon: FileText },
             { id: "settings", label: "System Settings", icon: Settings },
           ].map((item) => (
@@ -806,6 +832,93 @@ const AdminDashboard = () => {
               </motion.div>
             )}
 
+            {activeTab === "challenges" && (
+              <motion.div
+                key="challenges"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-6"
+              >
+                 <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Code2 className="w-5 h-5 text-orange-400" />
+                        Create Daily Challenge
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label className="text-gray-300">Challenge Title</Label>
+                          <Input 
+                            placeholder="e.g. Reverse Linked List" 
+                            value={newChallenge.title}
+                            onChange={(e) => setNewChallenge({...newChallenge, title: e.target.value})}
+                            className="bg-black/20 border-white/10 text-white"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-gray-300">Difficulty</Label>
+                          <Select 
+                            value={newChallenge.difficulty} 
+                            onValueChange={(value) => setNewChallenge({...newChallenge, difficulty: value})}
+                          >
+                            <SelectTrigger className="bg-black/20 border-white/10 text-white">
+                              <SelectValue placeholder="Select difficulty" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Easy">Easy</SelectItem>
+                              <SelectItem value="Medium">Medium</SelectItem>
+                              <SelectItem value="Hard">Hard</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-gray-300">Problem Description (Markdown supported)</Label>
+                        <Textarea 
+                          placeholder="Describe the problem..." 
+                          value={newChallenge.description}
+                          onChange={(e) => setNewChallenge({...newChallenge, description: e.target.value})}
+                          className="bg-black/20 border-white/10 text-white min-h-[150px]"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                           <Label className="text-gray-300">Test Cases (JSON format)</Label>
+                           <Textarea 
+                              value={newChallenge.testCases}
+                              onChange={(e) => setNewChallenge({...newChallenge, testCases: e.target.value})}
+                              className="bg-black/20 border-white/10 text-white font-mono text-xs min-h-[200px]"
+                           />
+                        </div>
+                        <div className="space-y-2">
+                           <Label className="text-gray-300">Starter Code (Template)</Label>
+                           <Textarea 
+                              value={newChallenge.starterCode}
+                              onChange={(e) => setNewChallenge({...newChallenge, starterCode: e.target.value})}
+                              className="bg-black/20 border-white/10 text-white font-mono text-xs min-h-[200px]"
+                           />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end pt-4 border-t border-white/10">
+                        <Button 
+                          onClick={handlePublishChallenge} 
+                          className="bg-orange-600 hover:bg-orange-700 text-white"
+                        >
+                          <Code2 className="mr-2 h-4 w-4" />
+                          Publish Challenge
+                        </Button>
+                      </div>
+                    </CardContent>
+                 </Card>
+              </motion.div>
+            )}
             {activeTab === "settings" && (
               <motion.div
                 key="settings"
