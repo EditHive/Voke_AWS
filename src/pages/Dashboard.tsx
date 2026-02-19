@@ -72,7 +72,7 @@ const Dashboard = () => {
   };
 
   const handleMarkAsRead = (id: string) => {
-    setNotifications(notifications.map(n => 
+    setNotifications(notifications.map(n =>
       n.id === id ? { ...n, read: true } : n
     ));
   };
@@ -222,9 +222,9 @@ const Dashboard = () => {
                 <div className="flex items-center justify-between p-4 border-b">
                   <h4 className="font-semibold">Notifications</h4>
                   {unreadCount > 0 && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="text-xs text-violet-600 h-auto p-0 hover:bg-transparent"
                       onClick={handleMarkAllAsRead}
                     >
@@ -236,8 +236,8 @@ const Dashboard = () => {
                   {notifications.length > 0 ? (
                     <div className="divide-y">
                       {notifications.map((notification) => (
-                        <div 
-                          key={notification.id} 
+                        <div
+                          key={notification.id}
                           className={`p-4 hover:bg-muted/50 transition-colors cursor-pointer ${!notification.read ? 'bg-violet-50/50 dark:bg-violet-900/10' : ''}`}
                           onClick={() => handleMarkAsRead(notification.id)}
                         >
@@ -392,15 +392,6 @@ const Dashboard = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="hover:shadow-lg transition-all cursor-pointer group border-l-4 border-l-teal-500" onClick={() => navigate("/job-market")}>
-                  <CardContent className="p-4 flex flex-col items-center text-center pt-6">
-                    <div className="w-12 h-12 rounded-full bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <TrendingUp className="w-6 h-6 text-teal-600 dark:text-teal-400" />
-                    </div>
-                    <h4 className="font-semibold text-sm">Job Market</h4>
-                    <p className="text-xs text-muted-foreground mt-1">Trends & Insights</p>
-                  </CardContent>
-                </Card>
 
                 <Card className="hover:shadow-lg transition-all cursor-pointer group border-l-4 border-l-indigo-500" onClick={() => navigate("/community")}>
                   <CardContent className="p-4 flex flex-col items-center text-center pt-6">
@@ -483,7 +474,7 @@ const Dashboard = () => {
                 {(() => {
                   const calculateStrength = () => {
                     if (!profile) return { score: 0, missing: [] };
-                    
+
                     const fields = [
                       { key: 'full_name', label: 'Full Name', weight: 25 },
                       { key: 'linkedin_url', label: 'LinkedIn', weight: 25 },
@@ -506,7 +497,7 @@ const Dashboard = () => {
                   };
 
                   const { score, missing } = calculateStrength();
-                  
+
                   return (
                     <>
                       <div className="flex justify-between items-center mb-4">
@@ -517,8 +508,8 @@ const Dashboard = () => {
                       </div>
                       <Progress value={score} className="h-2 mb-4" />
                       <p className="text-xs text-muted-foreground mb-4">
-                        {score === 100 
-                          ? "Great job! Your profile is fully complete." 
+                        {score === 100
+                          ? "Great job! Your profile is fully complete."
                           : `Add your ${missing[0] || 'details'} ${missing.length > 1 ? `and ${missing.length - 1} more` : ''} to reach 100%.`}
                       </p>
                       <Button variant="outline" size="sm" className="w-full" onClick={() => navigate("/profile")}>

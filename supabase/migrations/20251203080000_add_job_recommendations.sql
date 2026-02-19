@@ -71,54 +71,64 @@ ALTER TABLE job_recommendations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_career_plans ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for job_postings (public read, admin write)
+DROP POLICY IF EXISTS "Anyone can view job postings" ON job_postings;
 CREATE POLICY "Anyone can view job postings"
   ON job_postings FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Authenticated users can insert job postings" ON job_postings;
 CREATE POLICY "Authenticated users can insert job postings"
   ON job_postings FOR INSERT
   TO authenticated
   WITH CHECK (true);
 
 -- RLS Policies for job_recommendations (users can only see their own)
+DROP POLICY IF EXISTS "Users can view their own job recommendations" ON job_recommendations;
 CREATE POLICY "Users can view their own job recommendations"
   ON job_recommendations FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own job recommendations" ON job_recommendations;
 CREATE POLICY "Users can insert their own job recommendations"
   ON job_recommendations FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own job recommendations" ON job_recommendations;
 CREATE POLICY "Users can update their own job recommendations"
   ON job_recommendations FOR UPDATE
   TO authenticated
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own job recommendations" ON job_recommendations;
 CREATE POLICY "Users can delete their own job recommendations"
   ON job_recommendations FOR DELETE
   TO authenticated
   USING (auth.uid() = user_id);
 
 -- RLS Policies for user_career_plans (users can only see their own)
+DROP POLICY IF EXISTS "Users can view their own career plans" ON user_career_plans;
 CREATE POLICY "Users can view their own career plans"
   ON user_career_plans FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own career plans" ON user_career_plans;
 CREATE POLICY "Users can insert their own career plans"
   ON user_career_plans FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own career plans" ON user_career_plans;
 CREATE POLICY "Users can update their own career plans"
   ON user_career_plans FOR UPDATE
   TO authenticated
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own career plans" ON user_career_plans;
 CREATE POLICY "Users can delete their own career plans"
   ON user_career_plans FOR DELETE
   TO authenticated
@@ -134,16 +144,19 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create triggers for updated_at
+DROP TRIGGER IF EXISTS update_job_postings_updated_at ON job_postings;
 CREATE TRIGGER update_job_postings_updated_at
   BEFORE UPDATE ON job_postings
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_job_recommendations_updated_at ON job_recommendations;
 CREATE TRIGGER update_job_recommendations_updated_at
   BEFORE UPDATE ON job_recommendations
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_user_career_plans_updated_at ON user_career_plans;
 CREATE TRIGGER update_user_career_plans_updated_at
   BEFORE UPDATE ON user_career_plans
   FOR EACH ROW

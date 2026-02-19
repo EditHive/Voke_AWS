@@ -18,7 +18,8 @@ serve(async (req) => {
         const JOB_API_KEY = Deno.env.get('JOB_SEARCH_API_KEY') || '2451839aa10951a2081e044f97a26f7f'
 
         // Try The Muse API format first
-        const museUrl = `https://www.themuse.com/api/public/jobs?api_key=${JOB_API_KEY}&page=${page}&descending=true`
+        // Note: API key removed as it was causing 403 errors and the API is public
+        const museUrl = `https://www.themuse.com/api/public/jobs?page=${page}&descending=true`
 
         let jobs = []
 

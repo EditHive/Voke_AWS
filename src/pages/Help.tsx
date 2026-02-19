@@ -68,10 +68,6 @@ const Help = () => {
             color: "from-emerald-500 to-green-500",
             faqs: [
                 {
-                    question: "What is the Job Market Insights feature?",
-                    answer: "Job Market Insights uses AI to research current market trends, in-demand skills, and salary ranges for different tech roles. It provides personalized career recommendations based on your profile."
-                },
-                {
                     question: "How do Learning Paths work?",
                     answer: "Learning Paths are structured curricula designed to help you master specific skills or prepare for particular roles. They include curated resources, practice exercises, and progress tracking."
                 },
@@ -113,10 +109,10 @@ const Help = () => {
                                 <ArrowLeft className="h-5 w-5" />
                             </Button>
                             <div className="flex items-center gap-2 cursor-pointer" onClick={handleLogoClick}>
-                                <img 
-                                    src="/images/voke_logo.png" 
-                                    alt="Voke Logo" 
-                                    className="w-10 h-10 object-contain" 
+                                <img
+                                    src="/images/voke_logo.png"
+                                    alt="Voke Logo"
+                                    className="w-10 h-10 object-contain"
                                 />
                                 <h1 className="text-xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">
                                     Help Center

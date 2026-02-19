@@ -36,7 +36,7 @@ export const Footer = () => {
             </div>
 
             <div className="container mx-auto px-4 py-16 relative z-10">
-                <motion.div 
+                <motion.div
                     variants={containerVariants}
                     initial="hidden"
                     whileInView="visible"
@@ -82,7 +82,6 @@ export const Footer = () => {
                             {[
                                 { label: "Learning Paths", to: "/learning-paths" },
                                 { label: "Video Practice", to: "/video-interview" },
-                                { label: "Job Market Insights", to: "/job-market" },
                                 { label: "Leaderboard", to: "/leaderboard" }
                             ].map((link, index) => (
                                 <li key={index}>
@@ -145,7 +144,7 @@ export const Footer = () => {
                 </motion.div>
 
                 {/* Bottom Bar */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}

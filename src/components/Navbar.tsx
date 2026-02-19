@@ -52,13 +52,7 @@ export const Navbar = () => {
                         >
                             Video Practice
                         </Button>
-                        <Button
-                            variant="ghost"
-                            onClick={() => navigate("/job-market")}
-                            className="text-gray-700 dark:text-gray-300 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors"
-                        >
-                            Job Market
-                        </Button>
+
                         <Button
                             variant="ghost"
                             onClick={() => navigate("/voice-assistant")}

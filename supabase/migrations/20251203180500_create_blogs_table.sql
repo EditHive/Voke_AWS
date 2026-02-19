@@ -15,10 +15,12 @@ create table if not exists public.blogs (
 alter table public.blogs enable row level security;
 
 -- Create policies
+DROP POLICY IF EXISTS "Public blogs are viewable by everyone" ON public.blogs;
 create policy "Public blogs are viewable by everyone"
   on public.blogs for select
   using ( status = 'Published' );
 
+DROP POLICY IF EXISTS "Admins can do everything" ON public.blogs;
 create policy "Admins can do everything"
   on public.blogs for all
   using ( auth.jwt() ->> 'email' = 'sharma.priyanshu3434@gmail.com' )

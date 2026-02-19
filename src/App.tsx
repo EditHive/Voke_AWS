@@ -21,7 +21,7 @@ import VoiceInterviewResults from "./pages/VoiceInterviewResults";
 import MultiQuestionResults from "./pages/MultiQuestionResults";
 import VideoPracticeHistory from "./pages/VideoPracticeHistory";
 import ProgressAnalytics from "./pages/ProgressAnalytics";
-import JobMarketInsights from "./pages/JobMarketInsights";
+
 import AdaptiveInterview from "./pages/AdaptiveInterview";
 import PeerInterviews from "./pages/PeerInterviews";
 import CreatePeerSession from "./pages/CreatePeerSession";
@@ -67,7 +67,7 @@ const App = () => (
           <Route path="/voice-assistant" element={<VoiceAssistant />} />
           <Route path="/video-practice" element={<VideoPracticeHistory />} />
           <Route path="/progress-analytics" element={<ProgressAnalytics />} />
-          <Route path="/job-market" element={<JobMarketInsights />} />
+
           <Route path="/adaptive-interview" element={<AdaptiveInterview />} />
           <Route path="/peer-interviews" element={<PeerInterviews />} />
           <Route path="/peer-interviews/create" element={<CreatePeerSession />} />

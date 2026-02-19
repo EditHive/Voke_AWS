@@ -312,13 +312,13 @@ Tell me about a time you had to learn something quickly in order to deliver on a
                   <div className={`flex flex-col max-w-[85%] md:max-w-[75%] ${message.role === "user" ? "items-end" : "items-start"}`}>
                     <div
                       className={`p-5 rounded-2xl shadow-sm leading-relaxed ${message.role === "user"
-                          ? "bg-gradient-to-br from-violet-600 to-purple-600 text-white rounded-tr-none shadow-violet-500/10"
-                          : "bg-card border border-border/50 text-foreground rounded-tl-none"
+                        ? "bg-gradient-to-br from-violet-600 to-purple-600 text-white rounded-tr-none shadow-violet-500/10"
+                        : "bg-card border border-border/50 text-foreground rounded-tl-none"
                         }`}
                     >
                       <div className={`prose prose-sm max-w-none ${message.role === "user"
-                          ? "prose-invert text-white"
-                          : "dark:prose-invert text-foreground"
+                        ? "prose-invert text-white"
+                        : "dark:prose-invert text-foreground"
                         }`}>
                         <ReactMarkdown>{message.content}</ReactMarkdown>
                       </div>
@@ -384,8 +384,8 @@ Tell me about a time you had to learn something quickly in order to deliver on a
                 disabled={!input.trim() || sending}
                 size="icon"
                 className={`rounded-full h-10 w-10 shrink-0 transition-all duration-300 ${input.trim()
-                    ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-md hover:shadow-lg hover:scale-105'
-                    : 'bg-muted text-muted-foreground'
+                  ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-md hover:shadow-lg hover:scale-105'
+                  : 'bg-muted text-muted-foreground'
                   }`}
               >
                 <Send className="w-4 h-4" />
@@ -447,8 +447,8 @@ Tell me about a time you had to learn something quickly in order to deliver on a
             <Button variant="outline" onClick={() => navigate("/dashboard")}>
               Back to Dashboard
             </Button>
-            <Button onClick={() => navigate("/job-market")} className="bg-gradient-to-r from-violet-600 to-purple-600 text-white">
-              View Detailed Report
+            <Button onClick={() => navigate("/interview/new")} className="bg-gradient-to-r from-violet-600 to-purple-600 text-white">
+              Start New Interview
             </Button>
           </DialogFooter>
         </DialogContent>

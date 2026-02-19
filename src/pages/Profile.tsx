@@ -627,11 +627,8 @@ const Profile = () => {
                           <Target className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
                           <h3 className="text-lg font-medium text-foreground">No Skill Gaps Identified</h3>
                           <p className="text-muted-foreground mt-2 max-w-md mx-auto">
-                            Complete a career guidance assessment to discover your personalized skill development plan.
+                            Complete interviews to discover your personalized skill development plan.
                           </p>
-                          <Button variant="outline" className="mt-6" onClick={() => navigate("/job-market?tab=guidance")}>
-                            Start Assessment
-                          </Button>
                         </div>
                       ) : (
                         <div className="grid gap-4">
