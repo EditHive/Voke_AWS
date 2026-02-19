@@ -35,7 +35,7 @@ interface Message {
 const INITIAL_QUESTION: Message = {
   role: "assistant",
   content:
-    "Hello! I'm Voke, your AI interviewer. Let's get started – tell me about a challenging project or problem you've worked on recently, and how you approached it.",
+    "Welcome! Let's begin with a classic interview question: Tell me about yourself.",
 };
 
 export default function InterviewSession() {

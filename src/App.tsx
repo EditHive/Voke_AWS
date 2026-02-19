@@ -17,6 +17,7 @@ import InterviewSession from "./pages/InterviewSession";
 import VideoInterview from "./pages/VideoInterview";
 import VoiceAssistant from "./pages/VoiceAssistant";
 import VideoInterviewResults from "./pages/VideoInterviewResults";
+import TimedVideoInterviewResults from "./pages/TimedVideoInterviewResults";
 import VoiceInterviewResults from "./pages/VoiceInterviewResults";
 import MultiQuestionResults from "./pages/MultiQuestionResults";
 import VideoPracticeHistory from "./pages/VideoPracticeHistory";
@@ -62,6 +63,7 @@ const App = () => (
           <Route path="/interview/:id" element={<InterviewSession />} />
           <Route path="/video-interview" element={<VideoInterview />} />
           <Route path="/video-interview/results/:id" element={<VideoInterviewResults />} />
+          <Route path="/timed-interview/results/:id" element={<TimedVideoInterviewResults />} />
           <Route path="/voice-interview/results/:id" element={<VoiceInterviewResults />} />
           <Route path="/multi-question-results/:sessionId" element={<MultiQuestionResults />} />
           <Route path="/voice-assistant" element={<VoiceAssistant />} />

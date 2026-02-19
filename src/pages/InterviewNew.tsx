@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Brain, MessageSquare, Code, FileText,
+  MessageSquare,
   Send, User, Bot, Mic, MicOff, LogOut,
   Settings, Menu, X
 } from "lucide-react";
@@ -18,12 +18,9 @@ import ReactMarkdown from "react-markdown";
 import { useVoiceChat } from "@/hooks/useVoiceChat";
 import { loadUserProfileContext, ProfileContext } from "@/utils/profileContext";
 
-// Mock Data for Categories
+// Interview Categories
 const CATEGORIES = [
-  { id: 'general', label: 'General', icon: MessageSquare, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-  { id: 'technical', label: 'Technical', icon: Code, color: 'text-violet-500', bg: 'bg-violet-500/10' },
-  { id: 'behavioral', label: 'Behavioral', icon: Brain, color: 'text-pink-500', bg: 'bg-pink-500/10' },
-  { id: 'resume', label: 'Resume Based', icon: FileText, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+  { id: 'general', label: 'General Interview', icon: MessageSquare, color: 'text-violet-500', bg: 'bg-violet-500/10' },
 ];
 
 interface Message {
@@ -296,26 +293,41 @@ ${data.feedback.verification_note ? `### 🔍 Verification Note\n${data.feedback
               </Button>
             </div>
 
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-2">
-                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Interview Types
-                </div>
-                {CATEGORIES.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() => handleCategoryChange(category.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${activeCategory === category.id
-                      ? "bg-primary/10 text-primary shadow-sm"
-                      : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
-                      }`}
-                  >
-                    <div className={`p-2 rounded-lg ${activeCategory === category.id ? "bg-primary/20" : "bg-muted"} transition-colors`}>
-                      <category.icon className={`w-4 h-4 ${activeCategory === category.id ? "text-primary" : "text-muted-foreground"}`} />
+            <ScrollArea className="flex-1 p-6">
+              <div className="space-y-6">
+                {/* Interview Info Card */}
+                <div className="p-4 rounded-xl bg-gradient-to-br from-violet-500/10 to-purple-500/10 border border-violet-500/20">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2.5 rounded-lg bg-violet-500/20">
+                      <MessageSquare className="w-5 h-5 text-violet-500" />
                     </div>
-                    {category.label}
-                  </button>
-                ))}
+                    <h3 className="font-semibold text-foreground">AI Interview</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Practice with our AI interviewer. Get real-time feedback and improve your skills.
+                  </p>
+                </div>
+
+                {/* Tips Section */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
+                    Interview Tips
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/30">
+                      <div className="w-1.5 h-1.5 rounded-full bg-violet-500 mt-1.5 shrink-0"></div>
+                      <p className="text-xs text-muted-foreground">Be specific and provide concrete examples</p>
+                    </div>
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/30">
+                      <div className="w-1.5 h-1.5 rounded-full bg-violet-500 mt-1.5 shrink-0"></div>
+                      <p className="text-xs text-muted-foreground">Use the STAR method for behavioral questions</p>
+                    </div>
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/30">
+                      <div className="w-1.5 h-1.5 rounded-full bg-violet-500 mt-1.5 shrink-0"></div>
+                      <p className="text-xs text-muted-foreground">Take your time to think before answering</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </ScrollArea>
 
@@ -341,7 +353,7 @@ ${data.feedback.verification_note ? `### 🔍 Verification Note\n${data.feedback
               </Button>
             )}
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-lg">{CATEGORIES.find(c => c.id === activeCategory)?.label} Interview</span>
+              <span className="font-semibold text-lg">AI Interview</span>
               <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 text-xs font-medium">Live</span>
             </div>
           </div>

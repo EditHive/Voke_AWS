@@ -179,11 +179,12 @@ const TimedVideoInterview = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const questionCount = calculateQuestionCount(timeLimit);
-      const sessionQuestions = getQuestionsForSession(selectedRole, questionCount, ROLE_SPECIFIC_QUESTIONS);
-      setQuestions(sessionQuestions);
+      // Start with ONLY the introduction question
+      setQuestions(["Tell me about yourself."]);
+
 
       // Create interview session
+      // TODO: Switch back to video_interview_sessions after migration deploys
       const { data: session, error } = await supabase
         .from("interview_sessions")
         .insert({
@@ -383,13 +384,121 @@ const TimedVideoInterview = () => {
     }
   };
 
+  const generateNewQuestion = async () => {
+    if (!groq) {
+      // Fallback: use generic questions
+      const genericQuestions = ROLE_SPECIFIC_QUESTIONS[selectedRole as keyof typeof ROLE_SPECIFIC_QUESTIONS] || ROLE_SPECIFIC_QUESTIONS.General;
+      const unusedQuestions = genericQuestions.filter(q => !questions.includes(q));
+      if (unusedQuestions.length > 0) {
+        const randomQuestion = unusedQuestions[Math.floor(Math.random() * unusedQuestions.length)];
+        setQuestions(prev => [...prev, randomQuestion]);
+        setCurrentQuestionIndex(questions.length);
+      }
+      return;
+    }
+
+    try {
+      setIsAnalyzing(true);
+
+      // Randomly decide if this should be a resume/GitHub-based question (40%) or creative (60%)
+      const isPersonalized = Math.random() < 0.4;
+
+      let prompt = '';
+
+      if (isPersonalized && (profileContext?.context || codingStats)) {
+        // Generate a personalized question based on resume/GitHub
+        prompt = `You are an expert interviewer for a ${selectedRole} position.
+
+CANDIDATE'S PROFILE:
+${profileContext?.context || 'No resume/GitHub data available'}
+
+${codingStats ? `CODING STATS:
+- LeetCode: ${codingStats.leetcode?.submitStats?.find((s: any) => s.difficulty === "All")?.count || 0} problems solved
+- Codeforces Rating: ${codingStats.codeforces?.rating || 'N/A'}` : ''}
+
+ALREADY ASKED QUESTIONS:
+${questions.join('\n')}
+
+Generate ONE new interview question that:
+- Is based on their resume, GitHub projects, or coding profile
+- Asks about specific projects, technologies, or experiences mentioned in their profile
+- Tests their actual knowledge and experience
+- Is different from all previously asked questions
+- Is professional and relevant to ${selectedRole} role
+
+Respond with ONLY the question text, nothing else.`;
+      } else {
+        // Generate a creative generic question
+        prompt = `You are an expert interviewer for a ${selectedRole} position.
+
+ALREADY ASKED QUESTIONS:
+${questions.join('\n')}
+
+Generate ONE new, creative interview question that:
+- Is a standard professional interview question for ${selectedRole}
+- Tests important skills, problem-solving, or behavioral competencies
+- Is engaging and thought-provoking
+- Is different from all previously asked questions
+- Is NOT based on resume or GitHub (keep it generic)
+
+Respond with ONLY the question text, nothing else.`;
+      }
+
+      const completion = await groq.chat.completions.create({
+        messages: [{ role: 'user', content: prompt }],
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.9,
+        max_tokens: 150,
+      });
+
+      const newQuestion = completion.choices[0]?.message?.content?.trim();
+
+      if (newQuestion) {
+        // Add the new question to the list
+        setQuestions(prev => [...prev, newQuestion]);
+        setCurrentQuestionIndex(questions.length);
+      } else {
+        // Fallback to generic questions
+        const genericQuestions = ROLE_SPECIFIC_QUESTIONS[selectedRole as keyof typeof ROLE_SPECIFIC_QUESTIONS] || ROLE_SPECIFIC_QUESTIONS.General;
+        const unusedQuestions = genericQuestions.filter(q => !questions.includes(q));
+        if (unusedQuestions.length > 0) {
+          const randomQuestion = unusedQuestions[Math.floor(Math.random() * unusedQuestions.length)];
+          setQuestions(prev => [...prev, randomQuestion]);
+          setCurrentQuestionIndex(questions.length);
+        }
+      }
+    } catch (error) {
+      console.error('Error generating new question:', error);
+      // Fallback to generic questions
+      const genericQuestions = ROLE_SPECIFIC_QUESTIONS[selectedRole as keyof typeof ROLE_SPECIFIC_QUESTIONS] || ROLE_SPECIFIC_QUESTIONS.General;
+      const unusedQuestions = genericQuestions.filter(q => !questions.includes(q));
+      if (unusedQuestions.length > 0) {
+        const randomQuestion = unusedQuestions[Math.floor(Math.random() * unusedQuestions.length)];
+        setQuestions(prev => [...prev, randomQuestion]);
+        setCurrentQuestionIndex(questions.length);
+      }
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const handleNextQuestion = () => {
+    // Check if time has run out
+    if (timeRemaining <= 0) {
+      endInterview();
+      return;
+    }
+
+    // Continue to next question
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
       setCurrentFeedback(null);
       setInterviewState(InterviewState.QUESTION);
     } else {
-      endInterview();
+      // Generate a new creative question instead of repeating
+      generateNewQuestion();
+      setCurrentFeedback(null);
+      setInterviewState(InterviewState.QUESTION);
     }
   };
 
@@ -412,7 +521,7 @@ const TimedVideoInterview = () => {
         });
 
         // Navigate to results
-        navigate(`/video-interview/results/${sessionId}`);
+        navigate(`/timed-interview/results/${sessionId}`);
       } catch (error) {
         console.error("Error generating overall feedback:", error);
         toast.error("Failed to generate overall feedback");
@@ -512,10 +621,11 @@ const TimedVideoInterview = () => {
               <CardContent className="p-6">
                 <h3 className="font-semibold mb-2">What to Expect:</h3>
                 <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li>• First question will always be "Tell me about yourself"</li>
-                  <li>• You'll get quick feedback after each answer</li>
-                  <li>• Interview ends when time runs out or all questions are answered</li>
-                  <li>• Overall summary will be provided at the end</li>
+                  <li>• First question is always "Tell me about yourself"</li>
+                  <li>• Mix of personalized (resume/GitHub) and creative questions</li>
+                  <li>• Each question is unique - no repeats</li>
+                  <li>• Interview continues until time runs out or you click "End Interview"</li>
+                  <li>• Detailed feedback provided for each answer</li>
                 </ul>
               </CardContent>
             </Card>
