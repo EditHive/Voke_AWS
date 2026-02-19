@@ -69,7 +69,7 @@ serve(async (req) => {
             }
         }
 
-        // Fetch user data
+        // Fetch user data from all interview types
         console.log("Fetching user data...");
         const { data: textInterviews } = await supabase
             .from('interview_sessions')
@@ -80,7 +80,14 @@ serve(async (req) => {
 
         const { data: videoInterviews } = await supabase
             .from('video_interview_sessions')
-            .select('id, role, overall_score, delivery_score, body_language_score, confidence_score, created_at')
+            .select('id, question, overall_score, delivery_score, body_language_score, confidence_score, created_at')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(10)
+
+        const { data: voiceInterviews } = await supabase
+            .from('voice_interview_sessions')
+            .select('id, role, overall_score, created_at')
             .eq('user_id', userId)
             .order('created_at', { ascending: false })
             .limit(10)
@@ -91,23 +98,43 @@ serve(async (req) => {
             .eq('id', userId)
             .single()
 
-        // Calculate stats
+        // Calculate comprehensive stats across all interview types
         const allScores = [
             ...(textInterviews || []).map((i: any) => i.overall_score).filter(Boolean),
-            ...(videoInterviews || []).map((i: any) => i.overall_score).filter(Boolean)
+            ...(videoInterviews || []).map((i: any) => i.overall_score).filter(Boolean),
+            ...(voiceInterviews || []).map((i: any) => i.overall_score).filter(Boolean)
         ]
         const avgScore = allScores.length > 0
             ? Math.round(allScores.reduce((a: any, b: any) => a + b, 0) / allScores.length)
             : 50
 
-        const totalInterviews = (textInterviews?.length || 0) + (videoInterviews?.length || 0)
+        // Calculate communication skills from video interviews
+        const videoScores = (videoInterviews || []).filter((i: any) => i.delivery_score && i.body_language_score && i.confidence_score)
+        const avgDelivery = videoScores.length > 0
+            ? Math.round(videoScores.reduce((sum: number, i: any) => sum + i.delivery_score, 0) / videoScores.length)
+            : null
+        const avgBodyLanguage = videoScores.length > 0
+            ? Math.round(videoScores.reduce((sum: number, i: any) => sum + i.body_language_score, 0) / videoScores.length)
+            : null
+        const avgConfidence = videoScores.length > 0
+            ? Math.round(videoScores.reduce((sum: number, i: any) => sum + i.confidence_score, 0) / videoScores.length)
+            : null
+
+        const totalInterviews = (textInterviews?.length || 0) + (videoInterviews?.length || 0) + (voiceInterviews?.length || 0)
+
+        // Enhanced experience level detection
         let experienceLevel = 'entry'
-        if (avgScore > 75 && totalInterviews > 5) experienceLevel = 'senior'
-        else if (avgScore > 60 && totalInterviews > 3) experienceLevel = 'mid'
+        if (avgScore >= 80 && totalInterviews >= 8) {
+            experienceLevel = 'senior'
+        } else if (avgScore >= 70 && totalInterviews >= 5) {
+            experienceLevel = 'mid'
+        } else if (avgScore >= 60 && totalInterviews >= 3) {
+            experienceLevel = 'mid'
+        }
 
         const roles = [...new Set([
             ...(textInterviews || []).map((i: any) => i.role).filter(Boolean),
-            ...(videoInterviews || []).map((i: any) => i.role).filter(Boolean)
+            ...(voiceInterviews || []).map((i: any) => i.role).filter(Boolean)
         ])]
 
         // Fetch jobs
@@ -178,11 +205,68 @@ serve(async (req) => {
 
         const groq = new Groq({ apiKey: groqApiKey })
 
-        const prompt = `Match candidate to jobs.
-Profile: Score ${avgScore}, Level ${experienceLevel}, Roles ${roles.join(', ')}.
-Jobs: ${JSON.stringify(jobPostings.slice(0, 10).map((j: any) => ({ id: j.id, title: j.title, company: j.company, skills: j.skills_required })))}
+        // Enhanced AI matching prompt with comprehensive interview data
+        const communicationSkills = avgDelivery ? `
+- Communication Skills (from Video Interviews):
+  - Delivery: ${avgDelivery}/100
+  - Body Language: ${avgBodyLanguage}/100
+  - Confidence: ${avgConfidence}/100` : ''
 
-Return JSON: { "recommendations": [{ "job_id": "uuid", "match_score": 85, "match_reasons": ["r1"], "skill_gaps": [{"skill": "s1", "priority": "high", "estimated_time": "1w"}] }] }`
+        const prompt = `You are an expert career advisor analyzing comprehensive interview performance.
+
+CANDIDATE PROFILE:
+- Average Interview Score: ${avgScore}/100
+- Total Interviews Completed: ${totalInterviews}
+  - Text Interviews: ${textInterviews?.length || 0}
+  - Video Interviews: ${videoInterviews?.length || 0}
+  - Voice Interviews: ${voiceInterviews?.length || 0}
+- Experience Level: ${experienceLevel}${communicationSkills}
+- Target Roles: ${roles.length > 0 ? roles.join(', ') : 'General'}
+
+AVAILABLE JOBS:
+${JSON.stringify(jobPostings.slice(0, 10).map((j: any) => ({
+            id: j.id,
+            title: j.title,
+            company: j.company,
+            experience_level: j.experience_level,
+            skills: j.skills_required,
+            location: j.location,
+            remote_ok: j.remote_ok
+        })))}
+
+TASK:
+Match the candidate to the most suitable jobs based on:
+1. Interview performance scores across all types
+2. Communication and presentation skills (if available)
+3. Experience level match
+4. Role preferences and demonstrated skills
+
+Return JSON with top 5-10 matches. For each match, provide:
+- Accurate match_score (0-100) based on fit
+- Specific match_reasons referencing actual performance data
+- Relevant skill_gaps with realistic time estimates
+
+Format:
+{
+  "recommendations": [
+    {
+      "job_id": "uuid",
+      "match_score": 85,
+      "match_reasons": [
+        "Strong overall interview performance (avg ${avgScore}/100)",
+        "Experience level matches job requirements",
+        "Demonstrated excellent communication skills"
+      ],
+      "skill_gaps": [
+        {
+          "skill": "Advanced React",
+          "priority": "high",
+          "estimated_time": "2 weeks"
+        }
+      ]
+    }
+  ]
+}`
 
         const completion = await groq.chat.completions.create({
             messages: [
