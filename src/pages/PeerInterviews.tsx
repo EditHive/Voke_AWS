@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Calendar, Clock, Target, Plus, Loader2, Video, Search, Star, Zap, ArrowRight, UserPlus, BookOpen, CheckCircle2, MessageSquare, UserCheck, XCircle } from "lucide-react";
+import { Users, Calendar, Clock, Target, Plus, Loader2, Video, Search, Star, Zap, ArrowRight, UserPlus, BookOpen, CheckCircle2, MessageSquare, UserCheck, XCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { motion, AnimatePresence } from "motion/react";
@@ -37,7 +37,7 @@ const PeerInterviews = () => {
   const navigate = useNavigate();
   const { onlineUsers } = useOnlinePresence();
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'browse' | 'upcoming'>('browse');
+  const [activeTab, setActiveTab] = useState<'browse' | 'upcoming' | 'requests'>('browse');
   const [searchQuery, setSearchQuery] = useState("");
   const [sessions, setSessions] = useState<PeerSession[]>([]);
   const [userSessions, setUserSessions] = useState<PeerSession[]>([]);
@@ -72,14 +72,20 @@ const PeerInterviews = () => {
       const { data: { user } } = await supabase.auth.getUser();
       
       // Fetch all available sessions (future, scheduled or pending)
+      // We include sessions from the last hour to ensure sessions starting "now" are visible
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      
       const { data: allSessions, error } = await supabase
         .from('peer_interview_sessions')
         .select('*')
         .in('status', ['scheduled', 'pending'])
-        .gt('scheduled_at', new Date().toISOString())
+        .gt('scheduled_at', oneHourAgo)
         .order('scheduled_at', { ascending: true });
 
       if (error) throw error;
+
+      console.log("Fetched sessions:", allSessions);
+      console.log("Current User:", user?.id);
 
       // Fetch profiles for hosts and guests
       const userIds = new Set<string>();
@@ -149,9 +155,10 @@ const PeerInterviews = () => {
       toast.success("Request sent to host!");
       fetchSessions();
       setActiveTab('upcoming');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error requesting session:", error);
-      toast.error("Failed to request session");
+      console.error("Error details:", error.message, error.details, error.hint);
+      toast.error(`Failed to request session: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -187,6 +194,25 @@ const PeerInterviews = () => {
     } catch (error) {
       console.error("Error declining session:", error);
       toast.error("Failed to decline session");
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: string) => {
+    // In a real app, use a proper Dialog component. For now, browser confirm is quick and effective.
+    if (!window.confirm("Are you sure you want to delete this session? This action cannot be undone.")) return;
+
+    try {
+      const { error } = await supabase
+        .from('peer_interview_sessions')
+        .delete()
+        .eq('id', sessionId);
+
+      if (error) throw error;
+      toast.success("Session deleted successfully");
+      fetchSessions();
+    } catch (error) {
+      console.error("Error deleting session:", error);
+      toast.error("Failed to delete session");
     }
   };
 
@@ -339,9 +365,20 @@ const PeerInterviews = () => {
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-3 text-muted-foreground data-[state=active]:text-primary transition-all"
                 >
                   My Upcoming
-                  {userSessions.length > 0 && (
+                  {userSessions.filter(s => !(s.host_user_id === currentUserId && s.status === 'pending')).length > 0 && (
                     <Badge variant="secondary" className="ml-2 h-5 px-1.5 min-w-[1.25rem] text-[10px]">
-                      {userSessions.length}
+                      {userSessions.filter(s => !(s.host_user_id === currentUserId && s.status === 'pending')).length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="requests"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-3 text-muted-foreground data-[state=active]:text-primary transition-all"
+                >
+                  Requests
+                  {userSessions.filter(s => s.host_user_id === currentUserId && s.status === 'pending').length > 0 && (
+                    <Badge variant="destructive" className="ml-2 h-5 px-1.5 min-w-[1.25rem] text-[10px]">
+                      {userSessions.filter(s => s.host_user_id === currentUserId && s.status === 'pending').length}
                     </Badge>
                   )}
                 </TabsTrigger>
@@ -435,9 +472,108 @@ const PeerInterviews = () => {
               </AnimatePresence>
             </TabsContent>
 
+            <TabsContent value="requests" className="mt-0">
+              <AnimatePresence mode="popLayout">
+                {userSessions.filter(s => s.host_user_id === currentUserId && s.status === 'pending').length === 0 ? (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col items-center justify-center py-16 text-center bg-card/30 rounded-2xl border border-dashed border-border"
+                  >
+                    <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                      <UserPlus className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2">No pending requests</h3>
+                    <p className="text-muted-foreground max-w-sm mb-6">
+                      When users request to join your sessions, they will appear here.
+                    </p>
+                  </motion.div>
+                ) : (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {userSessions
+                      .filter(s => s.host_user_id === currentUserId && s.status === 'pending')
+                      .map((session, idx) => (
+                      <motion.div
+                        key={session.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                      >
+                        <Card className="group border-yellow-500/20 bg-gradient-to-br from-card to-yellow-500/5 hover:shadow-lg transition-all h-full flex flex-col">
+                          <CardHeader className="pb-3">
+                            <div className="flex justify-between items-start mb-2">
+                              <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
+                                Request Received
+                              </Badge>
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-muted-foreground" />
+                              </div>
+                            </div>
+                            <CardTitle className="line-clamp-1 text-lg">{session.topic}</CardTitle>
+                            <CardDescription className="flex items-center gap-2 mt-2">
+                              <Avatar className="w-6 h-6 border border-border">
+                                <AvatarImage src={session.guest_profile?.avatar_url || undefined} />
+                                <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                  {getInitials(session.guest_profile?.full_name || "Guest")}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm font-medium text-foreground">
+                                {session.guest_profile?.full_name || "Unknown User"}
+                              </span>
+                              <span className="text-xs text-muted-foreground">wants to join</span>
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="flex-1 flex flex-col justify-end">
+                            <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground mb-6 bg-background/50 p-3 rounded-lg border border-border/50">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-primary" />
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-foreground">
+                                    {new Date(session.scheduled_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                  </span>
+                                  <span className="text-xs">
+                                    {new Date(session.scheduled_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-primary" />
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-foreground">{session.duration_minutes} min</span>
+                                  <span className="text-xs">Duration</span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex gap-2">
+                              <Button 
+                                className="flex-1 bg-green-600 hover:bg-green-700"
+                                onClick={() => handleApproveRequest(session.id)}
+                              >
+                                <UserCheck className="w-4 h-4 mr-2" />
+                                Accept
+                              </Button>
+                              <Button 
+                                variant="destructive"
+                                className="flex-1"
+                                onClick={() => handleDeclineRequest(session.id)}
+                              >
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Reject
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </AnimatePresence>
+            </TabsContent>
+
             <TabsContent value="upcoming" className="mt-0">
               <AnimatePresence mode="popLayout">
-                {userSessions.length === 0 ? (
+                {userSessions.filter(s => !(s.host_user_id === currentUserId && s.status === 'pending')).length === 0 ? (
                   <motion.div 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -457,7 +593,9 @@ const PeerInterviews = () => {
                   </motion.div>
                 ) : (
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {userSessions.map((session, idx) => (
+                    {userSessions
+                      .filter(s => !(s.host_user_id === currentUserId && s.status === 'pending'))
+                      .map((session, idx) => (
                       <motion.div
                         key={session.id}
                         initial={{ opacity: 0, y: 20 }}
@@ -480,6 +618,17 @@ const PeerInterviews = () => {
                                     <CheckCircle2 className="w-3 h-3" />
                                     Confirmed
                                   </div>
+                                )}
+                                {session.host_user_id === currentUserId && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-6 w-6 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                    onClick={() => handleDeleteSession(session.id)}
+                                    title="Delete Session"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
                                 )}
                               </div>
                             </div>
@@ -519,25 +668,7 @@ const PeerInterviews = () => {
                             </div>
                             
                             {/* Actions based on role and status */}
-                            {session.host_user_id === currentUserId && session.status === 'pending' && session.guest_user_id ? (
-                              <div className="flex gap-2">
-                                <Button 
-                                  className="flex-1 bg-green-600 hover:bg-green-700"
-                                  onClick={() => handleApproveRequest(session.id)}
-                                >
-                                  <UserCheck className="w-4 h-4 mr-2" />
-                                  Approve
-                                </Button>
-                                <Button 
-                                  variant="destructive"
-                                  className="flex-1"
-                                  onClick={() => handleDeclineRequest(session.id)}
-                                >
-                                  <XCircle className="w-4 h-4 mr-2" />
-                                  Decline
-                                </Button>
-                              </div>
-                            ) : session.status === 'scheduled' ? (
+                            {session.status === 'scheduled' ? (
                               <div className="flex gap-2">
                                 <Button 
                                   className="flex-1 bg-primary hover:bg-primary/90" 
