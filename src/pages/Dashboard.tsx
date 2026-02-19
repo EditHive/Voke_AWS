@@ -13,12 +13,68 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
+  type: 'info' | 'success' | 'warning';
+}
+
+const MOCK_NOTIFICATIONS: Notification[] = [
+  {
+    id: '1',
+    title: 'Interview Scheduled',
+    message: 'Your mock interview with Sarah is scheduled for tomorrow at 10 AM.',
+    time: '2 hours ago',
+    read: false,
+    type: 'info'
+  },
+  {
+    id: '2',
+    title: 'Feedback Available',
+    message: 'AI feedback for your "React Hooks" session is ready.',
+    time: '5 hours ago',
+    read: false,
+    type: 'success'
+  },
+  {
+    id: '3',
+    title: 'Daily Streak!',
+    message: "You've reached a 5-day streak. Keep it up!",
+    time: '1 day ago',
+    read: true,
+    type: 'warning'
+  }
+];
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
   const [sessions, setSessions] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleMarkAllAsRead = () => {
+    setNotifications(notifications.map(n => ({ ...n, read: true })));
+    toast.success("All notifications marked as read");
+  };
+
+  const handleMarkAsRead = (id: string) => {
+    setNotifications(notifications.map(n => 
+      n.id === id ? { ...n, read: true } : n
+    ));
+  };
 
   useEffect(() => {
     checkAuth();
@@ -152,10 +208,60 @@ const Dashboard = () => {
           </div>
 
           <nav className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
-            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0" align="end">
+                <div className="flex items-center justify-between p-4 border-b">
+                  <h4 className="font-semibold">Notifications</h4>
+                  {unreadCount > 0 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-xs text-violet-600 h-auto p-0 hover:bg-transparent"
+                      onClick={handleMarkAllAsRead}
+                    >
+                      Mark all as read
+                    </Button>
+                  )}
+                </div>
+                <ScrollArea className="h-[300px]">
+                  {notifications.length > 0 ? (
+                    <div className="divide-y">
+                      {notifications.map((notification) => (
+                        <div 
+                          key={notification.id} 
+                          className={`p-4 hover:bg-muted/50 transition-colors cursor-pointer ${!notification.read ? 'bg-violet-50/50 dark:bg-violet-900/10' : ''}`}
+                          onClick={() => handleMarkAsRead(notification.id)}
+                        >
+                          <div className="flex justify-between items-start gap-2 mb-1">
+                            <h5 className={`text-sm font-medium ${!notification.read ? 'text-foreground' : 'text-muted-foreground'}`}>
+                              {notification.title}
+                            </h5>
+                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                              {notification.time}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-2">
+                            {notification.message}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center text-muted-foreground text-sm">
+                      No notifications
+                    </div>
+                  )}
+                </ScrollArea>
+              </PopoverContent>
+            </Popover>
             <ThemeToggle />
             <div className="h-8 w-px bg-border mx-2"></div>
             <div className="flex items-center gap-3 pl-2">

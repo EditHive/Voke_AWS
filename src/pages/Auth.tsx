@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ADMIN_EMAIL } from "@/config/admin";
 import { useToast } from "@/components/ui/use-toast";
 import { Mail, Lock, User, ArrowRight, Sparkles, Github, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,7 +22,11 @@ const Auth = () => {
     // Check if already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/dashboard");
+        if (session.user.email === ADMIN_EMAIL) {
+          navigate("/admin");
+        } else {
+          navigate("/dashboard");
+        }
       }
     });
 
@@ -30,7 +35,11 @@ const Auth = () => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        navigate("/dashboard");
+        if (session.user.email === ADMIN_EMAIL) {
+          navigate("/admin");
+        } else {
+          navigate("/dashboard");
+        }
       }
     });
 
