@@ -270,7 +270,11 @@ const Profile = () => {
 
       const { error: uploadError } = await supabase.storage
         .from("resumes")
-        .upload(fileName, resumeFile, { upsert: true });
+        .upload(fileName, resumeFile, {
+          upsert: true,
+          contentType: resumeFile.type,
+          cacheControl: '3600'
+        });
 
       if (uploadError) throw uploadError;
 
@@ -278,9 +282,13 @@ const Profile = () => {
         .from("resumes")
         .getPublicUrl(fileName);
 
+      // Safely append timestamp to force refresh and bypass cache
+      const separator = publicUrl.includes('?') ? '&' : '?';
+      const publicUrlWithTimestamp = `${publicUrl}${separator}t=${new Date().getTime()}`;
+
       const { error: updateError } = await supabase
         .from("profiles")
-        .update({ resume_url: publicUrl })
+        .update({ resume_url: publicUrlWithTimestamp })
         .eq("id", user.id);
 
       if (updateError) throw updateError;

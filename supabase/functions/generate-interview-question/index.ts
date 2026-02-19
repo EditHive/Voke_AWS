@@ -93,8 +93,8 @@ serve(async (req) => {
       "feedback": {
         "what_went_well": ["Specific point 1", "Specific point 2"],
         "what_needs_improvement": ["Specific issue 1", "Specific issue 2"],
-        "model_answer": "Provide the PERFECT ANSWER to the question you asked - this should be the actual ideal response a candidate would give, not instructions. Write it as if you are the perfect candidate answering the question. Include specific technical details, best practices, code examples if relevant, and real-world context.",
-        "verification_note": "REQUIRED if they mentioned ANYTHING not in their GitHub/Resume. Format: 'I did not find any project/skill named [X] in your GitHub profile or resume. Please provide specific implementation details to verify this claim.'"
+        "model_answer": "Provide a CONCISE, PERFECT ANSWER (2-3 sentences maximum) to the question you asked. Write it as if you are the perfect candidate answering the question in first person. Be direct and actionable, focusing on the key approach/strategy without lengthy explanations. Example: 'To manage a project with tight deadlines, I would prioritize tasks based on impact and urgency, allocate resources efficiently, and maintain clear communication with stakeholders to ensure successful delivery.'",
+        "verification_note": "OPTIONAL - Only include if they mentioned a project/skill/experience NOT found in their GitHub/Resume context. Format: 'I did not find any project/skill named [X] in your GitHub profile or resume. Please provide specific implementation details to verify this claim.' If everything is verified, omit this field entirely."
       },
       "question": "Your next question based on their performance",
       "is_finished": false

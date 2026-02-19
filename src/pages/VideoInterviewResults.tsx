@@ -391,13 +391,23 @@ const VideoInterviewResults = () => {
             )}
 
             {/* 6Q Analysis */}
-            {session.six_q_score && (
+            {/* 6Q Analysis */}
+            {session.six_q_score ? (
               <div className="pt-4">
                 <SixQAnalysis
                   scores={session.six_q_score}
                   cluster={session.personality_cluster}
                 />
               </div>
+            ) : (
+              <Card className="bg-muted/30 border-dashed border-border">
+                <CardContent className="py-8 text-center">
+                  <p className="text-muted-foreground">
+                    Personality analysis is not available for this session. <br />
+                    <span className="text-sm">Run a new interview to see your 6Q Personality Profile.</span>
+                  </p>
+                </CardContent>
+              </Card>
             )}
 
             {/* Detailed Summary */}

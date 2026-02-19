@@ -13,7 +13,7 @@ Deno.serve(async (req: Request) => {
     }
 
     try {
-        const { resumeUrl } = await req.json();
+        const { resumeUrl, resumeText } = await req.json();
 
         const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
         if (!GROQ_API_KEY) {
@@ -37,44 +37,61 @@ Deno.serve(async (req: Request) => {
             throw new Error("Unauthorized");
         }
 
-        // Fetch resume content from URL
-        const resumeResponse = await fetch(resumeUrl);
-        if (!resumeResponse.ok) {
-            throw new Error("Failed to fetch resume");
+        if (!resumeText || resumeText.length < 50) {
+            throw new Error("Resume content is missing or too short");
         }
 
-        // For now, we'll analyze based on the URL and basic metadata
-        // In a production app, you'd parse the PDF content here
-        const resumeText = `Resume analysis for ${user.email}`;
+        console.log(`Analyzing resume for ${user.email}, length: ${resumeText.length}`);
 
-        const analysisPrompt = `You are an expert resume reviewer and ATS (Applicant Tracking System) specialist. Analyze this resume and provide detailed feedback.
+        const analysisPrompt = `You are a strict, expert technical recruiter and ATS specialist at a top tech company (FAANG). You are reviewing a candidate's resume for a software engineering role.
+
+**YOUR OBJECTIVE:**
+Provide a critical, "no-fluff" deep-dive analysis. Do not be generic. If the resume is vague, call it out. If the formatting is bad, be direct.
 
 **ANALYSIS REQUIREMENTS:**
 
-1. **ATS Compatibility Score (0-100)**: Rate how well this resume will perform in ATS systems
-2. **Keywords**: Identify missing important keywords for tech roles
-3. **Structure & Formatting**: Evaluate layout, sections, and readability
-4. **Content Quality**: Assess impact, achievements, and clarity
-5. **Improvements**: Provide specific, actionable suggestions
+1.  **ATS Compatibility Score (0-100)**:
+    -   Be harsh. Deduct points for: tables, graphics, multi-column layouts that break parsing, missing keywords, and vague bullet points.
+    -   < 60: Poor (Needs total rewrite)
+    -   60-75: Average (Needs significant work)
+    -   75-85: Good (Minor tweaks needed)
+    -   85+: Excellent
+
+2.  **Keywords**:
+    -   Identify specific technical keywords missing for a modern Software Engineer (e.g., specific cloud tools, testing frameworks, CI/CD tools, system design terms).
+
+3.  **Structure & Content Quality**:
+    -   Do bullet points have metrics? (e.g., "Improved latency by 20ms" vs "Optimized code").
+    -   Is the experience strictly chronological?
+    -   Are there "responsibility" lists instead of "achievement" lists? (Bad)
+
+4.  **Actionable Improvements (CRITICAL SECTION)**:
+    -   Give concrete examples.
+    -   Instead of: "Add more metrics."
+    -   Say: "Rewrite 'Worked on API' to 'Designed REST API endpoints resolving 50k+ daily requests with <100ms latency'."
 
 **OUTPUT FORMAT (JSON):**
 {
   "ats_score": number (0-100),
   "keywords": {
-    "present": ["keyword1", "keyword2"],
-    "missing": ["keyword3", "keyword4"]
+    "present": ["list", "of", "found", "keywords"],
+    "missing": ["list", "of", "specific", "missing", "keywords"]
   },
-  "strengths": ["strength1", "strength2", "strength3"],
-  "improvements": ["improvement1", "improvement2", "improvement3"],
-  "structure_feedback": "detailed feedback on structure",
-  "content_feedback": "detailed feedback on content",
-  "overall_summary": "2-3 sentence summary"
+  "strengths": ["Specific strength 1", "Specific strength 2"],
+  "improvements": [
+    "Specific actionable tip 1 (e.g., Rewrite summary to focus on X)",
+    "Specific actionable tip 2 (e.g., Move Skills section to top)",
+    "Specific actionable tip 3 (e.g., Quantify the 'Project X' bullet point)"
+  ],
+  "structure_feedback": "Detailed critique of layout and organization.",
+  "content_feedback": "Detailed critique of the actual bullet point content.",
+  "overall_summary": "Professional summary of the candidate's standing."
 }
 
 **RESUME TO ANALYZE:**
 ${resumeText}
 
-Provide honest, constructive feedback that will help the candidate improve their resume.`;
+Provide honest, constructive, and highly specific feedback. Imagine you are deciding whether to interview this person.`;
 
         const response = await fetch(
             "https://api.groq.com/openai/v1/chat/completions",

@@ -221,9 +221,9 @@ const VoiceAssistant: React.FC = () => {
 
                 // Add instruction
                 if (projectCount > 0) {
-                    context += `\nINSTRUCTION: You have detailed information about the user's ${projectCount} GitHub projects and their resume. You know about ALL of them. When asked about projects or experience, you can discuss any of them in detail. Start by greeting them warmly by name, then ask about a specific project or experience that interests you.`;
+                    context += `\nINSTRUCTION: You have detailed information about the user's ${projectCount} GitHub projects and their resume. You know about ALL of them. Start by greeting them warmly by name. Then, instead of just asking generic questions, **ask creative, unconventional, and thought-provoking questions** to test their problem-solving and adaptability. Mix these with specific technical questions about their projects.`;
                 } else {
-                    context += `\nINSTRUCTION: Start by greeting the user warmly by name and ask them to tell you about their experience.`;
+                    context += `\nINSTRUCTION: Start by greeting the user warmly by name. Then, **ask creative, unconventional, and thought-provoking questions** to test their problem-solving and adaptability. Avoid generic "tell me about yourself" questions.`;
                 }
 
                 console.log('[VoiceAssistant] Final context length:', context.length);
@@ -234,7 +234,7 @@ const VoiceAssistant: React.FC = () => {
             console.error('[VoiceAssistant] Error loading context:', error);
             toast.error('Failed to load profile context');
             // Set minimal context so the interview can still proceed
-            setUserContext('User Name: Candidate\nINSTRUCTION: Greet the user and ask them to introduce themselves.');
+            setUserContext('User Name: Candidate\nINSTRUCTION: Greet the user and ask them a creative, unconventional interview question.');
         } finally {
             setLoadingContext(false);
         }
@@ -291,16 +291,16 @@ const VoiceAssistant: React.FC = () => {
     const isConnected = status === LiveStatus.CONNECTED;
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+        <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 relative overflow-hidden">
 
             {/* Background Decoration */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-900/20 rounded-full blur-3xl mix-blend-screen animate-pulse"></div>
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-900/20 rounded-full blur-3xl mix-blend-screen animate-pulse" style={{ animationDelay: '1s' }}></div>
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl mix-blend-screen animate-pulse"></div>
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl mix-blend-screen animate-pulse" style={{ animationDelay: '1s' }}></div>
             </div>
 
             <div className="absolute top-4 left-4 z-20">
-                <Button variant="ghost" className="text-slate-400 hover:text-white hover:bg-slate-800" onClick={() => navigate('/dashboard')}>
+                <Button variant="ghost" className="text-muted-foreground hover:text-foreground hover:bg-accent" onClick={() => navigate('/dashboard')}>
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back to Dashboard
                 </Button>
@@ -311,48 +311,48 @@ const VoiceAssistant: React.FC = () => {
                 {/* Header */}
                 <div className="text-center space-y-2">
                     <div className="flex items-center justify-center gap-3">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-medium text-slate-400">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-card border border-border text-xs font-medium text-muted-foreground">
                             <Sparkles className="w-3 h-3 text-purple-400" />
                             <span>AI Interviewer</span>
                         </div>
                         {status === LiveStatus.CONNECTED && (
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-medium text-slate-400 font-mono">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-card border border-border text-xs font-medium text-muted-foreground font-mono">
                                 <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                                 <span>{formatTime(duration)}</span>
                             </div>
                         )}
                     </div>
-                    <h1 className="text-3xl font-bold tracking-tight text-white">Voice Assistant</h1>
-                    <p className="text-slate-400 text-sm">
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Voice Assistant</h1>
+                    <p className="text-muted-foreground text-sm">
                         {loadingContext ? "Loading profile..." : "Ready to interview you based on your profile."}
                     </p>
                 </div>
 
                 {/* Visualizer Area */}
-                <div className="relative bg-slate-900/50 border border-slate-800 rounded-3xl overflow-hidden backdrop-blur-sm shadow-2xl transition-all duration-500 min-h-[320px]">
+                <div className="relative bg-card/50 border border-border rounded-3xl overflow-hidden backdrop-blur-sm shadow-2xl transition-all duration-500 min-h-[320px]">
                     {/* Connection Status Overlay */}
                     {status === LiveStatus.CONNECTING && (
-                        <div className="absolute inset-0 flex items-center justify-center z-20 bg-slate-950/80 backdrop-blur-sm">
+                        <div className="absolute inset-0 flex items-center justify-center z-20 bg-background/80 backdrop-blur-sm">
                             <div className="flex flex-col items-center gap-3">
-                                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                                <span className="text-sm font-medium text-slate-300">Connecting...</span>
+                                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                <span className="text-sm font-medium text-muted-foreground">Connecting...</span>
                             </div>
                         </div>
                     )}
 
                     {isError && (
-                        <div className="absolute inset-0 flex items-center justify-center z-20 bg-slate-950/80 backdrop-blur-sm">
-                            <div className="flex flex-col items-center gap-3 text-red-400 p-4 text-center">
+                        <div className="absolute inset-0 flex items-center justify-center z-20 bg-background/80 backdrop-blur-sm">
+                            <div className="flex flex-col items-center gap-3 text-destructive p-4 text-center">
                                 <AlertCircle className="w-10 h-10" />
                                 <span className="text-sm font-medium">Connection Error</span>
                                 {errorDetails && (
-                                    <p className="text-xs text-red-300 mt-1 max-w-[200px] break-words">
+                                    <p className="text-xs text-destructive/80 mt-1 max-w-[200px] break-words">
                                         {errorDetails}
                                     </p>
                                 )}
                                 <button
                                     onClick={() => window.location.reload()}
-                                    className="mt-2 px-4 py-2 bg-slate-800 rounded-lg hover:bg-slate-700 text-xs text-white transition-colors"
+                                    className="mt-2 px-4 py-2 bg-accent rounded-lg hover:bg-accent/80 text-xs text-foreground transition-colors"
                                 >
                                     Reload
                                 </button>
@@ -373,27 +373,27 @@ const VoiceAssistant: React.FC = () => {
                         <button
                             onClick={handleConnect}
                             disabled={status === LiveStatus.CONNECTING || loadingContext}
-                            className="group relative flex items-center justify-center w-20 h-20 bg-blue-600 hover:bg-blue-500 rounded-full shadow-lg hover:shadow-blue-500/25 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="group relative flex items-center justify-center w-20 h-20 bg-primary hover:bg-primary/90 rounded-full shadow-lg hover:shadow-primary/25 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <div className="absolute inset-0 rounded-full border-2 border-white/20 group-hover:scale-110 transition-transform duration-300"></div>
-                            <Mic className="w-8 h-8 text-white" />
+                            <Mic className="w-8 h-8 text-primary-foreground" />
                         </button>
                     ) : (
                         <div className="flex gap-4">
                             <button
                                 onClick={disconnect}
-                                className="group relative flex items-center justify-center w-16 h-16 bg-slate-700 hover:bg-slate-600 rounded-full shadow-lg transition-all duration-300"
+                                className="group relative flex items-center justify-center w-16 h-16 bg-muted hover:bg-muted/80 rounded-full shadow-lg transition-all duration-300"
                                 title="Mute/Pause"
                             >
-                                <X className="w-6 h-6 text-white" />
+                                <X className="w-6 h-6 text-foreground" />
                             </button>
                             <button
                                 onClick={handleEndInterview}
-                                className="group relative flex items-center justify-center w-20 h-20 bg-red-500 hover:bg-red-400 rounded-full shadow-lg hover:shadow-red-500/25 transition-all duration-300"
+                                className="group relative flex items-center justify-center w-20 h-20 bg-destructive hover:bg-destructive/90 rounded-full shadow-lg hover:shadow-destructive/25 transition-all duration-300"
                                 title="End Interview & Get Results"
                             >
                                 <div className="absolute inset-0 rounded-full border-2 border-white/20 group-hover:scale-110 transition-transform duration-300"></div>
-                                <MessageSquare className="w-8 h-8 text-white" />
+                                <MessageSquare className="w-8 h-8 text-destructive-foreground" />
                             </button>
                         </div>
                     )}
@@ -401,8 +401,8 @@ const VoiceAssistant: React.FC = () => {
 
                 {/* Transcript Log (Optional but useful for context) */}
                 {isConnected && logs.length > 0 && (
-                    <div className="mt-4 p-4 rounded-2xl bg-slate-900/40 border border-slate-800/50 backdrop-blur-sm max-h-48 overflow-y-auto custom-scrollbar">
-                        <div className="flex items-center gap-2 mb-2 text-xs text-slate-500 uppercase tracking-wider font-semibold">
+                    <div className="mt-4 p-4 rounded-2xl bg-card/40 border border-border/50 backdrop-blur-sm max-h-48 overflow-y-auto custom-scrollbar">
+                        <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground uppercase tracking-wider font-semibold">
                             <MessageSquare className="w-3 h-3" />
                             <span>Transcript</span>
                         </div>
@@ -410,8 +410,8 @@ const VoiceAssistant: React.FC = () => {
                             {logs.map((msg) => (
                                 <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                     <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${msg.role === 'user'
-                                        ? 'bg-blue-600/20 text-blue-100 rounded-tr-sm'
-                                        : 'bg-slate-800/50 text-slate-300 rounded-tl-sm'
+                                        ? 'bg-primary/20 text-primary-foreground rounded-tr-sm'
+                                        : 'bg-muted/50 text-muted-foreground rounded-tl-sm'
                                         }`}>
                                         {msg.text}
                                     </div>
@@ -425,7 +425,7 @@ const VoiceAssistant: React.FC = () => {
 
             {/* Instructions / Footer */}
             {!isConnected && (
-                <div className="absolute bottom-8 text-center text-slate-500 text-xs max-w-sm px-4">
+                <div className="absolute bottom-8 text-center text-muted-foreground text-xs max-w-sm px-4">
                     <p>Make sure your microphone is enabled.</p>
                     <p className="mt-1">Powered by Google Gemini 2.5 Native Audio API.</p>
                 </div>

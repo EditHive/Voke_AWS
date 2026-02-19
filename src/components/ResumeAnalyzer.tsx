@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, CheckCircle2, AlertCircle, TrendingUp, Download } from "lucide-react";
+import { Upload, FileText, CheckCircle2, AlertCircle, TrendingUp, Download, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 
@@ -21,6 +22,13 @@ const ResumeAnalyzer = ({ userId, resumeUrl }: ResumeAnalyzerProps) => {
     useEffect(() => {
         loadAnalysisHistory();
     }, [userId]);
+
+    // Reset analysis when resumeUrl changes (new upload)
+    useEffect(() => {
+        if (resumeUrl) {
+            setAnalysis(null);
+        }
+    }, [resumeUrl]);
 
     const loadAnalysisHistory = async () => {
         try {
@@ -50,8 +58,84 @@ const ResumeAnalyzer = ({ userId, resumeUrl }: ResumeAnalyzerProps) => {
 
         setAnalyzing(true);
         try {
+            // 1. Fetch and Parse PDF
+            toast.info("Reading resume content...");
+            const resumeResponse = await fetch(resumeUrl);
+            const resumeBlob = await resumeResponse.blob();
+
+            // Dynamic import for pdfjs
+            const pdfjsLib = await import('pdfjs-dist');
+            pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+                'pdfjs-dist/build/pdf.worker.min.mjs',
+                import.meta.url
+            ).toString();
+
+            const arrayBuffer = await resumeBlob.arrayBuffer();
+
+            // Validation: Check for PDF magic bytes
+            const header = new TextDecoder().decode(arrayBuffer.slice(0, 5));
+            if (header !== '%PDF-' && !header.startsWith('%PDF')) {
+                throw new Error("Invalid PDF file. Please use 'Export to PDF' or 'Print to PDF' instead of renaming the file extension.");
+            }
+
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+            let resumeText = '';
+            for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map((item: any) => item.str).join(' ');
+                resumeText += pageText + '\n';
+            }
+
+            resumeText = resumeText.replace(/\s+/g, ' ').trim().substring(0, 4000);
+            console.log("Extracted resume text length:", resumeText.length);
+
+            // 2. OCR Fallback if text is insufficient
+            if (resumeText.length < 50) {
+                toast.info("No text layer found. Attempting OCR on image...", { duration: 5000 });
+                console.log("Starting OCR fallback...");
+
+                // Dynamic import Tesseract
+                const Tesseract = await import('tesseract.js');
+
+                let ocrText = '';
+                for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) {
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 2.0 }); // Higher scale for better OCR
+
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    if (context) {
+                        const renderContext = {
+                            canvasContext: context,
+                            viewport: viewport
+                        };
+                        await page.render(renderContext).promise;
+                        const { data: { text } } = await Tesseract.default.recognize(canvas, 'eng');
+                        ocrText += text + '\n';
+                        toast.info(`Scanned page ${i}/${Math.min(pdf.numPages, 3)}...`);
+                    }
+                }
+
+                resumeText = ocrText.replace(/\s+/g, ' ').trim().substring(0, 4000);
+                console.log("OCR extracted text length:", resumeText.length);
+
+                if (resumeText.length < 50) {
+                    throw new Error("Could not extract readable text even with OCR. Please upload a clearer PDF or a text-based document.");
+                }
+            }
+
+            // 3. Send to AI
+            toast.info("Analyzing content...");
             const { data, error } = await supabase.functions.invoke("analyze-resume", {
-                body: { resumeUrl }
+                body: {
+                    resumeUrl,
+                    resumeText
+                }
             });
 
             if (error) throw error;
@@ -63,7 +147,7 @@ const ResumeAnalyzer = ({ userId, resumeUrl }: ResumeAnalyzerProps) => {
             }
         } catch (error: any) {
             console.error("Error analyzing resume:", error);
-            toast.error("Failed to analyze resume");
+            toast.error(error.message || "Failed to analyze resume");
         } finally {
             setAnalyzing(false);
         }
@@ -124,6 +208,18 @@ const ResumeAnalyzer = ({ userId, resumeUrl }: ResumeAnalyzerProps) => {
                         exit={{ opacity: 0, y: -20 }}
                         className="space-y-6"
                     >
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-semibold">Analysis Results</h3>
+                            <Button variant="outline" size="sm" onClick={analyzeResume} disabled={analyzing}>
+                                {analyzing ? (
+                                    <RefreshCw className="h-3.5 w-3.5 mr-2 animate-spin" />
+                                ) : (
+                                    <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                                )}
+                                Re-analyze
+                            </Button>
+                        </div>
+
                         {/* ATS Score */}
                         <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
                             <CardHeader>
@@ -136,7 +232,7 @@ const ResumeAnalyzer = ({ userId, resumeUrl }: ResumeAnalyzerProps) => {
                             <CardContent>
                                 <div className="flex items-center justify-between mb-4">
                                     <div>
-                                        <p className={`text-5xl font-bold ${getScoreColor(analysis.ats_score || 0)}`}>
+                                        <p className={`text-6xl font-bold ${getScoreColor(analysis.ats_score || 0)}`}>
                                             {analysis.ats_score || 0}
                                         </p>
                                         <p className="text-sm text-muted-foreground mt-1">{getScoreLabel(analysis.ats_score || 0)}</p>

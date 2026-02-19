@@ -61,13 +61,17 @@ Provide a comprehensive analysis including:
 
 2. WHAT'S GOOD: List 3-5 specific strengths in the candidate's response with concrete examples from their answer.
 
-3. WHAT'S WRONG: List 3-5 specific areas for improvement with actionable suggestions.
+3. WHAT'S WRONG: List 3-5 specific, DIRECT COMMANDS for improvement. Do not be vague.
+   - BAD: "Could improve eye contact"
+   - GOOD: "Look directly at the webcam lens, not the screen"
+   - BAD: "Better posture needed"
+   - GOOD: "Sit upright and stop slouching; center yourself in the frame"
 
-4. VIDEO ANALYSIS DETAILS:
-   - Eye Contact: Comment on camera engagement and maintaining eye contact
-   - Voice Volume: Assess speaking volume, clarity, and projection
-   - Posture: Evaluate body positioning and professional presence
-   - Facial Expressions: Analyze expressiveness and engagement
+4. VIDEO ANALYSIS DETAILS (Be brutally honest):
+   - Eye Contact: Did they look at the camera? (Yes/No + specific advice)
+   - Voice Volume: Was it loud enough? (Too quiet/Good/Too loud)
+   - Posture: Was it professional? (Slouching/Good/Leaning)
+   - Facial Expressions: Did they smile? Were they deadpan?
 
 5. SCORES (0-100):
    - Delivery: Clarity, pacing, filler words, tone
@@ -75,32 +79,32 @@ Provide a comprehensive analysis including:
    - Confidence: Self-assurance, handling pauses, professional demeanor
    - Overall: Weighted average
 
-6. **6Q PERSONALITY ANALYSIS FRAMEWORK:**
+6. **6Q PERSONALITY ANALYSIS FRAMEWORK (MANDATORY):**
    Analyze the candidate's personality traits (0-100) based on the comprehensive "6Q Framework":
 
-   **1. IQ (Intelligence Quotient)** - Problem solving, concept grasping, and logic
-      High IQ Indicators: Academic performance, uses specific examples, asks counter-questions, minimal emotional expression
-      Developing IQ Indicators: Unclear responses, changes topic often, rarely asks follow-ups, relies on emotions
+   **1. IQ (Intelligence Quotient)** - Logic & Clarity
+      - High: Structured answer, specific examples
+      - Low: Vague, rambling, misses the point
 
-   **2. EQ (Emotional Quotient)** - Emotional literacy, self-awareness, and empathy
-      High EQ Indicators: Admits mistakes without defensiveness, uses emotional vocabulary, acknowledges strengths and struggles, values teamwork, takes pauses
-      Developing EQ Indicators: Blames others, holds grudges, displays frustration quickly, seeks constant validation
+   **2. EQ (Emotional Quotient)** - Empathy & Awareness
+      - High: Uses emotional vocabulary, humble
+      - Low: Defensive, blames others, flat tone
 
-   **3. CQ (Creativity Quotient)** - Finding new ways to look at questions
-      High CQ Indicators: Asks diverse questions, uses "what if" thinking, associates concepts creatively, comfortable with trial and error
-      Developing CQ Indicators: Uncomfortable with open-ended questions, prefers structured paths, rarely asks beyond task
+   **3. CQ (Creativity Quotient)** - Innovation
+      - High: "What if" thinking, unique perspective
+      - Low: Standard/cliché answers, rigid thinking
 
-   **4. AQ (Adversity Quotient)** - Handling pressure, setbacks, and uncertainty
-      High AQ Indicators: Uses affirming gestures, talks about process not blame, clear reflection, calm tone, listens when corrected
-      Developing AQ Indicators: Missing reflection, quickly blames, immediate defensiveness, quick frustration
+   **4. AQ (Adversity Quotient)** - Resilience
+      - High: Calm tone, talks about solutions not problems
+      - Low: Frustrated tone, complains, defensive
 
-   **5. SQ (Social Quotient)** - Connecting, collaborating, and building rapport
-      High SQ Indicators: Adapts tone to audience, includes others, handles conflict maturely, understands non-verbal cues
-      Developing SQ Indicators: Blames team, dominates or withdraws, focuses only on own ideas
+   **5. SQ (Social Quotient)** - Collaboration
+      - High: Inclusive language ("we", "us"), friendly
+      - Low: "I" focused, dismissive, withdrawn
 
-   **6. MQ (Moral Quotient)** - Integrity, honesty, and fairness
-      High MQ Indicators: Takes responsibility, acknowledges others' contributions, consistency across contexts, owns mistakes
-      Developing MQ Indicators: Alters behavior based on audience, avoids reflection after conflicts
+   **6. MQ (Moral Quotient)** - Integrity
+      - High: Takes responsibility, honest about mistakes
+      - Low: Avoids blame, inconsistent stories
 
    **DETERMINE THE PERSONALITY CLUSTER based on the top 3 traits:**
    - Balanced Thinker (IQ+EQ+SQ), Innovative Problem Solver (IQ+CQ+AQ), Creative Strategist (IQ+CQ+SQ)
@@ -113,13 +117,13 @@ Provide a comprehensive analysis including:
 RESPONSE FORMAT (strict JSON):
 {
   "model_answer": "<ideal 2-3 paragraph response>",
-  "whats_good": ["<specific strength 1>", "<specific strength 2>", ...],
-  "whats_wrong": ["<specific improvement 1>", "<specific improvement 2>", ...],
+  "whats_good": ["<strength 1>", "<strength 2>", ...],
+  "whats_wrong": ["<DIRECT COMMAND 1 (e.g. Look at the camera)>", "<DIRECT COMMAND 2 (e.g. Sit up straight)>", ...],
   "video_analysis_details": {
-    "eye_contact": "<detailed feedback on eye contact>",
-    "voice_volume": "<detailed feedback on voice volume>",
-    "posture": "<detailed feedback on posture>",
-    "facial_expressions": "<detailed feedback on facial expressions>"
+    "eye_contact": "<specific observation + advice>",
+    "voice_volume": "<specific observation + advice>",
+    "posture": "<specific observation + advice>",
+    "facial_expressions": "<specific observation + advice>"
   },
   "delivery_score": <number 0-100>,
   "body_language_score": <number 0-100>,
@@ -139,7 +143,8 @@ RESPONSE FORMAT (strict JSON):
   "personality_cluster": "<Cluster Name>"
 }
 
-Be precise, objective, and calibrated ${roleContext ? `for ${role} roles` : "for professional interviews"}.`;
+Be BRUTALLY HONEST and DIRECT. Users want real feedback, not sugar-coating.
+IF VIDEO METADATA IS MISSING, INFER from the transcript text styles (e.g. long pauses, hesitation words).`;
 
     const response = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
