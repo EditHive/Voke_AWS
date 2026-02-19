@@ -96,7 +96,7 @@ const Index = () => {
               {["Features", "How it Works", "Testimonials", "Pricing"].map((item) => (
                 <a 
                   key={item}
-                  href="#"
+                  href={`#${item.toLowerCase().replace(/\s+/g, '-')}`}
                   className="text-2xl font-medium text-gray-300 hover:text-white"
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -305,6 +305,206 @@ const Index = () => {
                     {feature.desc}
                   </p>
                 </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section id="how-it-works" className="py-24 bg-black relative overflow-hidden">
+        <div className="container mx-auto px-4 md:px-6 relative z-10">
+          <div className="text-center mb-20">
+            <h2 className="text-3xl md:text-5xl font-bold mb-6">
+              How Voke <span className="text-fuchsia-400">Works</span>
+            </h2>
+            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+              Three simple steps to transform your interview preparation journey.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-12 relative">
+            {/* Connecting Line */}
+            <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-gradient-to-r from-violet-500/0 via-violet-500/50 to-violet-500/0 -translate-y-1/2 z-0" />
+
+            {[
+              {
+                step: "01",
+                title: "Choose Your Path",
+                desc: "Select your target role and experience level. We customize the questions to match your goals."
+              },
+              {
+                step: "02",
+                title: "Practice with AI",
+                desc: "Engage in realistic voice or text conversations. Our AI adapts to your responses in real-time."
+              },
+              {
+                step: "03",
+                title: "Get Insights",
+                desc: "Receive instant, detailed feedback on your answers, body language, and speaking pace."
+              }
+            ].map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.2 }}
+                className="relative z-10 bg-black/50 backdrop-blur-xl border border-white/10 p-8 rounded-3xl text-center group hover:border-violet-500/50 transition-colors"
+              >
+                <div className="w-16 h-16 rounded-2xl bg-violet-500/10 flex items-center justify-center mx-auto mb-6 text-2xl font-bold text-violet-400 group-hover:scale-110 transition-transform">
+                  {item.step}
+                </div>
+                <h3 className="text-xl font-bold mb-4">{item.title}</h3>
+                <p className="text-gray-400 leading-relaxed">
+                  {item.desc}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section id="testimonials" className="py-24 bg-white/[0.02] relative">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="text-center mb-20">
+            <h2 className="text-3xl md:text-5xl font-bold mb-6">
+              Loved by <span className="text-violet-400">Candidates</span>
+            </h2>
+            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+              Don't just take our word for it. See what our users have to say.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                quote: "Voke helped me land my L4 offer at Google. The system design practice was incredibly realistic.",
+                author: "Sarah Chen",
+                role: "Software Engineer at Google",
+                rating: 5
+              },
+              {
+                quote: "The behavioral interview feedback was a game changer. I finally understood what I was doing wrong.",
+                author: "Michael Ross",
+                role: "Product Manager at Meta",
+                rating: 5
+              },
+              {
+                quote: "I used to get so nervous during interviews. Voke built my confidence and helped me articulate my thoughts clearly.",
+                author: "Priya Patel",
+                role: "Data Scientist at Amazon",
+                rating: 5
+              }
+            ].map((testimonial, i) => (
+              <motion.div
+                key={i}
+                whileHover={{ y: -5 }}
+                className="p-8 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+              >
+                <div className="flex gap-1 mb-6">
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                  ))}
+                </div>
+                <p className="text-lg text-gray-300 mb-6 leading-relaxed">
+                  "{testimonial.quote}"
+                </p>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center font-bold text-white">
+                    {testimonial.author[0]}
+                  </div>
+                  <div>
+                    <h4 className="font-bold">{testimonial.author}</h4>
+                    <p className="text-sm text-gray-500">{testimonial.role}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="py-24 relative">
+        <div className="container mx-auto px-4 md:px-6">
+          <div className="text-center mb-20">
+            <h2 className="text-3xl md:text-5xl font-bold mb-6">
+              Simple, Transparent <span className="text-fuchsia-400">Pricing</span>
+            </h2>
+            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+              Start for free, upgrade when you're ready to take your prep to the next level.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {[
+              {
+                name: "Free",
+                price: "$0",
+                desc: "Perfect for getting started",
+                features: ["3 AI Interviews / month", "Basic Feedback", "Community Access", "1 Learning Path"],
+                cta: "Get Started",
+                popular: false
+              },
+              {
+                name: "Pro",
+                price: "$29",
+                desc: "For serious job seekers",
+                features: ["Unlimited AI Interviews", "Advanced Analytics", "Priority Support", "All Learning Paths", "Video Analysis"],
+                cta: "Start Free Trial",
+                popular: true
+              },
+              {
+                name: "Team",
+                price: "$99",
+                desc: "For universities & bootcamps",
+                features: ["Everything in Pro", "Team Dashboard", "Custom Question Bank", "Bulk User Management", "API Access"],
+                cta: "Contact Sales",
+                popular: false
+              }
+            ].map((plan, i) => (
+              <motion.div
+                key={i}
+                whileHover={{ y: -10 }}
+                className={`relative p-8 rounded-3xl border ${
+                  plan.popular 
+                    ? "bg-violet-900/20 border-violet-500/50 shadow-2xl shadow-violet-500/10" 
+                    : "bg-white/5 border-white/10"
+                } flex flex-col`}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-sm font-bold shadow-lg">
+                    Most Popular
+                  </div>
+                )}
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-bold">{plan.price}</span>
+                    <span className="text-gray-500">/month</span>
+                  </div>
+                  <p className="text-gray-400 mt-2 text-sm">{plan.desc}</p>
+                </div>
+                <ul className="space-y-4 mb-8 flex-1">
+                  {plan.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-center gap-3 text-sm text-gray-300">
+                      <CheckCircle className="w-4 h-4 text-violet-400 shrink-0" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <Button 
+                  className={`w-full py-6 rounded-xl font-bold ${
+                    plan.popular 
+                      ? "bg-white text-black hover:bg-gray-200" 
+                      : "bg-white/10 hover:bg-white/20 text-white"
+                  }`}
+                  onClick={() => navigate("/auth")}
+                >
+                  {plan.cta}
+                </Button>
               </motion.div>
             ))}
           </div>
