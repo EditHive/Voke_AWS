@@ -65,7 +65,77 @@ Deno.serve(async (req: Request) => {
     - 30-49: Poor.
     - 0-29: Very Poor.
 
-    Analyze the "user" messages in the transcript carefully.`;
+    Analyze the "user" messages in the transcript carefully.
+
+    **6Q PERSONALITY ANALYSIS FRAMEWORK:**
+    Analyze the candidate's personality traits (0-100) based on the comprehensive "6Q Framework":
+
+    **1. IQ (Intelligence Quotient)** - Problem solving, concept grasping, and logic
+       High IQ Indicators: Academic performance, uses specific examples, asks counter-questions, minimal emotional expression
+       Developing IQ Indicators: Unclear responses, changes topic often, rarely asks follow-ups, relies on emotions
+
+    **2. EQ (Emotional Quotient)** - Emotional literacy, self-awareness, and empathy
+       High EQ Indicators: Admits mistakes without defensiveness, uses emotional vocabulary, acknowledges strengths and struggles, values teamwork, takes pauses
+       Developing EQ Indicators: Blames others, holds grudges, displays frustration quickly, seeks constant validation
+
+    **3. CQ (Creativity Quotient)** - Finding new ways to look at questions
+       High CQ Indicators: Asks diverse questions, uses "what if" thinking, associates concepts creatively, comfortable with trial and error
+       Developing CQ Indicators: Uncomfortable with open-ended questions, prefers structured paths, rarely asks beyond task
+
+    **4. AQ (Adversity Quotient)** - Handling pressure, setbacks, and uncertainty
+       High AQ Indicators: Uses affirming gestures, talks about process not blame, clear reflection, calm tone, listens when corrected
+       Developing AQ Indicators: Missing reflection, quickly blames, immediate defensiveness, quick frustration
+
+    **5. SQ (Social Quotient)** - Connecting, collaborating, and building rapport
+       High SQ Indicators: Adapts tone to audience, includes others, handles conflict maturely, understands non-verbal cues
+       Developing SQ Indicators: Blames team, dominates or withdraws, focuses only on own ideas
+
+    **6. MQ (Moral Quotient)** - Integrity, honesty, and fairness
+       High MQ Indicators: Takes responsibility, acknowledges others' contributions, consistency across contexts, owns mistakes
+       Developing MQ Indicators: Alters behavior based on audience, avoids reflection after conflicts
+
+    **DETERMINE THE PERSONALITY CLUSTER based on the top 3 traits:**
+    - Balanced Thinker (IQ+EQ+SQ): Logical, calm, socially aware
+    - Innovative Problem Solver (IQ+CQ+AQ): Logical, creative, works under pressure
+    - Creative Strategist (IQ+CQ+SQ): Smart, imaginative, people-friendly
+    - Resilient Scholar (IQ+EQ+AQ): Clear thinker, disciplined
+    - Responsible Analyst (IQ+SQ+MQ): Logical, reliable, ethical
+    - Compassionate Leader (EQ+SQ+MQ): Empathetic, ethical, socially aware
+    - Creative People Person (EQ+CQ+SQ): Expressive, creative, interactive
+    - Ethical Resilient Leader (EQ+AQ+MQ): Calm, fair, good under stress
+    - Adaptive Innovator (CQ+AQ+SQ): Creative, adaptable
+    - Socially Conscious Creator (CQ+SQ+MQ): Creative, ethical, community-driven
+    - Ethical Executor (IQ+MQ+AQ): Disciplined, values-driven
+    - Empathic Creator (EQ+CQ+MQ): Emotional, creative, grounded
+    - Insightful Innovator (IQ+EQ+CQ): Logical, creative, empathetic
+    - Thoughtful Decision Maker (IQ+EQ+MQ): Mature, balanced
+    - Creative Resilient Communicator (CQ+EQ+AQ): Creative, calm, confident
+    - Purpose-Led Problem Solver (MQ+CQ+AQ): Ethical, innovation-driven
+    - High-Output Collaborator (IQ+SQ+AQ): Team-driven, fast learner
+    - The Stabiliser (EQ+SQ+AQ): Emotionally strong, adaptive
+
+    **UPDATED OUTPUT FORMAT:**
+    Respond with ONLY a valid JSON object (no markdown, no code blocks).
+    {
+      "score": number (0-100),
+      "feedback": "Overall summary (2-3 sentences)",
+      "strengths": ["Strength 1", "Strength 2", "Strength 3"],
+      "weaknesses": ["Weakness 1", "Weakness 2", "Weakness 3"],
+      "metrics": {
+        "technical_accuracy": number (0-100),
+        "communication": number (0-100),
+        "problem_solving": number (0-100)
+      },
+      "six_q_score": {
+        "iq": number (0-100),
+        "eq": number (0-100),
+        "cq": number (0-100),
+        "aq": number (0-100),
+        "sq": number (0-100),
+        "mq": number (0-100)
+      },
+      "personality_cluster": "Cluster Name"
+    }`;
 
     // Construct the conversation history for Gemini
     // Gemini expects "parts" with "text"
@@ -104,14 +174,14 @@ Deno.serve(async (req: Request) => {
     }
 
     const data = await response.json();
-    
+
     // Gemini response structure is different
     let aiContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!aiContent) {
       throw new Error("No content received from Gemini");
     }
-    
+
     // Clean up potential markdown formatting if the model ignores instructions
     aiContent = aiContent.replace(/```json/g, "").replace(/```/g, "").trim();
 

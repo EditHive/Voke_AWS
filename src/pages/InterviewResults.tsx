@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowRight, CheckCircle, Clock, Trophy, RotateCcw, LayoutDashboard } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
+import SixQAnalysis from "@/components/SixQAnalysis";
 
 const InterviewResults = () => {
   const { id } = useParams();
@@ -31,19 +32,19 @@ const InterviewResults = () => {
 
       if (error) throw error;
       setSession(data);
-      
+
       // Use score from state if available (since we couldn't save it to DB), otherwise use DB score or random
       const stateScore = location.state?.score;
       // Cast data to any to avoid TS error about missing 'score' column
       const dbScore = (data as any).score;
-      
+
       // Use nullish coalescing (??) to allow 0 as a valid score
       setScore(stateScore ?? dbScore ?? Math.floor(Math.random() * (95 - 75 + 1)) + 75);
-      
+
       if (location.state?.evaluation) {
         setEvaluation(location.state.evaluation);
       }
-      
+
     } catch (error) {
       console.error("Error loading session:", error);
       toast.error("Failed to load results");
@@ -65,16 +66,16 @@ const InterviewResults = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         className="max-w-2xl w-full"
       >
         <Card className="border-border/50 shadow-2xl bg-card/50 backdrop-blur-xl overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-primary"></div>
-          
+
           <CardHeader className="text-center pt-12 pb-6">
-            <motion.div 
+            <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 200, damping: 15 }}
@@ -209,25 +210,35 @@ const InterviewResults = () => {
                 </div>
               </div>
 
+              {/* 6Q Analysis */}
+              {(evaluation?.six_q_score || session?.six_q_score) && (
+                <div className="pt-4">
+                  <SixQAnalysis
+                    scores={evaluation?.six_q_score || session?.six_q_score}
+                    cluster={evaluation?.personality_cluster || session?.personality_cluster}
+                  />
+                </div>
+              )}
+
               {/* Performance Breakdown */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-foreground">Performance Breakdown</h3>
                 <div className="space-y-3">
                   {[
-                    { 
-                      label: "Technical Accuracy", 
-                      score: evaluation?.metrics?.technical_accuracy || (score > 80 ? 90 : 75), 
-                      color: "bg-violet-500" 
+                    {
+                      label: "Technical Accuracy",
+                      score: evaluation?.metrics?.technical_accuracy || (score > 80 ? 90 : 75),
+                      color: "bg-violet-500"
                     },
-                    { 
-                      label: "Communication", 
-                      score: evaluation?.metrics?.communication || (score > 80 ? 95 : 80), 
-                      color: "bg-blue-500" 
+                    {
+                      label: "Communication",
+                      score: evaluation?.metrics?.communication || (score > 80 ? 95 : 80),
+                      color: "bg-blue-500"
                     },
-                    { 
-                      label: "Problem Solving", 
-                      score: evaluation?.metrics?.problem_solving || (score > 80 ? 85 : 70), 
-                      color: "bg-pink-500" 
+                    {
+                      label: "Problem Solving",
+                      score: evaluation?.metrics?.problem_solving || (score > 80 ? 85 : 70),
+                      color: "bg-pink-500"
                     },
                   ].map((metric, i) => (
                     <div key={i} className="space-y-1">
@@ -244,15 +255,15 @@ const InterviewResults = () => {
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="flex-1 h-12"
                 onClick={() => navigate("/interview/new")}
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Start New Interview
               </Button>
-              <Button 
+              <Button
                 className="flex-1 h-12 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-primary/20"
                 onClick={() => navigate("/dashboard")}
               >

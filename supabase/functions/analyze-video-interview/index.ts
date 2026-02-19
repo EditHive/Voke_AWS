@@ -75,6 +75,41 @@ Provide a comprehensive analysis including:
    - Confidence: Self-assurance, handling pauses, professional demeanor
    - Overall: Weighted average
 
+6. **6Q PERSONALITY ANALYSIS FRAMEWORK:**
+   Analyze the candidate's personality traits (0-100) based on the comprehensive "6Q Framework":
+
+   **1. IQ (Intelligence Quotient)** - Problem solving, concept grasping, and logic
+      High IQ Indicators: Academic performance, uses specific examples, asks counter-questions, minimal emotional expression
+      Developing IQ Indicators: Unclear responses, changes topic often, rarely asks follow-ups, relies on emotions
+
+   **2. EQ (Emotional Quotient)** - Emotional literacy, self-awareness, and empathy
+      High EQ Indicators: Admits mistakes without defensiveness, uses emotional vocabulary, acknowledges strengths and struggles, values teamwork, takes pauses
+      Developing EQ Indicators: Blames others, holds grudges, displays frustration quickly, seeks constant validation
+
+   **3. CQ (Creativity Quotient)** - Finding new ways to look at questions
+      High CQ Indicators: Asks diverse questions, uses "what if" thinking, associates concepts creatively, comfortable with trial and error
+      Developing CQ Indicators: Uncomfortable with open-ended questions, prefers structured paths, rarely asks beyond task
+
+   **4. AQ (Adversity Quotient)** - Handling pressure, setbacks, and uncertainty
+      High AQ Indicators: Uses affirming gestures, talks about process not blame, clear reflection, calm tone, listens when corrected
+      Developing AQ Indicators: Missing reflection, quickly blames, immediate defensiveness, quick frustration
+
+   **5. SQ (Social Quotient)** - Connecting, collaborating, and building rapport
+      High SQ Indicators: Adapts tone to audience, includes others, handles conflict maturely, understands non-verbal cues
+      Developing SQ Indicators: Blames team, dominates or withdraws, focuses only on own ideas
+
+   **6. MQ (Moral Quotient)** - Integrity, honesty, and fairness
+      High MQ Indicators: Takes responsibility, acknowledges others' contributions, consistency across contexts, owns mistakes
+      Developing MQ Indicators: Alters behavior based on audience, avoids reflection after conflicts
+
+   **DETERMINE THE PERSONALITY CLUSTER based on the top 3 traits:**
+   - Balanced Thinker (IQ+EQ+SQ), Innovative Problem Solver (IQ+CQ+AQ), Creative Strategist (IQ+CQ+SQ)
+   - Resilient Scholar (IQ+EQ+AQ), Responsible Analyst (IQ+SQ+MQ), Compassionate Leader (EQ+SQ+MQ)
+   - Creative People Person (EQ+CQ+SQ), Ethical Resilient Leader (EQ+AQ+MQ), Adaptive Innovator (CQ+AQ+SQ)
+   - Socially Conscious Creator (CQ+SQ+MQ), Ethical Executor (IQ+MQ+AQ), Empathic Creator (EQ+CQ+MQ)
+   - Insightful Innovator (IQ+EQ+CQ), Thoughtful Decision Maker (IQ+EQ+MQ), Creative Resilient Communicator (CQ+EQ+AQ)
+   - Purpose-Led Problem Solver (MQ+CQ+AQ), High-Output Collaborator (IQ+SQ+AQ), The Stabiliser (EQ+SQ+AQ)
+
 RESPONSE FORMAT (strict JSON):
 {
   "model_answer": "<ideal 2-3 paragraph response>",
@@ -92,7 +127,16 @@ RESPONSE FORMAT (strict JSON):
   "overall_score": <number 0-100>,
   "feedback_summary": "<2-3 paragraph overall analysis>",
   "strengths": ["<strength 1>", "<strength 2>", ...],
-  "improvements": ["<improvement 1>", "<improvement 2>", ...]
+  "improvements": ["<improvement 1>", "<improvement 2>", ...],
+  "six_q_score": {
+    "iq": <number 0-100>,
+    "eq": <number 0-100>,
+    "cq": <number 0-100>,
+    "aq": <number 0-100>,
+    "sq": <number 0-100>,
+    "mq": <number 0-100>
+  },
+  "personality_cluster": "<Cluster Name>"
 }
 
 Be precise, objective, and calibrated ${roleContext ? `for ${role} roles` : "for professional interviews"}.`;
@@ -182,6 +226,8 @@ Be precise, objective, and calibrated ${roleContext ? `for ${role} roles` : "for
         whats_wrong: analysis.whats_wrong,
         video_analysis_details: analysis.video_analysis_details,
         status: "completed",
+        six_q_score: analysis.six_q_score,
+        personality_cluster: analysis.personality_cluster,
         analyzed_at: new Date().toISOString(),
       })
       .eq("id", sessionId);

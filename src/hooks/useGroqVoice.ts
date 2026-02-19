@@ -63,11 +63,15 @@ export function useGroqVoice(): UseGroqVoiceReturn {
     const statusRef = useRef(status);
     const isAiSpeakingRef = useRef(isAiSpeaking);
     const isListeningRef = useRef(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
         statusRef.current = status;
         isAiSpeakingRef.current = isAiSpeaking;
     }, [status, isAiSpeaking]);
+
+    // Forward declaration for use in speakResponse
+    const startListeningRef = useRef<() => Promise<void>>();
 
     const speakResponse = async (text: string) => {
         if (!text) return;
@@ -94,7 +98,12 @@ export function useGroqVoice(): UseGroqVoiceReturn {
             const audioUrl = URL.createObjectURL(blob);
 
             // Play the audio
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current = null;
+            }
             const audio = new Audio(audioUrl);
+            audioRef.current = audio;
 
             audio.onplay = () => {
                 console.log('DEBUG: Audio started');
@@ -105,10 +114,11 @@ export function useGroqVoice(): UseGroqVoiceReturn {
                 setIsAiSpeaking(false);
                 setVolume(0);
                 URL.revokeObjectURL(audioUrl);
+                audioRef.current = null;
 
                 // Resume listening after speaking
-                if (statusRef.current === LiveStatus.CONNECTED) {
-                    setTimeout(() => startListening(), 500);
+                if (statusRef.current === LiveStatus.CONNECTED && startListeningRef.current) {
+                    setTimeout(() => startListeningRef.current!(), 500);
                 }
             };
 
@@ -116,6 +126,7 @@ export function useGroqVoice(): UseGroqVoiceReturn {
                 console.error("DEBUG: Audio playback error:", e);
                 setIsAiSpeaking(false);
                 setVolume(0);
+                audioRef.current = null;
             };
 
             console.log('DEBUG: Playing audio for:', text);
@@ -128,11 +139,12 @@ export function useGroqVoice(): UseGroqVoiceReturn {
 
             // Fallback to browser TTS
             console.log('DEBUG: Falling back to browser TTS');
+            window.speechSynthesis.cancel(); // Cancel any previous speech
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.onend = () => {
                 setIsAiSpeaking(false);
-                if (statusRef.current === LiveStatus.CONNECTED) {
-                    setTimeout(() => startListening(), 500);
+                if (statusRef.current === LiveStatus.CONNECTED && startListeningRef.current) {
+                    setTimeout(() => startListeningRef.current!(), 500);
                 }
             };
             window.speechSynthesis.speak(utterance);
@@ -293,6 +305,11 @@ export function useGroqVoice(): UseGroqVoiceReturn {
         }
     };
 
+    // Assign startListening to ref so it can be called from speakResponse
+    useEffect(() => {
+        startListeningRef.current = startListening;
+    }, []);
+
     const connect = useCallback(async (context?: string) => {
         if (status === LiveStatus.CONNECTED) return;
 
@@ -370,6 +387,13 @@ export function useGroqVoice(): UseGroqVoiceReturn {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
             mediaRecorderRef.current.stop();
         }
+
+        // Stop audio playback
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current = null;
+        }
+        window.speechSynthesis.cancel();
 
         setIsUserSpeaking(false);
         setIsAiSpeaking(false);

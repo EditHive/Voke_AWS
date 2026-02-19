@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogOut, ArrowLeft, Eye, Mic, TrendingUp, Award, CheckCircle2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import SixQAnalysis from "@/components/SixQAnalysis";
 
 const MultiQuestionResults = () => {
     const { sessionId } = useParams();
@@ -203,6 +204,16 @@ const MultiQuestionResults = () => {
                         </CardContent>
                     </Card>
                 </div>
+
+                {/* 6Q Analysis */}
+                {session.six_q_score && (
+                    <div className="mb-8">
+                        <SixQAnalysis
+                            scores={session.six_q_score}
+                            cluster={session.personality_cluster}
+                        />
+                    </div>
+                )}
 
                 {/* Individual Answers */}
                 <div className="space-y-4">

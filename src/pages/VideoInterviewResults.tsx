@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogOut, ArrowLeft, TrendingUp, Eye, MessageSquare, Award, Mic, CheckCircle2, AlertCircle, Play, Share2, Download } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import SixQAnalysis from "@/components/SixQAnalysis";
 
 const VideoInterviewResults = () => {
   const { id } = useParams();
@@ -386,6 +387,16 @@ const VideoInterviewResults = () => {
                   </div>
                 </CardContent>
               </Card>
+            )}
+
+            {/* 6Q Analysis */}
+            {session.six_q_score && (
+              <div className="pt-4">
+                <SixQAnalysis
+                  scores={session.six_q_score}
+                  cluster={session.personality_cluster}
+                />
+              </div>
             )}
 
             {/* Detailed Summary */}

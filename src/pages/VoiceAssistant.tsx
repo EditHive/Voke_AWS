@@ -37,6 +37,32 @@ const VoiceAssistant: React.FC = () => {
         loadUserContext();
     }, []);
 
+    const [duration, setDuration] = useState(0);
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        if (status === LiveStatus.CONNECTED) {
+            timerRef.current = setInterval(() => {
+                setDuration(prev => prev + 1);
+            }, 1000);
+        } else {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+            }
+        }
+        return () => {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+            }
+        };
+    }, [status]);
+
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
     const loadUserContext = async () => {
         try {
             console.log('[VoiceAssistant] Starting loadUserContext...');
@@ -201,6 +227,48 @@ const VoiceAssistant: React.FC = () => {
         }
     };
 
+    const handleEndInterview = async () => {
+        if (logs.length === 0) {
+            toast.error("No conversation to analyze yet.");
+            return;
+        }
+
+        disconnect();
+        const toastId = toast.loading("Saving session...");
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("User not authenticated");
+
+            const { data, error } = await supabase
+                .from('interview_sessions')
+                .insert({
+                    user_id: user.id,
+                    role: 'Voice Assistant',
+                    time_limit_minutes: 0, // Unlimited
+                    status: 'completed',
+                    interview_type: 'voice',
+                    interview_mode: 'voice',
+                    transcript: logs, // Save the full logs
+                    total_duration_seconds: duration,
+                    created_at: new Date().toISOString()
+                } as any)
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            toast.dismiss(toastId);
+            toast.success("Session saved!");
+            navigate(`/voice-interview/results/${data.id}`);
+
+        } catch (error: any) {
+            console.error("Error saving session:", error);
+            toast.dismiss(toastId);
+            toast.error(`Failed to save session: ${error.message || error.error_description || "Unknown error"}`);
+        }
+    };
+
     const handleConnect = () => {
         connect(userContext);
     };
@@ -229,9 +297,17 @@ const VoiceAssistant: React.FC = () => {
 
                 {/* Header */}
                 <div className="text-center space-y-2">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-medium text-slate-400">
-                        <Sparkles className="w-3 h-3 text-purple-400" />
-                        <span>AI Interviewer</span>
+                    <div className="flex items-center justify-center gap-3">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-medium text-slate-400">
+                            <Sparkles className="w-3 h-3 text-purple-400" />
+                            <span>AI Interviewer</span>
+                        </div>
+                        {status === LiveStatus.CONNECTED && (
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-medium text-slate-400 font-mono">
+                                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                                <span>{formatTime(duration)}</span>
+                            </div>
+                        )}
                     </div>
                     <h1 className="text-3xl font-bold tracking-tight text-white">Voice Assistant</h1>
                     <p className="text-slate-400 text-sm">
@@ -290,13 +366,23 @@ const VoiceAssistant: React.FC = () => {
                             <Mic className="w-8 h-8 text-white" />
                         </button>
                     ) : (
-                        <button
-                            onClick={disconnect}
-                            className="group relative flex items-center justify-center w-20 h-20 bg-red-500 hover:bg-red-400 rounded-full shadow-lg hover:shadow-red-500/25 transition-all duration-300"
-                        >
-                            <div className="absolute inset-0 rounded-full border-2 border-white/20 group-hover:scale-110 transition-transform duration-300"></div>
-                            <X className="w-8 h-8 text-white" />
-                        </button>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={disconnect}
+                                className="group relative flex items-center justify-center w-16 h-16 bg-slate-700 hover:bg-slate-600 rounded-full shadow-lg transition-all duration-300"
+                                title="Mute/Pause"
+                            >
+                                <X className="w-6 h-6 text-white" />
+                            </button>
+                            <button
+                                onClick={handleEndInterview}
+                                className="group relative flex items-center justify-center w-20 h-20 bg-red-500 hover:bg-red-400 rounded-full shadow-lg hover:shadow-red-500/25 transition-all duration-300"
+                                title="End Interview & Get Results"
+                            >
+                                <div className="absolute inset-0 rounded-full border-2 border-white/20 group-hover:scale-110 transition-transform duration-300"></div>
+                                <MessageSquare className="w-8 h-8 text-white" />
+                            </button>
+                        </div>
                     )}
                 </div>
 
