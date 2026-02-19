@@ -12,6 +12,7 @@ import InterviewNew from "./pages/InterviewNew";
 import InterviewResults from "./pages/InterviewResults";
 import InterviewSession from "./pages/InterviewSession";
 import VideoInterview from "./pages/VideoInterview";
+import VoiceAssistant from "./pages/VoiceAssistant";
 import VideoInterviewResults from "./pages/VideoInterviewResults";
 import VideoPracticeHistory from "./pages/VideoPracticeHistory";
 import ProgressAnalytics from "./pages/ProgressAnalytics";
@@ -48,6 +49,7 @@ const App = () => (
           <Route path="/interview/:id" element={<InterviewSession />} />
           <Route path="/video-interview" element={<VideoInterview />} />
           <Route path="/video-interview/:id/results" element={<VideoInterviewResults />} />
+          <Route path="/voice-assistant" element={<VoiceAssistant />} />
           <Route path="/video-practice" element={<VideoPracticeHistory />} />
           <Route path="/progress-analytics" element={<ProgressAnalytics />} />
           <Route path="/job-market" element={<JobMarketInsights />} />

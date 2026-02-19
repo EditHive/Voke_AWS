@@ -7,45 +7,35 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  Brain, LogOut, Send, Mic, MicOff, Volume2, 
-  Clock, User, Bot, StopCircle, Award, CheckCircle2, AlertTriangle, XCircle
+import {
+  LogOut,
+  Send,
+  Clock,
+  User,
+  Bot,
+  StopCircle,
+  Award,
+  CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useVoiceChat } from "@/hooks/useVoiceChat";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "motion/react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 
-// Mock Interview Logic
-const MOCK_INTERVIEW_FLOW = [
-  {
-    role: "assistant",
-    content: "Hello! I'm Voke, your AI interviewer today. I see we're focusing on **Frontend Development**. To start, could you tell me about a challenging UI problem you've solved recently?"
-  },
-  {
-    role: "assistant",
-    content: "That's interesting. When dealing with that performance issue, how did you measure the impact of your optimizations? Did you use any specific tools?"
-  },
-  {
-    role: "assistant",
-    content: "Great. Now, let's shift to React specifically. Can you explain the difference between `useEffect` and `useLayoutEffect`, and when you would choose one over the other?"
-  },
-  {
-    role: "assistant",
-    content: "Excellent explanation. Let's do a quick coding challenge. How would you implement a custom hook `useDebounce` that delays a value update?"
-  },
-  {
-    role: "assistant",
-    content: "Thank you for that implementation. Finally, let's discuss accessibility. What are some key considerations when building a modal component to ensure it's accessible to screen readers?"
-  }
-];
-
+// Basic message shape for the text interview
 interface Message {
   role: "assistant" | "user";
   content: string;
 }
+
+// Fallback first question if the AI backend is unavailable
+const INITIAL_QUESTION: Message = {
+  role: "assistant",
+  content:
+    "Hello! I'm Voke, your AI interviewer. Let's get started – tell me about a challenging project or problem you've worked on recently, and how you approached it.",
+};
 
 export default function InterviewSession() {
   const { id } = useParams();
@@ -55,46 +45,69 @@ export default function InterviewSession() {
   const [sending, setSending] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [voiceMode, setVoiceMode] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [mockIndex, setMockIndex] = useState(0);
   const [showResults, setShowResults] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [config, setConfig] = useState(location.state?.config || {
     topic: "General",
     difficulty: "Intermediate",
-    mode: "text"
+    mode: "text",
   });
 
-  const { isListening, isSpeaking, startListening, stopListening, speak, stopSpeaking } = useVoiceChat({
-    onTranscript: (text, isFinal) => {
-      if (isFinal) {
-        setInput(text);
-        // Auto-send if voice mode is active and silence detected (simulated by isFinal)
-        setTimeout(() => {
-          if (text.trim()) handleSendMessage(text);
-        }, 1000);
-      }
-    },
-    onError: (error) => toast.error(error),
-  });
+  // Treat "sending" as when the AI is "speaking" for UI effects
+  const isSpeaking = sending;
+
+  // Derive a simple progress estimate based on number of AI turns
+  const assistantTurns = messages.filter(m => m.role === "assistant").length;
+  const progressPercent = Math.min(100, Math.round((assistantTurns / 5) * 100));
 
   useEffect(() => {
-    // Initialize session
-    setTimeout(() => {
-      setLoading(false);
-      // Start with first question
-      const initialMsg = MOCK_INTERVIEW_FLOW[0];
-      setMessages([initialMsg as Message]);
-      if (config.mode === 'voice') {
-        setVoiceMode(true);
-        speak(initialMsg.content);
-      }
-    }, 1500);
+    const init = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          navigate("/auth");
+          return;
+        }
 
-    const timer = setInterval(() => setElapsedTime(p => p + 1), 1000);
+        setUserId(user.id);
+        setLoading(false);
+        setSending(true);
+
+        // Ask the AI to start the interview and pose the first question
+        const { data, error } = await supabase.functions.invoke("adaptive-interview-chat", {
+          body: {
+            userId: user.id,
+            messages: [
+              {
+                role: "user",
+                content: "Start the interview and ask me the first question.",
+              },
+            ],
+          },
+        });
+
+        if (error) {
+          console.error("Error starting adaptive interview:", error);
+          toast.error("AI interviewer is unavailable, starting with a default question.");
+          setMessages([INITIAL_QUESTION]);
+        } else if (data?.content) {
+          setMessages([{ role: "assistant", content: data.content }]);
+        } else {
+          // No content returned – still show a sensible first question
+          setMessages([INITIAL_QUESTION]);
+        }
+      } finally {
+        setSending(false);
+      }
+    };
+
+    init();
+
+    const timer = setInterval(() => setElapsedTime((p) => p + 1), 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     scrollToBottom();
@@ -104,29 +117,78 @@ export default function InterviewSession() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleSendMessage = async (content: string) => {
-    if (!content.trim()) return;
+  // Fallback formatter used if the AI backend is unavailable
+  const buildFallbackFeedback = (question: string | null, answer: string): string => {
+    const safeQuestion = question || "the interview question";
 
-    // Add user message
+    return `### ✅ What You Did Well
+- You provided a thoughtful answer in your own words.
+- You attempted to connect your experience to the question.
+
+### ⚠️ Areas to Improve
+- Be more specific and concrete; include technologies, numbers, or clear outcomes.
+- Use a clear structure like STAR (Situation, Task, Action, Result).
+- Explicitly call out what *you* did versus what the team did.
+
+### 📝 Model Answer
+Here is an example of a strong answer to "${safeQuestion}":
+
+I recently worked on a challenging project where [...brief context]. The main challenge was [...key problem]. My responsibility was to [...your role]. To solve this, I first [...step 1], then [...step 2], and finally [...step 3]. As a result, we achieved [...measurable result such as performance improvement, revenue impact, or user metric].
+
+Notice how this answer clearly explains the context, your specific actions, and a concrete result.
+
+### 🎯 Skill Gap Analysis
+- Storytelling and structuring answers
+- Highlighting measurable impact
+- Communicating your individual contribution
+
+### ❓ Next Question
+Tell me about a time you had to learn something quickly in order to deliver on a tight deadline. What did you do and what was the outcome?`;
+  };
+
+  const handleSendMessage = async (content: string) => {
+    if (!content.trim() || sending || !userId) return;
+
+    // Add user message locally
     const userMsg: Message = { role: "user", content };
-    setMessages(prev => [...prev, userMsg]);
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
     setInput("");
     setSending(true);
 
-    // Simulate AI thinking delay
-    setTimeout(() => {
-      const nextIndex = mockIndex + 1;
-      if (nextIndex < MOCK_INTERVIEW_FLOW.length) {
-        const aiMsg = MOCK_INTERVIEW_FLOW[nextIndex];
-        setMessages(prev => [...prev, aiMsg as Message]);
-        setMockIndex(nextIndex);
-        if (voiceMode) speak(aiMsg.content);
-      } else {
-        // End of interview flow
-        setShowResults(true);
+    // Last assistant turn (used if we need to build a local fallback)
+    const lastAssistant = [...updatedMessages].reverse().find(m => m.role === "assistant") || null;
+    const lastQuestion = lastAssistant?.content ?? null;
+
+    try {
+      const { data, error } = await supabase.functions.invoke("adaptive-interview-chat", {
+        body: {
+          userId,
+          messages: updatedMessages,
+        },
+      });
+
+      if (error) {
+        console.error("Error contacting AI interviewer:", error);
+        toast.error("AI feedback is temporarily unavailable. Showing a generic review instead.");
+        const fallbackContent = buildFallbackFeedback(lastQuestion, content);
+        const aiMsg: Message = { role: "assistant", content: fallbackContent };
+        setMessages(prev => [...prev, aiMsg]);
+        return;
       }
+
+      if (data?.content) {
+        const aiMsg: Message = { role: "assistant", content: data.content };
+        setMessages(prev => [...prev, aiMsg]);
+      } else {
+        // No content from backend – still respond with a useful fallback
+        const fallbackContent = buildFallbackFeedback(lastQuestion, content);
+        const aiMsg: Message = { role: "assistant", content: fallbackContent };
+        setMessages(prev => [...prev, aiMsg]);
+      }
+    } finally {
       setSending(false);
-    }, 2000);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -135,17 +197,6 @@ export default function InterviewSession() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const toggleVoiceMode = () => {
-    if (voiceMode) {
-      stopListening();
-      stopSpeaking();
-      setVoiceMode(false);
-    } else {
-      startListening();
-      setVoiceMode(true);
-      toast.success("Voice mode active");
-    }
-  };
 
   if (loading) {
     return (
@@ -194,23 +245,15 @@ export default function InterviewSession() {
             <div className="p-4 rounded-xl bg-background/50 border border-border/50 shadow-sm space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Progress</span>
-                <span className="font-medium">{Math.round(((mockIndex + 1) / MOCK_INTERVIEW_FLOW.length) * 100)}%</span>
+                <span className="font-medium">{progressPercent}%</span>
               </div>
-              <Progress value={((mockIndex + 1) / MOCK_INTERVIEW_FLOW.length) * 100} className="h-2" />
+              <Progress value={progressPercent} className="h-2" />
             </div>
           </div>
         </div>
 
         <div className="flex-1 p-6 flex flex-col justify-end">
           <div className="space-y-3">
-            <Button 
-              onClick={toggleVoiceMode} 
-              variant={voiceMode ? "default" : "outline"} 
-              className={`w-full justify-start h-12 text-base ${voiceMode ? 'bg-gradient-to-r from-violet-600 to-purple-600 border-0 shadow-lg shadow-violet-500/25' : ''}`}
-            >
-              {voiceMode ? <Mic className="w-5 h-5 mr-3" /> : <MicOff className="w-5 h-5 mr-3" />}
-              {voiceMode ? "Voice Mode Active" : "Enable Voice Mode"}
-            </Button>
             <Button onClick={() => setShowResults(true)} variant="destructive" className="w-full justify-start h-12 bg-red-500/10 text-red-500 hover:bg-red-500/20 border-0">
               <StopCircle className="w-5 h-5 mr-3" />
               End Session
@@ -310,15 +353,6 @@ export default function InterviewSession() {
         <div className="p-4 md:p-6 bg-background/80 backdrop-blur-xl border-t border-border/40">
           <div className="max-w-3xl mx-auto relative">
             <div className="relative flex items-end gap-2 p-2 bg-card border border-border/50 rounded-3xl shadow-lg shadow-black/5 focus-within:ring-2 focus-within:ring-violet-500/20 transition-all">
-              <Button
-                size="icon"
-                variant="ghost"
-                className={`rounded-full h-10 w-10 shrink-0 ${voiceMode ? 'text-red-500 bg-red-50 hover:bg-red-100 dark:bg-red-950/30' : 'text-muted-foreground hover:text-foreground'}`}
-                onClick={toggleVoiceMode}
-              >
-                {voiceMode ? <Mic className="w-5 h-5 animate-pulse" /> : <Mic className="w-5 h-5" />}
-              </Button>
-              
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -328,7 +362,7 @@ export default function InterviewSession() {
                     handleSendMessage(input);
                   }
                 }}
-                placeholder={voiceMode ? "Listening... (or type your answer)" : "Type your answer here..."}
+                placeholder="Type your answer here..."
                 className="min-h-[44px] max-h-[120px] py-3 px-2 border-0 focus-visible:ring-0 bg-transparent resize-none shadow-none"
                 rows={1}
                 disabled={sending}

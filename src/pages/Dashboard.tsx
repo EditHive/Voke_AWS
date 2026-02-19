@@ -6,8 +6,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  FileText, LogOut, TrendingUp, Upload, Play, Target, Users, Mic, Settings, 
+import {
+  FileText, LogOut, TrendingUp, Upload, Play, Target, Users, Mic, Settings,
   Flame, Trophy, Clock, Star, ArrowRight, Zap, Code, MessageSquare, Bell, Search,
   Globe, BookOpen
 } from "lucide-react";
@@ -139,13 +139,13 @@ const Dashboard = () => {
             </div>
             <h1 className="text-xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">Voke</h1>
           </div>
-          
+
           <div className="flex-1 max-w-md mx-8 hidden md:block">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input 
+              <input
                 type="text"
-                placeholder="Search interviews, questions, or peers..." 
+                placeholder="Search interviews, questions, or peers..."
                 className="w-full pl-10 pr-4 py-2 rounded-full bg-muted/50 border-transparent focus:bg-background focus:border-primary/20 transition-all outline-none text-sm"
               />
             </div>
@@ -177,19 +177,19 @@ const Dashboard = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
+
           {/* Left Column - Main Feed */}
           <div className="lg:col-span-8 space-y-8">
-            
+
             {/* Hero Section */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white p-8 shadow-xl"
             >
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-fuchsia-500/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
-              
+
               <div className="relative z-10">
                 <div className="flex justify-between items-start mb-6">
                   <div>
@@ -235,13 +235,13 @@ const Dashboard = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="hover:shadow-lg transition-all cursor-pointer group border-l-4 border-l-pink-500" onClick={() => navigate("/adaptive-interview")}>
+                <Card className="hover:shadow-lg transition-all cursor-pointer group border-l-4 border-l-pink-500" onClick={() => navigate("/voice-assistant")}>
                   <CardContent className="p-4 flex flex-col items-center text-center pt-6">
                     <div className="w-12 h-12 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                       <Mic className="w-6 h-6 text-pink-600 dark:text-pink-400" />
                     </div>
-                    <h4 className="font-semibold text-sm">Voice Session</h4>
-                    <p className="text-xs text-muted-foreground mt-1">Real-time Speech</p>
+                    <h4 className="font-semibold text-sm">AI Voice Agent</h4>
+                    <p className="text-xs text-muted-foreground mt-1">Real-time Interview</p>
                   </CardContent>
                 </Card>
 
@@ -324,11 +324,10 @@ const Dashboard = () => {
                       className="flex items-center justify-between p-4 border border-border/50 rounded-xl bg-card/50 hover:bg-muted/50 transition-all hover:shadow-sm group"
                     >
                       <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-xl ${
-                          session.interview_type.includes("React") ? "bg-blue-500/10 text-blue-500" :
-                          session.interview_type.includes("System") ? "bg-purple-500/10 text-purple-500" :
-                          "bg-emerald-500/10 text-emerald-500"
-                        }`}>
+                        <div className={`p-3 rounded-xl ${session.interview_type.includes("React") ? "bg-blue-500/10 text-blue-500" :
+                            session.interview_type.includes("System") ? "bg-purple-500/10 text-purple-500" :
+                              "bg-emerald-500/10 text-emerald-500"
+                          }`}>
                           <FileText className="w-5 h-5" />
                         </div>
                         <div>
@@ -360,7 +359,7 @@ const Dashboard = () => {
 
           {/* Right Column - Sidebar Widgets */}
           <div className="lg:col-span-4 space-y-6">
-            
+
             {/* Profile Strength */}
             <Card className="bg-gradient-to-br from-card to-muted/50 border-border/50">
               <CardContent className="p-6">
