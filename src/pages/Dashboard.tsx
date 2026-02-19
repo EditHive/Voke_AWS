@@ -98,12 +98,29 @@ const Dashboard = () => {
     );
   }
 
-  const stats = [
-    { label: "Interviews", value: "12", icon: FileText, color: "text-blue-500", bg: "bg-blue-500/10" },
-    { label: "Avg. Score", value: "85%", icon: Trophy, color: "text-amber-500", bg: "bg-amber-500/10" },
-    { label: "Hours", value: "24h", icon: Clock, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-    { label: "Streak", value: "5 Days", icon: Flame, color: "text-orange-500", bg: "bg-orange-500/10" },
-  ];
+  const calculateStats = (sessions: any[]) => {
+    const totalInterviews = sessions.length;
+    const completedSessions = sessions.filter(s => s.status === "completed");
+    
+    const avgScore = completedSessions.length > 0
+      ? Math.round(completedSessions.reduce((acc, s) => acc + (Number(s.score) || 0), 0) / completedSessions.length)
+      : 0;
+    
+    // Estimate hours: 15 mins per completed session
+    const totalMinutes = completedSessions.length * 15;
+    const totalHours = Math.round(totalMinutes / 60);
+    // If less than 1 hour but has sessions, show <1h or just 0.5h, but let's stick to integer hours for simplicity or 0 if 0.
+    const displayHours = totalHours === 0 && completedSessions.length > 0 ? "< 1" : totalHours.toString();
+
+    return [
+      { label: "Interviews", value: totalInterviews.toString(), icon: FileText, color: "text-blue-500", bg: "bg-blue-500/10" },
+      { label: "Avg. Score", value: `${avgScore}%`, icon: Trophy, color: "text-amber-500", bg: "bg-amber-500/10" },
+      { label: "Hours", value: `${displayHours}h`, icon: Clock, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+      { label: "Streak", value: "5 Days", icon: Flame, color: "text-orange-500", bg: "bg-orange-500/10" },
+    ];
+  };
+
+  const stats = calculateStats(sessions);
 
   const recommended = [
     { title: "Master React Hooks", type: "Technical", duration: "30 min", level: "Intermediate" },
