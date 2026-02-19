@@ -11,6 +11,9 @@ import {
   Flame, Trophy, Clock, Star, ArrowRight, Zap, Code, MessageSquare, Bell, Search,
   Globe, BookOpen, Briefcase
 } from "lucide-react";
+import { SkillRadar } from "@/components/dashboard/SkillRadar";
+import { RoadToOffer } from "@/components/dashboard/RoadToOffer";
+import { MarketPulse } from "@/components/dashboard/MarketPulse";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import {
@@ -30,57 +33,86 @@ interface Notification {
   type: 'info' | 'success' | 'warning';
 }
 
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: '1',
-    title: 'Interview Scheduled',
-    message: 'Your mock interview with Sarah is scheduled for tomorrow at 10 AM.',
-    time: '2 hours ago',
-    read: false,
-    type: 'info'
-  },
-  {
-    id: '2',
-    title: 'Feedback Available',
-    message: 'AI feedback for your "React Hooks" session is ready.',
-    time: '5 hours ago',
-    read: false,
-    type: 'success'
-  },
-  {
-    id: '3',
-    title: 'Daily Streak!',
-    message: "You've reached a 5-day streak. Keep it up!",
-    time: '1 day ago',
-    read: true,
-    type: 'warning'
-  }
-];
-
 const Dashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
   const [sessions, setSessions] = useState<any[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
-
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const handleMarkAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
-    toast.success("All notifications marked as read");
-  };
-
-  const handleMarkAsRead = (id: string) => {
-    setNotifications(notifications.map(n =>
-      n.id === id ? { ...n, read: true } : n
-    ));
-  };
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     checkAuth();
     loadData();
+    setupNotifications();
   }, []);
+
+  const setupNotifications = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    fetchNotifications(user.id);
+
+    // Subscribe to realtime notifications
+    const channel = supabase
+      .channel('dashboard_notifications')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications' },
+        (payload: any) => {
+          if (payload.new.user_id === user.id) {
+            fetchNotifications(user.id);
+            toast.info("New notification: " + payload.new.title);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
+
+  const fetchNotifications = async (userId: string) => {
+    const { data } = await supabase
+      .from('notifications' as any)
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    
+    if (data) {
+      const notifs = data as any as Notification[];
+      setNotifications(notifs);
+      setUnreadCount(notifs.filter(n => !n.read).length);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase
+      .from('notifications' as any)
+      .update({ read: true })
+      .eq('user_id', user.id);
+      
+    setNotifications(notifications.map(n => ({ ...n, read: true })));
+    setUnreadCount(0);
+    toast.success("All notifications marked as read");
+  };
+
+  const handleMarkAsRead = async (id: string) => {
+    await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', id);
+
+    setNotifications(notifications.map(n =>
+      n.id === id ? { ...n, read: true } : n
+    ));
+    setUnreadCount(prev => Math.max(0, prev - 1));
+  };
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -93,9 +125,9 @@ const Dashboard = () => {
   /*                             Data Fetching & Logic                          */
   /* -------------------------------------------------------------------------- */
 
-  const loadData = async () => {
+  const loadData = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -330,7 +362,7 @@ const Dashboard = () => {
                               {notification.title}
                             </h5>
                             <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                              {notification.time}
+                              {new Date(notification.created_at).toLocaleDateString()}
                             </span>
                           </div>
                           <p className="text-xs text-muted-foreground line-clamp-2">
@@ -354,12 +386,42 @@ const Dashboard = () => {
                 <p className="text-sm font-medium leading-none">{profile?.full_name || "User"}</p>
                 <p className="text-xs text-muted-foreground">Level 5 Scholar</p>
               </div>
-              <Avatar className="cursor-pointer" onClick={() => navigate("/profile")}>
-                <AvatarImage src={profile?.avatar_url} />
-                <AvatarFallback className="bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white">
-                  {(profile?.full_name || "U")[0]}
-                </AvatarFallback>
-              </Avatar>
+              
+              {/* Profile Strength Ring */}
+              {(() => {
+                 const score = (() => {
+                    if (!profile) return 0;
+                    let s = 0;
+                    const fields = ['full_name', 'linkedin_url', 'github_url', 'resume_url'];
+                    fields.forEach(k => { if (profile[k]) s += 25; });
+                    return s;
+                 })();
+                 const strokeColor = score === 100 ? "#10b981" : score >= 50 ? "#eab308" : "#ef4444";
+                 const radius = 20;
+                 const circumference = 2 * Math.PI * radius;
+                 const offset = circumference - (score / 100) * circumference;
+
+                 return (
+                    <div className="relative flex items-center justify-center w-12 h-12 cursor-pointer group" onClick={() => navigate("/profile")}>
+                        {/* Tooltip */}
+                        <div className="absolute top-14 right-0 w-max px-3 py-1.5 bg-popover border border-border text-xs font-medium rounded-md shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                            Profile Strength: <span style={{ color: strokeColor }}>{score}%</span>
+                        </div>
+
+                        <svg className="absolute w-full h-full transform -rotate-90">
+                           <circle cx="24" cy="24" r={radius} stroke="currentColor" strokeWidth="2.5" fill="transparent" className="text-muted/20" />
+                           <circle cx="24" cy="24" r={radius} stroke={strokeColor} strokeWidth="2.5" fill="transparent" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" className="transition-all duration-1000 ease-out" />
+                        </svg>
+
+                        <Avatar className="w-8 h-8">
+                            <AvatarImage src={profile?.avatar_url} />
+                            <AvatarFallback className="bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-xs">
+                            {(profile?.full_name || "U")[0]}
+                            </AvatarFallback>
+                        </Avatar>
+                    </div>
+                 );
+              })()}
             </div>
           </nav>
         </div>
@@ -499,115 +561,29 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Recent Activity */}
-            <Card className="border-border/50 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Recent Activity</CardTitle>
-                  <CardDescription>Your latest interview sessions</CardDescription>
-                </div>
-                <Button variant="ghost" size="sm" className="text-violet-600">View All</Button>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {sessions.map((session) => (
-                    <div
-                      key={session.id}
-                      className="flex items-center justify-between p-4 border border-border/50 rounded-xl bg-card/50 hover:bg-muted/50 transition-all hover:shadow-sm group"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-xl ${session.type === 'Text' ? "bg-blue-500/10 text-blue-500" :
-                          session.type === 'Video' ? "bg-fuchsia-500/10 text-fuchsia-500" :
-                            "bg-emerald-500/10 text-emerald-500"
-                          }`}>
-                          {session.type === 'Video' ? <Play className="w-5 h-5" /> : 
-                           session.type === 'Peer' ? <Users className="w-5 h-5" /> :
-                           <FileText className="w-5 h-5" />}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-foreground">
-                              {session.topic || session.interview_type || session.question || "Interview Session"}
-                            </p>
-                            {session.score && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 font-medium border border-green-500/20">
-                                Score: {session.score}%
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                            <span>{new Date(session.date).toLocaleDateString()}</span>
-                            <span>•</span>
-                            <span className="capitalize">{session.status?.replace('_', ' ') || 'Completed'}</span>
-                          </p>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => navigate(`/interview/${session.id}`)}>
-                        {session.status === "in_progress" ? "Resume" : "View Results"}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            {/* Road to Offer (Timeline) */}
+            <RoadToOffer profile={profile} onUpdate={() => loadData(true)} />
+
+            {/* Market Pulse (Salary & Trends) */}
+            <MarketPulse profile={profile} />
 
           </div>
 
           {/* Right Column - Sidebar Widgets */}
           <div className="lg:col-span-4 space-y-6">
 
-            {/* Profile Strength */}
-            <Card className="bg-gradient-to-br from-card to-muted/50 border-border/50">
-              <CardContent className="p-6">
-                {(() => {
-                  const calculateStrength = () => {
-                    if (!profile) return { score: 0, missing: [] };
+            {/* AI Skill Radar (Competency Map) */}
+            <SkillRadar 
+                data={sessions.length > 0 ? [
+                    { subject: "Confidence", A: sessions.reduce((acc, s) => acc + (s.score || 70), 0) / (sessions.length || 1), fullMark: 100 },
+                    { subject: "Technical", A: sessions.filter(s => s.type === 'Text').reduce((acc, s) => acc + (s.score || 0), 0) / (sessions.filter(s => s.type === 'Text').length || 1) || 60, fullMark: 100 },
+                    { subject: "ATS Score", A: 85, fullMark: 100 }, // Mocked or derived from resume analysis
+                    { subject: "Problem Solving", A: sessions.filter(s => s.topic?.includes('Code') || s.topic?.includes('System')).reduce((acc, s) => acc + (s.score || 0), 0) / (sessions.filter(s => s.topic?.includes('Code') || s.topic?.includes('System')).length || 1) || 75, fullMark: 100 },
+                    { subject: "Communication", A: sessions.filter(s => s.type === 'Video').reduce((acc, s) => acc + (s.score || 0), 0) / (sessions.filter(s => s.type === 'Video').length || 1) || 80, fullMark: 100 },
+                ] : undefined}
+            />
 
-                    const fields = [
-                      { key: 'full_name', label: 'Full Name', weight: 25 },
-                      { key: 'linkedin_url', label: 'LinkedIn', weight: 25 },
-                      { key: 'github_url', label: 'GitHub', weight: 25 },
-                      { key: 'resume_url', label: 'Resume', weight: 25 },
-                    ];
 
-                    let score = 0;
-                    const missing: string[] = [];
-
-                    fields.forEach(field => {
-                      if (profile[field.key] && profile[field.key].length > 0) {
-                        score += field.weight;
-                      } else {
-                        missing.push(field.label);
-                      }
-                    });
-
-                    return { score, missing };
-                  };
-
-                  const { score, missing } = calculateStrength();
-
-                  return (
-                    <>
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-semibold">Profile Strength</h3>
-                        <span className={`text-sm font-bold ${score === 100 ? 'text-green-600' : 'text-violet-600'}`}>
-                          {score}%
-                        </span>
-                      </div>
-                      <Progress value={score} className="h-2 mb-4" />
-                      <p className="text-xs text-muted-foreground mb-4">
-                        {score === 100
-                          ? "Great job! Your profile is fully complete."
-                          : `Add your ${missing[0] || 'details'} ${missing.length > 1 ? `and ${missing.length - 1} more` : ''} to reach 100%.`}
-                      </p>
-                      <Button variant="outline" size="sm" className="w-full" onClick={() => navigate("/profile")}>
-                        {score === 100 ? "Edit Profile" : "Complete Profile"}
-                      </Button>
-                    </>
-                  );
-                })()}
-              </CardContent>
-            </Card>
 
             {/* Daily Challenge */}
             <Card className="border-border/50 overflow-hidden relative">

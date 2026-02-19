@@ -496,7 +496,11 @@ const AdminDashboard = () => {
                       </TableHeader>
                       <TableBody>
                         {mockUsers.map((user) => (
-                          <TableRow key={user.id} className="border-white/10 hover:bg-white/5 transition-colors">
+                          <TableRow 
+                            key={user.id} 
+                            className="border-white/10 hover:bg-white/5 cursor-pointer transition-colors"
+                            onClick={() => navigate(`/admin/users/${user.id}`)}
+                          >
                             <TableCell>
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-8 w-8 border border-white/10">
@@ -584,7 +588,11 @@ const AdminDashboard = () => {
                             </TableRow>
                           ) : (
                             users.map((user) => (
-                              <TableRow key={user.id} className="border-white/10 hover:bg-white/5">
+                              <TableRow 
+                                key={user.id} 
+                                className="border-white/10 hover:bg-white/5 cursor-pointer transition-colors"
+                                onClick={() => navigate(`/admin/users/${user.id}`)}
+                              >
                                 <TableCell className="font-medium text-gray-200">
                                   {user.full_name || "N/A"}
                                 </TableCell>

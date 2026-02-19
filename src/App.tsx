@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Profile from "./pages/Profile";
 import Blogs from "./pages/Blogs";
+import AdminUserDetails from "./pages/AdminUserDetails";
 
 import LearningPaths from "./pages/LearningPaths";
 import InterviewNew from "./pages/InterviewNew";
@@ -57,6 +58,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/users/:userId" element={<AdminUserDetails />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/blogs" element={<Blogs />} />
             <Route path="/community" element={<Community />} />
