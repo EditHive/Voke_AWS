@@ -155,7 +155,7 @@ IF VIDEO METADATA IS MISSING, INFER from the transcript text styles (e.g. long p
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "meta-llama/llama-4-maverick-17b-128e-instruct",
+          model: "llama-3.3-70b-versatile",
           messages: [
             {
               role: "user",

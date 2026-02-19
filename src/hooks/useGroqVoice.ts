@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import Groq from 'groq-sdk';
 import { LiveStatus, MessageLog } from '../types/voice';
+import { toast } from 'sonner';
 // import { HfInference } from '@huggingface/inference';
 
 // Initialize Groq client
@@ -206,12 +207,29 @@ export function useGroqVoice(): UseGroqVoiceReturn {
                 return;
             }
 
-            const completion = await groq.chat.completions.create({
-                messages: messages as any,
-                model: 'llama-3.3-70b-versatile',
-                temperature: 0.7,
-                max_tokens: 300,
-            });
+            let completion;
+            try {
+                completion = await groq.chat.completions.create({
+                    messages: messages as any,
+                    model: 'llama-3.3-70b-versatile',
+                    temperature: 0.7,
+                    max_tokens: 300,
+                });
+            } catch (error: any) {
+                // Rate Limit Fallback
+                if (error?.status === 429) {
+                    console.log('DEBUG: Rate limit reached, switching to fallback model...');
+                    toast.info("Rate limit hit. Switching to lighter model (Llama 3.1 8B)...");
+                    completion = await groq.chat.completions.create({
+                        messages: messages as any,
+                        model: 'llama-3.1-8b-instant', // Fallback model
+                        temperature: 0.7,
+                        max_tokens: 300,
+                    });
+                } else {
+                    throw error;
+                }
+            }
 
             const aiText = completion.choices[0]?.message?.content || "I didn't catch that.";
             console.log('DEBUG: Groq response:', aiText);
@@ -227,15 +245,26 @@ export function useGroqVoice(): UseGroqVoiceReturn {
 
             speakResponse(aiText);
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('DEBUG: Groq API Error:', error);
-            console.error('DEBUG: Error details:', JSON.stringify(error, null, 2));
-            if (error instanceof Error) {
-                console.error('DEBUG: Error message:', error.message);
-                console.error('DEBUG: Error stack:', error.stack);
+
+            // Detailed Error Handling
+            let errorMessage = "I'm having trouble connecting to my brain right now.";
+
+            if (error?.status === 401) {
+                errorMessage = "My API key is missing or invalid. Please check your configuration.";
+                toast.error("Groq API Error: 401 Unauthorized. Please check VITE_GROQ_API_KEY in .env");
+            } else if (error?.status === 404) {
+                errorMessage = "I can't access the AI model. It might be unavailable.";
+                toast.error("Groq API Error: 404 Model Not Found. The model may differ or be deprecated.");
+            } else if (error?.status === 429) {
+                errorMessage = "My brain is tired. Please give me a minute to rest.";
+                toast.error("Groq Rate Limit Exceeded (429). Please wait a moment or upgrade plan.");
+            } else {
+                toast.error(`Voice Assistant Error: ${error.message || "Unknown error"}`);
             }
-            const errorText = "I'm having trouble connecting to my brain right now.";
-            speakResponse(errorText);
+
+            speakResponse(errorMessage);
         }
     };
 
@@ -245,12 +274,55 @@ export function useGroqVoice(): UseGroqVoiceReturn {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
+            // Audio Context for VAD (Voice Activity Detection)
+            const audioContext = new AudioContext();
+            const source = audioContext.createMediaStreamSource(stream);
+            const analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
             const mediaRecorder = new MediaRecorder(stream, {
                 mimeType: 'audio/webm'
             });
 
             audioChunksRef.current = [];
             isListeningRef.current = true;
+
+            // VAD Variables
+            let lastSpeechTime = Date.now();
+            let silenceTimer: any = null;
+            const SPEECH_THRESHOLD = 20; // Volume threshold (0-255)
+            const SILENCE_DURATION = 2000; // 2 seconds of silence to stop
+
+            const detectSilence = () => {
+                if (!isListeningRef.current) return;
+
+                analyser.getByteFrequencyData(dataArray);
+
+                // Calculate average volume
+                let sum = 0;
+                for (let i = 0; i < bufferLength; i++) {
+                    sum += dataArray[i];
+                }
+                const average = sum / bufferLength;
+
+                if (average > SPEECH_THRESHOLD) {
+                    lastSpeechTime = Date.now();
+                }
+
+                // Check for silence duration
+                if (Date.now() - lastSpeechTime > SILENCE_DURATION) {
+                    console.log('DEBUG: Silence detected, stopping recording...');
+                    if (mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop();
+                    }
+                } else {
+                    silenceTimer = requestAnimationFrame(detectSilence);
+                }
+            };
 
             mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
@@ -262,6 +334,7 @@ export function useGroqVoice(): UseGroqVoiceReturn {
                 console.log('DEBUG: Recording started');
                 setIsUserSpeaking(true);
                 setVolume(0.5);
+                detectSilence(); // Start VAD loop
             };
 
             mediaRecorder.onstop = async () => {
@@ -270,6 +343,11 @@ export function useGroqVoice(): UseGroqVoiceReturn {
                 setVolume(0);
                 isListeningRef.current = false;
 
+                // Cleanup VAD
+                cancelAnimationFrame(silenceTimer);
+                audioContext.close();
+                stream.getTracks().forEach(track => track.stop());
+
                 if (audioChunksRef.current.length > 0) {
                     const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
                     const transcription = await transcribeAudio(audioBlob);
@@ -277,21 +355,19 @@ export function useGroqVoice(): UseGroqVoiceReturn {
                     if (transcription) {
                         await handleUserMessage(transcription);
                     } else {
-                        // Resume listening if no transcription
+                        // Resume listening if no transcription (silence/noise)
                         if (statusRef.current === LiveStatus.CONNECTED) {
+                            // Small delay to prevent instant loop
                             setTimeout(() => startListening(), 500);
                         }
                     }
                 }
-
-                // Stop all tracks
-                stream.getTracks().forEach(track => track.stop());
             };
 
             mediaRecorderRef.current = mediaRecorder;
             mediaRecorder.start();
 
-            // Auto-stop after 30 seconds (increased from 10s to allow longer responses)
+            // Safety timeout (still keep 30s max)
             setTimeout(() => {
                 if (mediaRecorder.state === 'recording') {
                     mediaRecorder.stop();
@@ -332,21 +408,36 @@ export function useGroqVoice(): UseGroqVoiceReturn {
                     throw new Error("Groq client not initialized");
                 }
 
-                const greetingCompletion = await groq.chat.completions.create({
-                    messages: [
-                        {
-                            role: 'system',
-                            content: SYSTEM_INSTRUCTION + '\n\nCONTEXT:\n' + contextRef.current
-                        },
-                        {
-                            role: 'user',
-                            content: 'Generate a warm, personalized greeting for the user. Address them by name if available in the context. Keep it to 1-2 sentences and invite them to introduce themselves or talk about their experience.'
-                        }
-                    ],
-                    model: 'llama-3.3-70b-versatile',
-                    temperature: 0.8,
-                    max_tokens: 100,
-                });
+                let greetingCompletion;
+                try {
+                    greetingCompletion = await groq.chat.completions.create({
+                        messages: [
+                            {
+                                role: 'system',
+                                content: SYSTEM_INSTRUCTION + '\n\nCONTEXT:\n' + contextRef.current
+                            },
+                            {
+                                role: 'user',
+                                content: 'Generate a warm, personalized greeting for the user. Address them by name if available in the context. Keep it to 1-2 sentences and invite them to introduce themselves or talk about their experience.'
+                            }
+                        ],
+                        model: 'llama-3.3-70b-versatile',
+                        temperature: 0.8,
+                        max_tokens: 100,
+                    });
+                } catch (error: any) {
+                    if (error?.status === 429) {
+                        console.log('DEBUG: Rate limit reached during greeting, switching to fallback...');
+                        greetingCompletion = await groq.chat.completions.create({
+                            messages: [{ role: 'user', content: 'Say hello and ask for introduction.' }],
+                            model: 'llama-3.1-8b-instant',
+                            temperature: 0.7,
+                            max_tokens: 60,
+                        });
+                    } else {
+                        throw error;
+                    }
+                }
 
                 const greeting = greetingCompletion.choices[0]?.message?.content || "Hello! I'm ready to interview you. Please introduce yourself.";
                 console.log('DEBUG: Generated greeting:', greeting);

@@ -17,6 +17,7 @@ serve(async (req) => {
         console.log("Generating overall feedback for session:", sessionId);
 
         const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+        console.log("DEBUG: GROQ_API_KEY present:", !!GROQ_API_KEY);
         if (!GROQ_API_KEY) {
             return new Response(
                 JSON.stringify({ error: "GROQ_API_KEY is not configured" }),
@@ -126,7 +127,7 @@ Focus on patterns across all answers, not individual questions.`;
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    model: "meta-llama/llama-4-maverick-17b-128e-instruct",
+                    model: "llama-3.3-70b-versatile",
                     messages: [
                         {
                             role: "user",
