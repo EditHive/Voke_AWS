@@ -23,6 +23,7 @@ import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "motion/react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { loadUserProfileContext } from "@/utils/profileContext";
 
 // Basic message shape for the text interview
 interface Message {
@@ -48,6 +49,7 @@ export default function InterviewSession() {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showResults, setShowResults] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userContext, setUserContext] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [config, setConfig] = useState(location.state?.config || {
     topic: "General",
@@ -75,10 +77,20 @@ export default function InterviewSession() {
         setLoading(false);
         setSending(true);
 
+        // Load profile context
+        try {
+          const profileContext = await loadUserProfileContext();
+          setUserContext(profileContext.context);
+          console.log('[InterviewSession] Profile context loaded');
+        } catch (error) {
+          console.error('[InterviewSession] Error loading profile context:', error);
+        }
+
         // Ask the AI to start the interview and pose the first question
         const { data, error } = await supabase.functions.invoke("adaptive-interview-chat", {
           body: {
             userId: user.id,
+            userContext: userContext, // Include profile context
             messages: [
               {
                 role: "user",
@@ -164,6 +176,7 @@ Tell me about a time you had to learn something quickly in order to deliver on a
       const { data, error } = await supabase.functions.invoke("adaptive-interview-chat", {
         body: {
           userId,
+          userContext, // Include profile context for personalized questions
           messages: updatedMessages,
         },
       });
@@ -226,14 +239,14 @@ Tell me about a time you had to learn something quickly in order to deliver on a
               </>
             )}
           </div>
-          
+
           <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
             Voke AI
           </h2>
           <Badge variant="outline" className="mt-2 border-violet-500/30 text-violet-600 bg-violet-500/5">
             {config.topic} Expert
           </Badge>
-          
+
           <div className="mt-8 w-full space-y-4">
             <div className="flex items-center justify-between text-sm p-4 rounded-xl bg-background/50 border border-border/50 shadow-sm">
               <span className="text-muted-foreground flex items-center gap-2">
@@ -241,7 +254,7 @@ Tell me about a time you had to learn something quickly in order to deliver on a
               </span>
               <span className="font-mono font-bold text-lg">{formatTime(elapsedTime)}</span>
             </div>
-            
+
             <div className="p-4 rounded-xl bg-background/50 border border-border/50 shadow-sm space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Progress</span>
@@ -295,20 +308,18 @@ Tell me about a time you had to learn something quickly in order to deliver on a
                       <AvatarFallback className="bg-gradient-to-br from-violet-600 to-purple-600 text-white">AI</AvatarFallback>
                     </Avatar>
                   )}
-                  
+
                   <div className={`flex flex-col max-w-[85%] md:max-w-[75%] ${message.role === "user" ? "items-end" : "items-start"}`}>
                     <div
-                      className={`p-5 rounded-2xl shadow-sm leading-relaxed ${
-                        message.role === "user"
+                      className={`p-5 rounded-2xl shadow-sm leading-relaxed ${message.role === "user"
                           ? "bg-gradient-to-br from-violet-600 to-purple-600 text-white rounded-tr-none shadow-violet-500/10"
                           : "bg-card border border-border/50 text-foreground rounded-tl-none"
-                      }`}
+                        }`}
                     >
-                      <div className={`prose prose-sm max-w-none ${
-                        message.role === "user" 
-                          ? "prose-invert text-white" 
+                      <div className={`prose prose-sm max-w-none ${message.role === "user"
+                          ? "prose-invert text-white"
                           : "dark:prose-invert text-foreground"
-                      }`}>
+                        }`}>
                         <ReactMarkdown>{message.content}</ReactMarkdown>
                       </div>
                     </div>
@@ -327,8 +338,8 @@ Tell me about a time you had to learn something quickly in order to deliver on a
 
             {/* Typing Indicator */}
             {sending && (
-              <motion.div 
-                initial={{ opacity: 0 }} 
+              <motion.div
+                initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="flex gap-4 justify-start"
               >
@@ -344,7 +355,7 @@ Tell me about a time you had to learn something quickly in order to deliver on a
                 </div>
               </motion.div>
             )}
-            
+
             <div ref={messagesEndRef} className="h-4" />
           </div>
         </ScrollArea>
@@ -367,16 +378,15 @@ Tell me about a time you had to learn something quickly in order to deliver on a
                 rows={1}
                 disabled={sending}
               />
-              
+
               <Button
                 onClick={() => handleSendMessage(input)}
                 disabled={!input.trim() || sending}
                 size="icon"
-                className={`rounded-full h-10 w-10 shrink-0 transition-all duration-300 ${
-                  input.trim() 
-                    ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-md hover:shadow-lg hover:scale-105' 
+                className={`rounded-full h-10 w-10 shrink-0 transition-all duration-300 ${input.trim()
+                    ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-md hover:shadow-lg hover:scale-105'
                     : 'bg-muted text-muted-foreground'
-                }`}
+                  }`}
               >
                 <Send className="w-4 h-4" />
               </Button>
@@ -397,7 +407,7 @@ Tell me about a time you had to learn something quickly in order to deliver on a
               Here's a summary of your performance in this session.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6 py-4">
             <div className="flex items-center justify-center p-6 bg-muted/30 rounded-xl border border-border/50">
               <div className="text-center">

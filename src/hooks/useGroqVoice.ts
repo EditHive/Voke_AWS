@@ -4,10 +4,20 @@ import { LiveStatus, MessageLog } from '../types/voice';
 // import { HfInference } from '@huggingface/inference';
 
 // Initialize Groq client
-const groq = new Groq({
-    apiKey: import.meta.env.VITE_GROQ_API_KEY,
-    dangerouslyAllowBrowser: true
-});
+// Initialize Groq client safely
+const getGroqClient = () => {
+    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+    if (!apiKey) {
+        console.warn("VITE_GROQ_API_KEY is missing. Voice features will be disabled.");
+        return null;
+    }
+    return new Groq({
+        apiKey: apiKey,
+        dangerouslyAllowBrowser: true
+    });
+};
+
+const groq = getGroqClient();
 
 // Initialize Hugging Face client
 // const hf = new HfInference(import.meta.env.VITE_HUGGING_FACE_TOKEN);
@@ -136,6 +146,11 @@ export function useGroqVoice(): UseGroqVoiceReturn {
             // Convert blob to File
             const audioFile = new File([audioBlob], 'audio.webm', { type: 'audio/webm' });
 
+            if (!groq) {
+                console.error('DEBUG: Groq client not initialized (missing API key)');
+                return '';
+            }
+
             const transcription = await groq.audio.transcriptions.create({
                 file: audioFile,
                 model: 'whisper-large-v3-turbo',
@@ -172,6 +187,12 @@ export function useGroqVoice(): UseGroqVoiceReturn {
             ];
 
             console.log('DEBUG: Full messages being sent:', JSON.stringify(messages, null, 2));
+
+            if (!groq) {
+                const errorText = "I cannot process your request because my API key is missing.";
+                speakResponse(errorText);
+                return;
+            }
 
             const completion = await groq.chat.completions.create({
                 messages: messages as any,
@@ -290,6 +311,10 @@ export function useGroqVoice(): UseGroqVoiceReturn {
             // Generate personalized greeting using Groq
             try {
                 console.log('DEBUG: Generating personalized greeting...');
+                if (!groq) {
+                    throw new Error("Groq client not initialized");
+                }
+
                 const greetingCompletion = await groq.chat.completions.create({
                     messages: [
                         {

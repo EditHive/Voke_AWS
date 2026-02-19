@@ -92,10 +92,10 @@ const VideoInterviewResults = () => {
       <header className="bg-background/80 backdrop-blur-md border-b border-border/40 sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/dashboard")}>
-            <img 
-              src="/images/voke_logo.png" 
-              alt="Voke Logo" 
-              className="w-8 h-8 object-contain" 
+            <img
+              src="/images/voke_logo.png"
+              alt="Voke Logo"
+              className="w-8 h-8 object-contain"
             />
             <h1 className="text-xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">
               Interview Analysis
@@ -171,9 +171,9 @@ const VideoInterviewResults = () => {
               <CardContent>
                 <div className="aspect-video bg-black rounded-lg overflow-hidden relative group">
                   {session.video_url ? (
-                    <video 
-                      src={session.video_url} 
-                      controls 
+                    <video
+                      src={session.video_url}
+                      controls
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -213,7 +213,7 @@ const VideoInterviewResults = () => {
                   <Progress value={session.delivery_score || 0} className="h-1.5" />
                 </CardContent>
               </Card>
-              
+
               <Card className="bg-card/30 backdrop-blur-xl border-border/50">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-2 mb-4 text-muted-foreground">
@@ -247,18 +247,47 @@ const VideoInterviewResults = () => {
               </Card>
             </div>
 
-            {/* Feedback Analysis */}
+            {/* Model Answer Section */}
+            {session.model_answer && (
+              <Card className="bg-blue-500/5 border-blue-500/20">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Award className="w-5 h-5 text-blue-500" />
+                    Model Answer
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="prose prose-sm max-w-none dark:prose-invert text-muted-foreground leading-relaxed">
+                    <p className="text-sm italic text-blue-600 dark:text-blue-400 mb-3">
+                      Here's an ideal response to this question:
+                    </p>
+                    <div dangerouslySetInnerHTML={{ __html: session.model_answer.replace(/\n/g, "<br>") }} />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* What's Good / What's Wrong Grid */}
             <div className="grid md:grid-cols-2 gap-6">
-              {/* Strengths */}
+              {/* What's Good */}
               <Card className="bg-green-500/5 border-green-500/20">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base flex items-center gap-2 text-green-600 dark:text-green-400">
                     <CheckCircle2 className="w-5 h-5" />
-                    Key Strengths
+                    What's Good
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {session.analysis_result?.strengths ? (
+                  {session.whats_good && Array.isArray(session.whats_good) && session.whats_good.length > 0 ? (
+                    <ul className="space-y-3">
+                      {session.whats_good.map((item: string, idx: number) => (
+                        <li key={idx} className="flex gap-3 text-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 shrink-0"></span>
+                          <span className="text-muted-foreground">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : session.analysis_result?.strengths ? (
                     <ul className="space-y-3">
                       {session.analysis_result.strengths.map((strength: string, idx: number) => (
                         <li key={idx} className="flex gap-3 text-sm">
@@ -273,37 +302,98 @@ const VideoInterviewResults = () => {
                 </CardContent>
               </Card>
 
-              {/* Improvements */}
-              <Card className="bg-yellow-500/5 border-yellow-500/20">
+              {/* What's Wrong */}
+              <Card className="bg-red-500/5 border-red-500/20">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
+                  <CardTitle className="text-base flex items-center gap-2 text-red-600 dark:text-red-400">
                     <AlertCircle className="w-5 h-5" />
-                    Areas for Improvement
+                    What's Wrong
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {session.analysis_result?.improvements ? (
+                  {session.whats_wrong && Array.isArray(session.whats_wrong) && session.whats_wrong.length > 0 ? (
+                    <ul className="space-y-3">
+                      {session.whats_wrong.map((item: string, idx: number) => (
+                        <li key={idx} className="flex gap-3 text-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-2 shrink-0"></span>
+                          <span className="text-muted-foreground">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : session.analysis_result?.improvements ? (
                     <ul className="space-y-3">
                       {session.analysis_result.improvements.map((improvement: string, idx: number) => (
                         <li key={idx} className="flex gap-3 text-sm">
-                          <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 mt-2 shrink-0"></span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-2 shrink-0"></span>
                           <span className="text-muted-foreground">{improvement}</span>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-sm text-muted-foreground">No specific improvements identified.</p>
+                    <p className="text-sm text-muted-foreground">No specific issues identified.</p>
                   )}
                 </CardContent>
               </Card>
             </div>
+
+            {/* Video Analysis Details */}
+            {session.video_analysis_details && (
+              <Card className="bg-purple-500/5 border-purple-500/20">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Eye className="w-5 h-5 text-purple-500" />
+                    Video Analysis Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {session.video_analysis_details.eye_contact && (
+                      <div className="p-4 rounded-lg bg-background/50">
+                        <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                          <Eye className="w-4 h-4 text-purple-500" />
+                          Eye Contact
+                        </h4>
+                        <p className="text-sm text-muted-foreground">{session.video_analysis_details.eye_contact}</p>
+                      </div>
+                    )}
+                    {session.video_analysis_details.voice_volume && (
+                      <div className="p-4 rounded-lg bg-background/50">
+                        <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                          <Mic className="w-4 h-4 text-purple-500" />
+                          Voice Volume
+                        </h4>
+                        <p className="text-sm text-muted-foreground">{session.video_analysis_details.voice_volume}</p>
+                      </div>
+                    )}
+                    {session.video_analysis_details.posture && (
+                      <div className="p-4 rounded-lg bg-background/50">
+                        <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4 text-purple-500" />
+                          Posture
+                        </h4>
+                        <p className="text-sm text-muted-foreground">{session.video_analysis_details.posture}</p>
+                      </div>
+                    )}
+                    {session.video_analysis_details.facial_expressions && (
+                      <div className="p-4 rounded-lg bg-background/50">
+                        <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                          <MessageSquare className="w-4 h-4 text-purple-500" />
+                          Facial Expressions
+                        </h4>
+                        <p className="text-sm text-muted-foreground">{session.video_analysis_details.facial_expressions}</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Detailed Summary */}
             <Card className="bg-card/30 backdrop-blur-xl border-border/50">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <MessageSquare className="w-5 h-5 text-violet-500" />
-                  Detailed Feedback
+                  Overall Feedback
                 </CardTitle>
               </CardHeader>
               <CardContent>

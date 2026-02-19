@@ -13,12 +13,19 @@ serve(async (req) => {
   }
 
   try {
-    const { sessionId, question } = await req.json();
-    console.log("Analyzing video interview session:", sessionId);
+    const { sessionId, question, transcript, userContext, role } = await req.json();
+    console.log("Analyzing video interview session:", sessionId, "Role:", role);
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+    if (!GROQ_API_KEY) {
+      console.error("GROQ_API_KEY is not configured");
+      return new Response(
+        JSON.stringify({ error: "Server configuration error: GROQ_API_KEY is missing" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -36,72 +43,70 @@ serve(async (req) => {
 
     console.log("Video URL:", session.video_url);
 
-    // In a real implementation, you would:
-    // 1. Extract frames from the video at regular intervals
-    // 2. Send frames to vision AI for analysis
-    // 3. Analyze audio for speech patterns
-    // 4. Generate comprehensive feedback
-
-    // Use detailed prompts for more accurate analysis
-    const analysisPrompt = `You are an expert interview coach with 15+ years of experience. Analyze this video interview response in detail.
+    // Enhanced analysis prompt with role-specific criteria
+    const roleContext = role ? `for a ${role} position` : "";
+    const analysisPrompt = `You are an expert interview coach with 15+ years of experience. Analyze this video interview response ${roleContext} in detail.
 
 INTERVIEW DETAILS:
+- Role: ${role || "General"}
 - Question: "${question}"
 - Duration: ${session.duration_seconds} seconds
-- Context: B.Tech CSE student preparing for technical internships
+- Context: ${userContext || "Professional preparing for interviews"}
+- Transcript: "${transcript || "(No transcript available, analyze based on video metadata and general best practices)"}"
 
 ANALYSIS REQUIREMENTS:
-Evaluate based on professional interview standards and provide precise scores:
+Provide a comprehensive analysis including:
 
-1. DELIVERY (0-100): Analyze speech patterns
-   - Clarity and articulation (25 points)
-   - Pacing and rhythm (25 points)
-   - Filler words usage (25 points)
-   - Tone and energy (25 points)
+1. MODEL ANSWER: Write an ideal 2-3 paragraph response to this question ${roleContext}. This should demonstrate best practices in structure, content, and delivery.
 
-2. BODY LANGUAGE (0-100): Assess non-verbal communication
-   - Posture and positioning (25 points)
-   - Eye contact (camera engagement) (25 points)
-   - Hand gestures and movements (25 points)
-   - Facial expressions (25 points)
+2. WHAT'S GOOD: List 3-5 specific strengths in the candidate's response with concrete examples from their answer.
 
-3. CONFIDENCE (0-100): Measure overall presence
-   - Self-assurance in responses (33 points)
-   - Handling of pauses/thinking time (33 points)
-   - Professional demeanor (34 points)
+3. WHAT'S WRONG: List 3-5 specific areas for improvement with actionable suggestions.
 
-4. OVERALL SCORE: Weighted average considering all factors
+4. VIDEO ANALYSIS DETAILS:
+   - Eye Contact: Comment on camera engagement and maintaining eye contact
+   - Voice Volume: Assess speaking volume, clarity, and projection
+   - Posture: Evaluate body positioning and professional presence
+   - Facial Expressions: Analyze expressiveness and engagement
 
-FEEDBACK REQUIREMENTS:
-- Provide 2-3 paragraphs of detailed, actionable feedback
-- List 3-5 specific strengths with examples
-- List 3-5 areas for improvement with concrete suggestions
-- Be honest but constructive
-- Reference the specific question context
+5. SCORES (0-100):
+   - Delivery: Clarity, pacing, filler words, tone
+   - Body Language: Posture, eye contact, gestures, expressions
+   - Confidence: Self-assurance, handling pauses, professional demeanor
+   - Overall: Weighted average
 
 RESPONSE FORMAT (strict JSON):
 {
+  "model_answer": "<ideal 2-3 paragraph response>",
+  "whats_good": ["<specific strength 1>", "<specific strength 2>", ...],
+  "whats_wrong": ["<specific improvement 1>", "<specific improvement 2>", ...],
+  "video_analysis_details": {
+    "eye_contact": "<detailed feedback on eye contact>",
+    "voice_volume": "<detailed feedback on voice volume>",
+    "posture": "<detailed feedback on posture>",
+    "facial_expressions": "<detailed feedback on facial expressions>"
+  },
   "delivery_score": <number 0-100>,
   "body_language_score": <number 0-100>,
   "confidence_score": <number 0-100>,
   "overall_score": <number 0-100>,
-  "feedback_summary": "<detailed 2-3 paragraph analysis>",
-  "strengths": ["<specific strength 1>", "<specific strength 2>", ...],
-  "improvements": ["<actionable improvement 1>", "<actionable improvement 2>", ...]
+  "feedback_summary": "<2-3 paragraph overall analysis>",
+  "strengths": ["<strength 1>", "<strength 2>", ...],
+  "improvements": ["<improvement 1>", "<improvement 2>", ...]
 }
 
-Be precise, objective, and calibrated for entry-level technical roles.`;
+Be precise, objective, and calibrated ${roleContext ? `for ${role} roles` : "for professional interviews"}.`;
 
     const response = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      "https://api.groq.com/openai/v1/chat/completions",
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${GROQ_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
+          model: "meta-llama/llama-4-maverick-17b-128e-instruct",
           messages: [
             {
               role: "user",
@@ -158,7 +163,7 @@ Be precise, objective, and calibrated for entry-level technical roles.`;
         (analysis.delivery_score +
           analysis.body_language_score +
           analysis.confidence_score) /
-          3
+        3
       );
     }
 
@@ -172,6 +177,10 @@ Be precise, objective, and calibrated for entry-level technical roles.`;
         body_language_score: analysis.body_language_score,
         confidence_score: analysis.confidence_score,
         overall_score: analysis.overall_score,
+        model_answer: analysis.model_answer,
+        whats_good: analysis.whats_good,
+        whats_wrong: analysis.whats_wrong,
+        video_analysis_details: analysis.video_analysis_details,
         status: "completed",
         analyzed_at: new Date().toISOString(),
       })

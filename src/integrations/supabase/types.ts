@@ -14,6 +14,68 @@ export type Database = {
   }
   public: {
     Tables: {
+      interview_answers: {
+        Row: {
+          analyzed_at: string | null
+          body_language_score: number | null
+          confidence_score: number | null
+          created_at: string | null
+          delivery_score: number | null
+          duration_seconds: number | null
+          id: string
+          model_answer: string | null
+          question: string
+          question_number: number
+          session_id: string
+          transcript: string | null
+          video_url: string | null
+          whats_good: Json | null
+          whats_wrong: Json | null
+        }
+        Insert: {
+          analyzed_at?: string | null
+          body_language_score?: number | null
+          confidence_score?: number | null
+          created_at?: string | null
+          delivery_score?: number | null
+          duration_seconds?: number | null
+          id?: string
+          model_answer?: string | null
+          question: string
+          question_number: number
+          session_id: string
+          transcript?: string | null
+          video_url?: string | null
+          whats_good?: Json | null
+          whats_wrong?: Json | null
+        }
+        Update: {
+          analyzed_at?: string | null
+          body_language_score?: number | null
+          confidence_score?: number | null
+          created_at?: string | null
+          delivery_score?: number | null
+          duration_seconds?: number | null
+          id?: string
+          model_answer?: string | null
+          question?: string
+          question_number?: number
+          session_id?: string
+          transcript?: string | null
+          video_url?: string | null
+          whats_good?: Json | null
+          whats_wrong?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_answers_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "interview_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       interview_messages: {
         Row: {
           content: string
@@ -48,33 +110,54 @@ export type Database = {
       }
       interview_sessions: {
         Row: {
+          body_language_summary: string | null
           completed_at: string | null
+          confidence_summary: string | null
           created_at: string | null
+          eye_contact_summary: string | null
           id: string
           interview_type: string
           job_profile_id: string | null
+          overall_score: number | null
           resume_content: string | null
+          role: string
           status: string | null
+          time_limit_minutes: number | null
+          total_duration_seconds: number | null
           user_id: string
         }
         Insert: {
+          body_language_summary?: string | null
           completed_at?: string | null
+          confidence_summary?: string | null
           created_at?: string | null
+          eye_contact_summary?: string | null
           id?: string
           interview_type: string
           job_profile_id?: string | null
+          overall_score?: number | null
           resume_content?: string | null
+          role?: string
           status?: string | null
+          time_limit_minutes?: number | null
+          total_duration_seconds?: number | null
           user_id: string
         }
         Update: {
+          body_language_summary?: string | null
           completed_at?: string | null
+          confidence_summary?: string | null
           created_at?: string | null
+          eye_contact_summary?: string | null
           id?: string
           interview_type?: string
           job_profile_id?: string | null
+          overall_score?: number | null
           resume_content?: string | null
+          role?: string
           status?: string | null
+          time_limit_minutes?: number | null
+          total_duration_seconds?: number | null
           user_id?: string
         }
         Relationships: [
@@ -404,11 +487,17 @@ export type Database = {
           duration_seconds: number | null
           feedback_summary: string | null
           id: string
+          model_answer: string | null
           overall_score: number | null
           question: string
+          role: string | null
           status: string | null
+          transcript: string | null
           user_id: string
+          video_analysis_details: Json | null
           video_url: string | null
+          whats_good: Json | null
+          whats_wrong: Json | null
         }
         Insert: {
           analysis_result?: Json | null
@@ -420,11 +509,17 @@ export type Database = {
           duration_seconds?: number | null
           feedback_summary?: string | null
           id?: string
+          model_answer?: string | null
           overall_score?: number | null
           question: string
+          role?: string | null
           status?: string | null
+          transcript?: string | null
           user_id: string
+          video_analysis_details?: Json | null
           video_url?: string | null
+          whats_good?: Json | null
+          whats_wrong?: Json | null
         }
         Update: {
           analysis_result?: Json | null
@@ -436,11 +531,17 @@ export type Database = {
           duration_seconds?: number | null
           feedback_summary?: string | null
           id?: string
+          model_answer?: string | null
           overall_score?: number | null
           question?: string
+          role?: string | null
           status?: string | null
+          transcript?: string | null
           user_id?: string
+          video_analysis_details?: Json | null
           video_url?: string | null
+          whats_good?: Json | null
+          whats_wrong?: Json | null
         }
         Relationships: []
       }

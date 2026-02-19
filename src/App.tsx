@@ -13,6 +13,7 @@ import InterviewSession from "./pages/InterviewSession";
 import VideoInterview from "./pages/VideoInterview";
 import VoiceAssistant from "./pages/VoiceAssistant";
 import VideoInterviewResults from "./pages/VideoInterviewResults";
+import MultiQuestionResults from "./pages/MultiQuestionResults";
 import VideoPracticeHistory from "./pages/VideoPracticeHistory";
 import ProgressAnalytics from "./pages/ProgressAnalytics";
 import JobMarketInsights from "./pages/JobMarketInsights";
@@ -27,7 +28,7 @@ import Community from "./pages/Community";
 import Help from "./pages/Help";
 import Privacy from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
-import { Footer } from "./components/Footer";
+// import { Footer } from "./components/Footer";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,7 @@ const App = () => (
           <Route path="/interview/:id" element={<InterviewSession />} />
           <Route path="/video-interview" element={<VideoInterview />} />
           <Route path="/video-interview/:id/results" element={<VideoInterviewResults />} />
+          <Route path="/interview-results/:sessionId" element={<MultiQuestionResults />} />
           <Route path="/voice-assistant" element={<VoiceAssistant />} />
           <Route path="/video-practice" element={<VideoPracticeHistory />} />
           <Route path="/progress-analytics" element={<ProgressAnalytics />} />
@@ -64,7 +66,7 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-        <Footer />
+        {/* <Footer /> */}
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
