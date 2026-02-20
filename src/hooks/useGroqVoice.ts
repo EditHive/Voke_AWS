@@ -261,7 +261,7 @@ export function useGroqVoice(): UseGroqVoiceReturn {
                 errorMessage = "My brain is tired. Please give me a minute to rest.";
                 toast.error("Groq Rate Limit Exceeded (429). Please wait a moment or upgrade plan.");
             } else {
-                toast.error(`Voice Assistant Error: ${error.message || "Unknown error"}`);
+                toast.error(`Voice Interview Error: ${error.message || "Unknown error"}`);
             }
 
             speakResponse(errorMessage);

@@ -38,7 +38,7 @@ Once redeployed:
 1. Open your Vercel URL
 2. Open browser console (F12)
 3. Check for any errors
-4. Try logging in and using the voice assistant
+4. Try logging in and using the voice interviewer
 
 ## Troubleshooting
 
@@ -47,7 +47,7 @@ Once redeployed:
 2. Verify all environment variables are set correctly
 3. Make sure Supabase is configured (it's hardcoded in the app, so should work)
 
-### Voice Assistant not working?
+### Voice Interview not working?
 - The local TTS server (`npm run tts`) won't work on Vercel (it's for local development only)
 - The app will automatically fall back to browser's built-in speech synthesis
 - GitHub and Resume scanning should work fine

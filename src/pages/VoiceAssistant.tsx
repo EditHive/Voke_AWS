@@ -257,7 +257,7 @@ const VoiceAssistant: React.FC = () => {
                 .from('interview_sessions')
                 .insert({
                     user_id: user.id,
-                    role: 'Voice Assistant',
+                    role: 'Voice Interviewer',
                     time_limit_minutes: 0, // Unlimited
                     status: 'completed',
                     interview_type: 'voice',
@@ -322,7 +322,7 @@ const VoiceAssistant: React.FC = () => {
                             </div>
                         )}
                     </div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Voice Assistant</h1>
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Voice Interview</h1>
                     <p className="text-muted-foreground text-sm">
                         {loadingContext ? "Loading profile..." : "Ready to interview you based on your profile."}
                     </p>
