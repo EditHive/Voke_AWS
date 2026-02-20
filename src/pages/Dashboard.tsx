@@ -104,7 +104,7 @@ const Dashboard = () => {
 
   const handleMarkAsRead = async (id: string) => {
     await supabase
-      .from('notifications')
+      .from('notifications' as any)
       .update({ read: true })
       .eq('id', id);
 
