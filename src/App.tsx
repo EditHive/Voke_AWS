@@ -38,6 +38,8 @@ import Privacy from "./pages/Privacy";
 import DailyChallenge from "./pages/DailyChallenge";
 import JobRecommendations from "./pages/JobRecommendations";
 import QuestionPractice from "./pages/QuestionPractice";
+import Companies from "./pages/Companies";
+import CompanyDetail from "./pages/CompanyDetail";
 import CareerPlanView from "./pages/CareerPlanView";
 import NotFound from "./pages/NotFound";
 import { Footer } from "./components/Footer";
@@ -91,6 +93,8 @@ const App = () => (
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/daily-challenge" element={<DailyChallenge />} />
             <Route path="/question-practice" element={<QuestionPractice />} />
+            <Route path="/companies" element={<Companies />} />
+            <Route path="/companies/:slug" element={<CompanyDetail />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
