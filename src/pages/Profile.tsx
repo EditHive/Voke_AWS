@@ -205,60 +205,26 @@ const Profile = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 1. First try to use the Edge Function for clean deletion
-      // const { error: funcError } = await supabase.functions.invoke('delete-user-account');
-      // For now, assume Edge Function is not deployed or failing, and force manual cleanup.
+      console.log("Starting account deletion via Edge Function...");
 
-      const tables = [
-        'peer_interview_sessions', // check host_user_id
-        'job_recommendations',
-        'user_career_recommendations',
-        'user_career_plans',
-        'user_progress',
-        'chat_sessions',
-        'resume_analyses',
-        'interview_sessions',
-        'video_interview_sessions',
-        'notifications'
-      ];
+      const { error: funcError } = await supabase.functions.invoke('delete-user-account');
 
-      console.log("Starting manual account deletion...");
-
-      // Delete from tables where user_id is the key
-      for (const table of tables) {
-        try {
-          if (table === 'peer_interview_sessions') {
-            await supabase.from(table).delete().eq('host_user_id', user.id);
-            await supabase.from(table).delete().eq('guest_user_id', user.id);
-          } else {
-            const { error: delError } = await supabase.from(table as any).delete().eq('user_id', user.id);
-            if (delError) {
-              console.error(`Failed to cleanup ${table}:`, delError);
-              // Continue anyway to try deleting as much as possible
-            }
-          }
-        } catch (e) {
-          console.error(`Exception deleting from ${table}:`, e);
-        }
+      if (funcError) {
+        throw new Error(funcError.message || "Failed to invoke deletion function");
       }
 
-      // Finally delete profile
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .delete()
-        .eq("id", user.id);
+      // Check if response was actually successful, sometimes invoke returns error in data
+      // but in this case simple invoke failure check is start. 
+      // Ideally we check response status too but throwing on funcError covers network/invocation layer.
 
-      if (profileError) {
-        console.error("Manual profile delete failed:", profileError);
-        toast.error("Failed to delete profile data. Please contact support.");
-        setSaving(false);
-        return;
-      }
+      console.log("Deletion complete. Signing out...");
 
-      console.log("Manual deletion complete. Signing out...");
+      // Force sign out to clear local session
       await supabase.auth.signOut();
+
       toast.success("Account deleted successfully");
       navigate("/");
+
     } catch (error: any) {
       console.error("Error deleting account:", error);
       toast.error(`Failed to delete account: ${error.message}`);
