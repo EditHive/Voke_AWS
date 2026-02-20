@@ -37,6 +37,7 @@ import Help from "./pages/Help";
 import Privacy from "./pages/Privacy";
 import DailyChallenge from "./pages/DailyChallenge";
 import JobRecommendations from "./pages/JobRecommendations";
+import QuestionPractice from "./pages/QuestionPractice";
 import CareerPlanView from "./pages/CareerPlanView";
 import NotFound from "./pages/NotFound";
 import { Footer } from "./components/Footer";
@@ -89,6 +90,7 @@ const App = () => (
             <Route path="/help" element={<Help />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/daily-challenge" element={<DailyChallenge />} />
+            <Route path="/question-practice" element={<QuestionPractice />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

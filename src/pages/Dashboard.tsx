@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   FileText, LogOut, TrendingUp, Upload, Play, Target, Users, Mic, Settings,
   Flame, Trophy, Clock, Star, ArrowRight, Zap, Code, MessageSquare, Bell, Search,
-  Globe, BookOpen, Briefcase
+  Globe, BookOpen, Briefcase, FileQuestion
 } from "lucide-react";
 import { SkillRadar } from "@/components/dashboard/SkillRadar";
 import { RoadToOffer } from "@/components/dashboard/RoadToOffer";
@@ -325,6 +325,9 @@ const Dashboard = () => {
           </div>
 
           <nav className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/blog")}>
+              <BookOpen className="w-5 h-5" />
+            </Button>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
@@ -549,15 +552,17 @@ const Dashboard = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="hover:shadow-lg transition-all cursor-pointer group border-l-4 border-l-orange-500" onClick={() => navigate("/blog")}>
+                <Card className="hover:shadow-lg transition-all cursor-pointer group border-l-4 border-l-orange-500" onClick={() => navigate("/question-practice")}>
                   <CardContent className="p-4 flex flex-col items-center text-center pt-6">
                     <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <BookOpen className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                      <FileQuestion className="w-6 h-6 text-orange-600 dark:text-orange-400" />
                     </div>
-                    <h4 className="font-semibold text-sm">Blog</h4>
-                    <p className="text-xs text-muted-foreground mt-1">Read & Learn</p>
+                    <h4 className="font-semibold text-sm">Question Practice</h4>
+                    <p className="text-xs text-muted-foreground mt-1">Daily Challenges</p>
                   </CardContent>
                 </Card>
+
+
               </div>
             </div>
 
