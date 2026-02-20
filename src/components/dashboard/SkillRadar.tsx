@@ -1,7 +1,13 @@
 
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Tooltip, Legend } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Brain, Info } from "lucide-react";
+import { Brain, Info, Zap } from "lucide-react";
+import {
+    Tooltip as ShadTooltip, // Renamed to avoid conflict with recharts Tooltip
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface SkillRadarProps {
   data?: {
@@ -25,11 +31,25 @@ export const SkillRadar = ({ data = defaultData }: SkillRadarProps) => {
     <Card className="border-border/50 shadow-sm hover:shadow-md transition-all duration-300 group">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-                <Brain className="w-4 h-4 text-violet-500" />
-                AI Competency Map
-            </CardTitle>
-            <Info className="w-4 h-4 text-muted-foreground/50 cursor-pointer hover:text-violet-500 transition-colors" />
+                <div className="flex items-center gap-2 mb-6">
+                    <Zap className="w-5 h-5 text-violet-500" />
+                    <h3 className="font-semibold text-lg">AI Competency Map</h3>
+                    <TooltipProvider>
+                        <ShadTooltip>
+                            <TooltipTrigger>
+                                <Info className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors cursor-pointer" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs p-4">
+                                <p className="font-semibold mb-2">How is this calculated?</p>
+                                <ul className="list-disc pl-4 space-y-1 text-sm text-muted-foreground">
+                                    <li><strong>Confidence:</strong> Based on your voice tone and hesitation analysis from AI interviews.</li>
+                                    <li><strong>Technical:</strong> Scores from your coding challenges and technical Q&A sessions.</li>
+                                    <li><strong>Communication:</strong> Clarity, pace, and vocabulary analysis from video sessions.</li>
+                                </ul>
+                            </TooltipContent>
+                        </ShadTooltip>
+                    </TooltipProvider>
+                </div>
         </div>
         <CardDescription className="text-xs">
             Visual breakdown of your interview skills.

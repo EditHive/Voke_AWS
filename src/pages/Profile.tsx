@@ -890,8 +890,8 @@ const Profile = () => {
           </div>
         </Tabs>
 
-        <Dialog open={showMandatoryModal} onOpenChange={() => { }}>
-          <DialogContent className="sm:max-w-[500px]" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+        <Dialog open={showMandatoryModal} onOpenChange={setShowMandatoryModal}>
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Complete Your Profile</DialogTitle>
               <DialogDescription>

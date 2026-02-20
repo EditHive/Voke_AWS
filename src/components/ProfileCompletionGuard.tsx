@@ -22,24 +22,8 @@ export const ProfileCompletionGuard = ({ children }: { children: React.ReactNode
                 return;
             }
 
-            const { data: profile } = await supabase
-                .from("profiles")
-                .select("github_url, resume_url, leetcode_id, codeforces_id")
-                .eq("id", user.id)
-                .single();
-
-            if (profile) {
-                const isComplete =
-                    profile.github_url &&
-                    profile.resume_url &&
-                    profile.leetcode_id &&
-                    profile.codeforces_id;
-
-                // If profile is incomplete and user is not on profile page, redirect to profile
-                if (!isComplete && location.pathname !== "/profile") {
-                    navigate("/profile");
-                }
-            }
+            // We no longer force redirect to profile page if profile is incomplete
+            // The user will be prompted to complete their profile when they visit the profile settings
         } catch (error) {
             console.error("Error checking profile:", error);
         } finally {
