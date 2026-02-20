@@ -18,7 +18,7 @@ import { UpgradeButton } from "@/components/UpgradeButton";
 
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { motion } from "motion/react"; 
+import { motion } from "motion/react";
 import {
   Popover,
   PopoverContent,
@@ -290,8 +290,11 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="relative w-16 h-16">
+          <div className="absolute inset-0 border-t-2 border-violet-500 rounded-full animate-spin"></div>
+          <div className="absolute inset-3 border-t-2 border-fuchsia-500 rounded-full animate-spin-reverse"></div>
+        </div>
       </div>
     );
   }

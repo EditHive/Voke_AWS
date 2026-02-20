@@ -161,20 +161,27 @@ export function useGroqVoice(): UseGroqVoiceReturn {
 
             if (!groq) {
                 console.error('DEBUG: Groq client not initialized (missing API key)');
+                toast.error("Voice Error: Groq API Key missing");
                 return '';
             }
 
             const transcription = await groq.audio.transcriptions.create({
                 file: audioFile,
-                model: 'whisper-large-v3-turbo',
+                model: 'whisper-large-v3-turbo', // Reverting to turbo as distil is decommissioned
                 temperature: 0,
                 response_format: 'verbose_json',
             });
 
             console.log('DEBUG: Transcription:', transcription.text);
+
+            if (!transcription.text) {
+                toast.warning("Hears silence (empty transcript)");
+            }
+
             return transcription.text || '';
-        } catch (error) {
+        } catch (error: any) {
             console.error('DEBUG: Whisper transcription error:', error);
+            toast.error(`Transcription Failed: ${error.message}`);
             return '';
         }
     };
@@ -293,9 +300,13 @@ export function useGroqVoice(): UseGroqVoiceReturn {
 
             // VAD Variables
             let lastSpeechTime = Date.now();
+            let speechStarted = false;
             let silenceTimer: any = null;
-            const SPEECH_THRESHOLD = 20; // Volume threshold (0-255)
-            const SILENCE_DURATION = 2000; // 2 seconds of silence to stop
+            const startTime = Date.now();
+
+            const SPEECH_THRESHOLD = 5; // Lower capability for quiet mics (range 0-255)
+            const SILENCE_AFTER_SPEECH = 2500; // Increased to 2.5s for natural pauses
+            const INITIAL_WAIT_TIMEOUT = 10000; // 10s wait
 
             const detectSilence = () => {
                 if (!isListeningRef.current) return;
@@ -309,18 +320,46 @@ export function useGroqVoice(): UseGroqVoiceReturn {
                 }
                 const average = sum / bufferLength;
 
+                // Update volume for visualizer (normalized 0-1)
+                // average is usually 0-100 for speech, max 255. 
+                // We divide by 100 to make it responsive, capped at 1 by visualizer.
+                setVolume(average / 100);
+
                 if (average > SPEECH_THRESHOLD) {
                     lastSpeechTime = Date.now();
+                    if (!speechStarted) {
+                        console.log('DEBUG: Speech detected! Vol:', average);
+                        speechStarted = true;
+                        setIsUserSpeaking(true); // Visual feedback
+                    }
                 }
 
-                // Check for silence duration
-                if (Date.now() - lastSpeechTime > SILENCE_DURATION) {
-                    console.log('DEBUG: Silence detected, stopping recording...');
-                    if (mediaRecorder.state === 'recording') {
-                        mediaRecorder.stop();
+                // Logic:
+                // 1. If speech started: Wait for 2.5s of silence to finish sentence
+                // 2. If NO speech yet: Wait for 10s total before resetting/checking
+
+                const now = Date.now();
+
+                if (speechStarted) {
+                    if (now - lastSpeechTime > SILENCE_AFTER_SPEECH) {
+                        console.log('DEBUG: End of sentence detected, stopping...');
+                        if (mediaRecorder.state === 'recording') {
+                            mediaRecorder.stop();
+                        }
+                    } else {
+                        silenceTimer = requestAnimationFrame(detectSilence);
                     }
                 } else {
-                    silenceTimer = requestAnimationFrame(detectSilence);
+                    // Still waiting for first word
+                    if (now - startTime > INITIAL_WAIT_TIMEOUT) {
+                        console.log('DEBUG: No speech detected (timeout), restarting listener...');
+                        if (mediaRecorder.state === 'recording') {
+                            mediaRecorder.stop();
+                        }
+                        // Note: handleUserMessage logic in onstop handles empty audio by ignoring or restarting
+                    } else {
+                        silenceTimer = requestAnimationFrame(detectSilence);
+                    }
                 }
             };
 
@@ -331,10 +370,18 @@ export function useGroqVoice(): UseGroqVoiceReturn {
             };
 
             mediaRecorder.onstart = () => {
-                console.log('DEBUG: Recording started');
-                setIsUserSpeaking(true);
-                setVolume(0.5);
-                detectSilence(); // Start VAD loop
+                console.log('DEBUG: Recording started (Waiting for speech...)');
+                // Don't set isUserSpeaking(true) yet - wait for actual voice
+                setIsUserSpeaking(false);
+                setVolume(0); // Optional: show mic activity only when speaking? or keep showing visualizer
+                // Actually visualizer usually needs 'volume' state. 
+                // Let's rely on visualizer updating volume in a real app, but here we just pass volume prop.
+                // For now, let's allow volume updates for visualizer:
+
+                // Start a volume update loop for visualizer independent of VAD if needed,
+                // but current VAD loop calculates average anyway.
+                // Let's hook volume setting into detectSilence for smoother UI
+                detectSilence();
             };
 
             mediaRecorder.onstop = async () => {
@@ -348,18 +395,32 @@ export function useGroqVoice(): UseGroqVoiceReturn {
                 audioContext.close();
                 stream.getTracks().forEach(track => track.stop());
 
-                if (audioChunksRef.current.length > 0) {
+                // Calculate total size
+                const totalSize = audioChunksRef.current.reduce((acc, chunk) => acc + chunk.size, 0);
+                console.log('DEBUG: Audio captured size:', totalSize, 'SpeechStarted:', speechStarted);
+
+                // RELAXED CONDITION:
+                // Transcribe if speech was detected OR if we captured a significant amount of audio (>10KB)
+                // This acts as a failsafe if the VAD threshold was slightly missed but user spoke a lot.
+                const hasSignificantAudio = totalSize > 10000;
+
+                if ((speechStarted || hasSignificantAudio) && audioChunksRef.current.length > 0) {
                     const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
                     const transcription = await transcribeAudio(audioBlob);
 
-                    if (transcription) {
+                    if (transcription && transcription.trim().length > 0) {
                         await handleUserMessage(transcription);
                     } else {
-                        // Resume listening if no transcription (silence/noise)
+                        // Transcription empty? Resume listening
                         if (statusRef.current === LiveStatus.CONNECTED) {
-                            // Small delay to prevent instant loop
                             setTimeout(() => startListening(), 500);
                         }
+                    }
+                } else {
+                    // No speech detected (timed out waiting)
+                    console.log('DEBUG: No sufficient speech captured, resuming listening...');
+                    if (statusRef.current === LiveStatus.CONNECTED) {
+                        startListening();
                     }
                 }
             };
@@ -367,12 +428,12 @@ export function useGroqVoice(): UseGroqVoiceReturn {
             mediaRecorderRef.current = mediaRecorder;
             mediaRecorder.start();
 
-            // Safety timeout (still keep 30s max)
+            // Hard safety limit (e.g. 60s max recording)
             setTimeout(() => {
                 if (mediaRecorder.state === 'recording') {
                     mediaRecorder.stop();
                 }
-            }, 30000);
+            }, 60000);
 
         } catch (error) {
             console.error('DEBUG: Microphone error:', error);
