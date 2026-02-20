@@ -40,6 +40,7 @@ import JobRecommendations from "./pages/JobRecommendations";
 import QuestionPractice from "./pages/QuestionPractice";
 import Companies from "./pages/Companies";
 import CompanyDetail from "./pages/CompanyDetail";
+import Playground from "./pages/Playground";
 import CareerPlanView from "./pages/CareerPlanView";
 import NotFound from "./pages/NotFound";
 import { Footer } from "./components/Footer";
@@ -95,6 +96,7 @@ const App = () => (
             <Route path="/question-practice" element={<QuestionPractice />} />
             <Route path="/companies" element={<Companies />} />
             <Route path="/companies/:slug" element={<CompanyDetail />} />
+            <Route path="/playground" element={<Playground />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

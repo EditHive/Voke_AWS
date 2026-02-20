@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -167,6 +168,8 @@ const Index = () => {
               and land your dream job faster than ever before.
             </motion.p>
 
+
+
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -181,15 +184,30 @@ const Index = () => {
                 Start Practicing Free
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => navigate("/learning-paths")}
-                className="w-full sm:w-auto border-white/20 text-black hover:bg-white/10 text-lg px-8 py-6 rounded-full backdrop-blur-sm"
-              >
-                <Play className="mr-2 w-5 h-5 fill-current" />
-                Watch Demo
-              </Button>
+              
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="w-full sm:w-auto border-white/20 text-black hover:bg-white/10 text-lg px-8 py-6 rounded-full backdrop-blur-sm"
+                  >
+                    <Play className="mr-2 w-5 h-5 fill-current" />
+                    Watch Demo
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[900px] p-0 overflow-hidden bg-black/90 border-white/10 backdrop-blur-xl">
+                  <div className="aspect-video w-full">
+                    <iframe 
+                      className="w-full h-full"
+                      src="https://www.youtube.com/embed/LXb3EKWsInQ?si=KvH-2j1k2j1k2j1k&autoplay=1&mute=0" 
+                      title="Voke AI Demo" 
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                      allowFullScreen
+                    ></iframe>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </motion.div>
 
             {/* Hero Dashboard Preview */}

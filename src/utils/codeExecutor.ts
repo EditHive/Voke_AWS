@@ -33,7 +33,7 @@ function listToArray(head: ListNode | null): number[] {
 }
 
 export type ExecutionResult = {
-  passed: boolean;
+  passed: boolean; // Keep for JS tests compat
   logs: string[];
   results: {
     caseId: number;
@@ -45,17 +45,110 @@ export type ExecutionResult = {
   error?: string;
 };
 
-export const executeCode = (userCode: string, language: 'javascript' | 'python' | 'bash'): ExecutionResult => {
-  if (language !== 'javascript') {
-    return {
-      passed: false,
-      logs: ["Execution for Python/Bash is currently simulated."],
-      results: [],
-      error: "Only JavaScript execution is supported in this browser environment currently."
-    };
+// --- Pyodide Setup ---
+declare global {
+  interface Window {
+    loadPyodide: (config?: any) => Promise<any>;
+  }
+}
+
+let pyodide: any = null;
+let pyodideLoadingPromise: Promise<any> | null = null;
+
+const loadPyodide = async () => {
+    if (pyodide) return pyodide;
+    if (pyodideLoadingPromise) return pyodideLoadingPromise;
+
+    pyodideLoadingPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js';
+        script.type = 'text/javascript';
+        script.async = true;
+        
+        script.onload = async () => {
+             // Poll for loadPyodide availability
+             let checkCount = 0;
+             const checkInterval = setInterval(async () => {
+                 if (typeof window.loadPyodide === 'function') {
+                     clearInterval(checkInterval);
+                     try {
+                         const p = await window.loadPyodide({
+                            indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/"
+                         });
+                         pyodide = p;
+                         resolve(p);
+                     } catch (e) {
+                         reject(e);
+                     }
+                 } else {
+                     checkCount++;
+                     if (checkCount > 20) { // Wait up to 2 seconds (20 * 100ms)
+                         clearInterval(checkInterval);
+                         reject(new Error('Pyodide script loaded but loadPyodide is not defined after timeout.'));
+                     }
+                 }
+             }, 100);
+        };
+        script.onerror = (e) => reject(new Error('Failed to load Pyodide script'));
+        document.body.appendChild(script);
+    });
+
+    return pyodideLoadingPromise;
+};
+
+export const executeCode = async (userCode: string, language: 'javascript' | 'python' | 'bash'): Promise<ExecutionResult> => {
+  const logs: string[] = [];
+
+  // --- Python Execution ---
+  if (language === 'python') {
+      try {
+          const py = await loadPyodide();
+          
+          // Redirect stdout
+          py.setStdout({
+              batched: (msg: string) => {
+                  logs.push(msg);
+              }
+          });
+          
+          await py.runPythonAsync(userCode);
+          
+          return {
+              passed: true,
+              logs: logs,
+              results: [],
+          };
+      } catch (err: any) {
+          return {
+              passed: false,
+              logs: logs,
+              results: [],
+              error: err.toString()
+          };
+      }
   }
 
-  const logs: string[] = [];
+  // --- Bash Execution (Simulated) ---
+  if (language === 'bash') {
+      // Simple simulation for demo purposes
+      if (userCode.trim().startsWith("echo")) {
+          const output = userCode.replace("echo", "").replace(/"/g, "").replace(/'/g, "").trim();
+          return {
+              passed: true,
+              logs: [output],
+              results: []
+          };
+      }
+      return {
+          passed: false,
+          logs: ["Execution for Bash is currently simulated (try 'echo hello')"],
+          results: [],
+          error: "Full Bash support requires a backend system."
+      };
+  }
+
+  // --- JavaScript Execution ---
+  // (Existing Logic Wrapped in Async)
   const originalConsoleLog = console.log;
   
   // Capture console.log
@@ -81,54 +174,53 @@ export const executeCode = (userCode: string, language: 'javascript' | 'python' 
   let allPassed = true;
 
   try {
-    // 1. Prepare the user's function
-    // We wrap it to ensure it returns the function or executes it
-    // The user code is expected to be: "function reverseList(head) { ... }"
-    
-    // We construct a Function that takes logging/classes and returns the user's reverseList
-    // We append "; return reverseList;" to ensure we get the handle
-    
     const factory = new Function('ListNode', 'console', `
       ${userCode}
+      // If user didn't define reverseList (e.g. just wrote console.log), that's fine for playground unless we enforce it.
+      // For general playground, we might not want to enforce reverseList unless in "Challenge Mode".
+      // But preserving existing logic for now.
       if (typeof reverseList !== 'function') {
-        throw new Error("Function 'reverseList' not found. Please do not change the function name.");
+        // Just return null if no function, main execution is done via main body
+        return null; 
       }
       return reverseList;
     `);
 
     const userFunction = factory(ListNode, mockConsole);
 
-    // 2. Run Test Cases
-    testCases.forEach((tc, index) => {
-      // Create fresh input per test case to avoid mutation issues
-      const inputList = arrayToList(tc.input);
-      
-      try {
-        const outputList = userFunction(inputList);
-        const outputArray = listToArray(outputList);
+    if (userFunction) {
+        // 2. Run Test Cases
+        testCases.forEach((tc, index) => {
+        // Create fresh input per test case to avoid mutation issues
+        const inputList = arrayToList(tc.input);
         
-        const passed = JSON.stringify(outputArray) === JSON.stringify(tc.expected);
-        if (!passed) allPassed = false;
+        try {
+            const outputList = userFunction(inputList);
+            const outputArray = listToArray(outputList);
+            
+            const passed = JSON.stringify(outputArray) === JSON.stringify(tc.expected);
+            if (!passed) allPassed = false;
 
-        results.push({
-          caseId: index + 1,
-          input: JSON.stringify(tc.input),
-          expected: JSON.stringify(tc.expected),
-          actual: JSON.stringify(outputArray),
-          passed
+            results.push({
+            caseId: index + 1,
+            input: JSON.stringify(tc.input),
+            expected: JSON.stringify(tc.expected),
+            actual: JSON.stringify(outputArray),
+            passed
+            });
+        } catch (err: any) {
+            allPassed = false;
+            logs.push(`Error in Test Case ${index + 1}: ${err.message}`);
+            results.push({
+            caseId: index + 1,
+            input: JSON.stringify(tc.input),
+            expected: JSON.stringify(tc.expected),
+            actual: "Error: " + err.message,
+            passed: false
+            });
+        }
         });
-      } catch (err: any) {
-        allPassed = false;
-        logs.push(`Error in Test Case ${index + 1}: ${err.message}`);
-        results.push({
-          caseId: index + 1,
-          input: JSON.stringify(tc.input),
-          expected: JSON.stringify(tc.expected),
-          actual: "Error: " + err.message,
-          passed: false
-        });
-      }
-    });
+    }
 
   } catch (err: any) {
     return {

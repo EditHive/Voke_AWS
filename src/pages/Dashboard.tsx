@@ -542,13 +542,13 @@ const Dashboard = () => {
                 </Card>
 
 
-                <Card className="hover:shadow-lg transition-all cursor-pointer group border-l-4 border-l-indigo-500" onClick={() => navigate("/community")}>
-                  <CardContent className="p-4 flex flex-col items-center text-center pt-6">
+                <Card className="hover:shadow-lg transition-all cursor-pointer group border-l-4 border-l-indigo-500" onClick={() => navigate("/playground")}>
+                  <CardContent className="p-4 flex-col items-center text-center pt-6 flex">
                     <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <Globe className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                      <Code className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                     </div>
-                    <h4 className="font-semibold text-sm">Community</h4>
-                    <p className="text-xs text-muted-foreground mt-1">Connect & Share</p>
+                    <h4 className="font-semibold text-sm">Playground</h4>
+                    <p className="text-xs text-muted-foreground mt-1">Code Sandbox</p>
                   </CardContent>
                 </Card>
 
