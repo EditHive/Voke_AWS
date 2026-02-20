@@ -23,6 +23,7 @@ const Index = () => {
   }, []);
 
   return (
+    
     <div className="min-h-screen bg-black text-white selection:bg-violet-500/30">
       {/* Navbar */}
       <nav 

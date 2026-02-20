@@ -14,8 +14,11 @@ import {
 import { SkillRadar } from "@/components/dashboard/SkillRadar";
 import { RoadToOffer } from "@/components/dashboard/RoadToOffer";
 import { MarketPulse } from "@/components/dashboard/MarketPulse";
-import { motion } from "motion/react";
+import { UpgradeButton } from "@/components/UpgradeButton";
+
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { motion } from "motion/react"; 
 import {
   Popover,
   PopoverContent,
@@ -325,6 +328,7 @@ const Dashboard = () => {
           </div>
 
           <nav className="flex items-center gap-2">
+            <UpgradeButton />
             <Button variant="ghost" size="icon" onClick={() => navigate("/blog")}>
               <BookOpen className="w-5 h-5" />
             </Button>

@@ -9,6 +9,7 @@ import {
   FileText, Briefcase, Zap, Target, LineChart, 
   ArrowUpRight, Clock
 } from "lucide-react";
+import { UpgradeButton } from "@/components/UpgradeButton";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import { Badge } from "@/components/ui/badge";
@@ -224,6 +225,7 @@ const LearningPaths = () => {
                  <span className="text-sm font-medium">{selectedTrack.role}</span>
             </div>
             <div className="flex items-center gap-4">
+                <UpgradeButton />
                 <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
                     <LogOut className="w-4 h-4 mr-2" /> Exit
                 </Button>

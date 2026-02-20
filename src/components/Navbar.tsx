@@ -11,6 +11,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 
+import { UpgradeButton } from "@/components/UpgradeButton";
+
 export const Navbar = () => {
     const navigate = useNavigate();
     const [notifications, setNotifications] = useState<any[]>([]);
@@ -75,7 +77,7 @@ export const Navbar = () => {
 
     const markAsRead = async (id: string) => {
         await supabase
-            .from('notifications')
+            .from('notifications' as any)
             .update({ read: true })
             .eq('id', id);
         
@@ -154,6 +156,7 @@ export const Navbar = () => {
 
                     {/* Right Side - Theme Toggle & CTA */}
                     <div className="flex items-center gap-3">
+                        <UpgradeButton />
                         {userId && (
                             <>
                                 <Popover>
