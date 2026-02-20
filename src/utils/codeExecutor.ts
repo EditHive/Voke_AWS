@@ -60,10 +60,16 @@ const loadPyodide = async () => {
     if (pyodideLoadingPromise) return pyodideLoadingPromise;
 
     pyodideLoadingPromise = new Promise((resolve, reject) => {
+        // Set a global timeout for the entire loading process (20 seconds)
+        const timeoutId = setTimeout(() => {
+            reject(new Error("Pyodide loading timed out (20s). Check your connection or firewall."));
+        }, 20000);
+
         const script = document.createElement('script');
         script.src = 'https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js';
         script.type = 'text/javascript';
         script.async = true;
+        script.crossOrigin = "anonymous"; // Better for CDN
         
         script.onload = async () => {
              // Poll for loadPyodide availability
@@ -71,6 +77,7 @@ const loadPyodide = async () => {
              const checkInterval = setInterval(async () => {
                  if (typeof window.loadPyodide === 'function') {
                      clearInterval(checkInterval);
+                     clearTimeout(timeoutId);
                      try {
                          const p = await window.loadPyodide({
                             indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/"
@@ -82,14 +89,18 @@ const loadPyodide = async () => {
                      }
                  } else {
                      checkCount++;
-                     if (checkCount > 20) { // Wait up to 2 seconds (20 * 100ms)
+                     if (checkCount > 50) { // Wait up to 5 seconds (50 * 100ms)
                          clearInterval(checkInterval);
-                         reject(new Error('Pyodide script loaded but loadPyodide is not defined after timeout.'));
+                         clearTimeout(timeoutId);
+                         reject(new Error('Pyodide script loaded but loadPyodide is not defined after 5s polling.'));
                      }
                  }
              }, 100);
         };
-        script.onerror = (e) => reject(new Error('Failed to load Pyodide script'));
+        script.onerror = (e) => {
+            clearTimeout(timeoutId);
+            reject(new Error('Failed to load Pyodide script from CDN. Check content blockers.'));
+        };
         document.body.appendChild(script);
     });
 
