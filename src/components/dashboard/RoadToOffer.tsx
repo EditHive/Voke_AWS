@@ -231,7 +231,13 @@ export const RoadToOffer = ({ profile, onUpdate }: RoadToOfferProps) => {
                   <img
                     src={`https://logo.clearbit.com/${company.toLowerCase().replace(/\s/g, '')}.com`}
                     onError={(e) => {
-                      e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(company)}&background=random&color=fff&size=64`;
+                      const target = e.currentTarget;
+                      // Fallback to Google Search icon or generic letter if Clearbit fails
+                      if (company.toLowerCase().includes('google')) {
+                        target.src = "https://www.google.com/favicon.ico";
+                      } else {
+                        target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(company)}&background=random&color=fff&size=64`;
+                      }
                     }}
                     alt={`${company} logo`}
                     className="w-full h-full object-contain"

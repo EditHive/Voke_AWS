@@ -80,7 +80,7 @@ const Dashboard = () => {
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(10);
-    
+
     if (data) {
       const notifs = data as any as Notification[];
       setNotifications(notifs);
@@ -96,7 +96,7 @@ const Dashboard = () => {
       .from('notifications' as any)
       .update({ read: true })
       .eq('user_id', user.id);
-      
+
     setNotifications(notifications.map(n => ({ ...n, read: true })));
     setUnreadCount(0);
     toast.success("All notifications marked as read");
@@ -146,7 +146,7 @@ const Dashboard = () => {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
-        // 3. Fetch Video Interviews
+      // 3. Fetch Video Interviews
       const { data: videoSessions } = await supabase
         .from("video_interview_sessions")
         .select("*")
@@ -160,7 +160,7 @@ const Dashboard = () => {
         .or(`host_user_id.eq.${user.id},guest_user_id.eq.${user.id}`)
         .order("scheduled_at", { ascending: false });
 
-      
+
       // Combine for "Recent Activity" list (Top 5)
       const allActivity = [
         ...(textSessions || []).map(s => ({ ...s, type: 'Text', date: s.created_at, score: s.overall_score })),
@@ -169,7 +169,7 @@ const Dashboard = () => {
       ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       setSessions(allActivity.slice(0, 5));
-      
+
       // Calculate Stats
       const statsData = calculateRealStats(textSessions || [], videoSessions || [], peerSessions || [], user.id);
       setRealStats(statsData);
@@ -202,9 +202,9 @@ const Dashboard = () => {
     for (const dateStr of uniqueDates) {
       const date = new Date(dateStr);
       // Compare time values normalized to noon to avoid timezone issues with exact midnight
-      const d1 = new Date(currentCheck).setHours(12,0,0,0);
-      const d2 = new Date(date).setHours(12,0,0,0);
-      
+      const d1 = new Date(currentCheck).setHours(12, 0, 0, 0);
+      const d2 = new Date(date).setHours(12, 0, 0, 0);
+
       if (d1 === d2) {
         streak++;
         currentCheck.setDate(currentCheck.getDate() - 1);
@@ -239,7 +239,7 @@ const Dashboard = () => {
     // Note: Peer ratings might be 1-10 or 1-5, adjust normalization if user confirms scale. Assuming 1-100 for text/video.
     // Let's assume Peer is 1-10 and map to 1-100 for consistency if average is distinct.
     // If peer ratings are not yet standard, we might need to adjust. For now, treating raw.
-    
+
     // Correction: Peer ratings schema shows `overall_score` as number. Let's assume 100 base for now or normalize later.
     // Actually, looking at previous artifacts, peer might be new. Let's stick to raw average if unsure, or normalize.
     // Safe bet: Normalize everything to %
@@ -274,10 +274,10 @@ const Dashboard = () => {
   };
 
   const [realStats, setRealStats] = useState([
-      { label: "Interviews", value: "0", icon: FileText, color: "text-blue-500", bg: "bg-blue-500/10" },
-      { label: "Avg. Score", value: "0%", icon: Trophy, color: "text-amber-500", bg: "bg-amber-500/10" },
-      { label: "Hours", value: "0h", icon: Clock, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-      { label: "Streak", value: "0 Days", icon: Flame, color: "text-orange-500", bg: "bg-orange-500/10" },
+    { label: "Interviews", value: "0", icon: FileText, color: "text-blue-500", bg: "bg-blue-500/10" },
+    { label: "Avg. Score", value: "0%", icon: Trophy, color: "text-amber-500", bg: "bg-amber-500/10" },
+    { label: "Hours", value: "0h", icon: Clock, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    { label: "Streak", value: "0 Days", icon: Flame, color: "text-orange-500", bg: "bg-orange-500/10" },
   ]);
 
   const handleLogout = async () => {
@@ -305,9 +305,9 @@ const Dashboard = () => {
       <header className="bg-card/80 backdrop-blur-xl border-b border-border sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/dashboard")}>
-            <img 
-              src="/images/voke_logo.png" 
-              alt="Voke Logo" 
+            <img
+              src="/images/voke_logo.png"
+              alt="Voke Logo"
               className="w-10 h-10 object-contain"
             />
             <h1 className="text-xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">Voke</h1>
@@ -387,43 +387,45 @@ const Dashboard = () => {
             <div className="flex items-center gap-3 pl-2">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium leading-none">{profile?.full_name || "User"}</p>
-                <p className="text-xs text-muted-foreground">Level 5 Scholar</p>
+                <p className="text-xs text-muted-foreground">
+                  Level {Math.floor(parseInt(realStats[0].value) / 5) + 1} Scholar
+                </p>
               </div>
-              
+
               {/* Profile Strength Ring */}
               {(() => {
-                 const score = (() => {
-                    if (!profile) return 0;
-                    let s = 0;
-                    const fields = ['full_name', 'linkedin_url', 'github_url', 'resume_url'];
-                    fields.forEach(k => { if (profile[k]) s += 25; });
-                    return s;
-                 })();
-                 const strokeColor = score === 100 ? "#10b981" : score >= 50 ? "#eab308" : "#ef4444";
-                 const radius = 20;
-                 const circumference = 2 * Math.PI * radius;
-                 const offset = circumference - (score / 100) * circumference;
+                const score = (() => {
+                  if (!profile) return 0;
+                  let s = 0;
+                  const fields = ['full_name', 'linkedin_url', 'github_url', 'resume_url'];
+                  fields.forEach(k => { if (profile[k]) s += 25; });
+                  return s;
+                })();
+                const strokeColor = score === 100 ? "#10b981" : score >= 50 ? "#eab308" : "#ef4444";
+                const radius = 20;
+                const circumference = 2 * Math.PI * radius;
+                const offset = circumference - (score / 100) * circumference;
 
-                 return (
-                    <div className="relative flex items-center justify-center w-12 h-12 cursor-pointer group" onClick={() => navigate("/profile")}>
-                        {/* Tooltip */}
-                        <div className="absolute top-14 right-0 w-max px-3 py-1.5 bg-popover border border-border text-xs font-medium rounded-md shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                            Profile Strength: <span style={{ color: strokeColor }}>{score}%</span>
-                        </div>
-
-                        <svg className="absolute w-full h-full transform -rotate-90">
-                           <circle cx="24" cy="24" r={radius} stroke="currentColor" strokeWidth="2.5" fill="transparent" className="text-muted/20" />
-                           <circle cx="24" cy="24" r={radius} stroke={strokeColor} strokeWidth="2.5" fill="transparent" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" className="transition-all duration-1000 ease-out" />
-                        </svg>
-
-                        <Avatar className="w-8 h-8">
-                            <AvatarImage src={profile?.avatar_url} />
-                            <AvatarFallback className="bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-xs">
-                            {(profile?.full_name || "U")[0]}
-                            </AvatarFallback>
-                        </Avatar>
+                return (
+                  <div className="relative flex items-center justify-center w-12 h-12 cursor-pointer group" onClick={() => navigate("/profile")}>
+                    {/* Tooltip */}
+                    <div className="absolute top-14 right-0 w-max px-3 py-1.5 bg-popover border border-border text-xs font-medium rounded-md shadow-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                      Profile Strength: <span style={{ color: strokeColor }}>{score}%</span>
                     </div>
-                 );
+
+                    <svg className="absolute w-full h-full transform -rotate-90">
+                      <circle cx="24" cy="24" r={radius} stroke="currentColor" strokeWidth="2.5" fill="transparent" className="text-muted/20" />
+                      <circle cx="24" cy="24" r={radius} stroke={strokeColor} strokeWidth="2.5" fill="transparent" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" className="transition-all duration-1000 ease-out" />
+                    </svg>
+
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={profile?.avatar_url} />
+                      <AvatarFallback className="bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-xs">
+                        {(profile?.full_name || "U")[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                );
               })()}
             </div>
           </nav>
@@ -578,14 +580,14 @@ const Dashboard = () => {
           <div className="lg:col-span-4 space-y-6">
 
             {/* AI Skill Radar (Competency Map) */}
-            <SkillRadar 
-                data={sessions.length > 0 ? [
-                    { subject: "Confidence", A: sessions.reduce((acc, s) => acc + (s.score || 70), 0) / (sessions.length || 1), fullMark: 100 },
-                    { subject: "Technical", A: sessions.filter(s => s.type === 'Text').reduce((acc, s) => acc + (s.score || 0), 0) / (sessions.filter(s => s.type === 'Text').length || 1) || 60, fullMark: 100 },
-                    { subject: "ATS Score", A: 85, fullMark: 100 }, // Mocked or derived from resume analysis
-                    { subject: "Problem Solving", A: sessions.filter(s => s.topic?.includes('Code') || s.topic?.includes('System')).reduce((acc, s) => acc + (s.score || 0), 0) / (sessions.filter(s => s.topic?.includes('Code') || s.topic?.includes('System')).length || 1) || 75, fullMark: 100 },
-                    { subject: "Communication", A: sessions.filter(s => s.type === 'Video').reduce((acc, s) => acc + (s.score || 0), 0) / (sessions.filter(s => s.type === 'Video').length || 1) || 80, fullMark: 100 },
-                ] : undefined}
+            <SkillRadar
+              data={sessions.length > 0 ? [
+                { subject: "Confidence", A: sessions.reduce((acc, s) => acc + (s.score || 70), 0) / (sessions.length || 1), fullMark: 100 },
+                { subject: "Technical", A: sessions.filter(s => s.type === 'Text').reduce((acc, s) => acc + (s.score || 0), 0) / (sessions.filter(s => s.type === 'Text').length || 1) || 60, fullMark: 100 },
+                { subject: "ATS Score", A: 85, fullMark: 100 }, // Mocked or derived from resume analysis
+                { subject: "Problem Solving", A: sessions.filter(s => s.topic?.includes('Code') || s.topic?.includes('System')).reduce((acc, s) => acc + (s.score || 0), 0) / (sessions.filter(s => s.topic?.includes('Code') || s.topic?.includes('System')).length || 1) || 75, fullMark: 100 },
+                { subject: "Communication", A: sessions.filter(s => s.type === 'Video').reduce((acc, s) => acc + (s.score || 0), 0) / (sessions.filter(s => s.type === 'Video').length || 1) || 80, fullMark: 100 },
+              ] : undefined}
             />
 
 

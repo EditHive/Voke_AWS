@@ -47,6 +47,7 @@ import { Footer } from "./components/Footer";
 import GlobalAIChatbot from "./components/GlobalAIChatbot";
 import { OnlinePresenceProvider } from "./components/OnlinePresenceProvider";
 import { SessionRequestNotifier } from "./components/SessionRequestNotifier";
+import { ProfileCompletionGuard } from "./components/ProfileCompletionGuard";
 
 const queryClient = new QueryClient();
 
@@ -57,55 +58,57 @@ const App = () => (
       <Sonner />
       <OnlinePresenceProvider>
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/users/:userId" element={<AdminUserDetails />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/blogs" element={<Blogs />} />
-            <Route path="/community" element={<Community />} />
-            <Route path="/learning-paths" element={<LearningPaths />} />
-            <Route path="/interview/new" element={<InterviewNew />} />
-            <Route path="/interview/results/:id" element={<InterviewResults />} />
-            <Route path="/interview/:id" element={<InterviewSession />} />
-            <Route path="/video-interview" element={<VideoInterview />} />
-            <Route path="/video-interview/results/:id" element={<VideoInterviewResults />} />
-            <Route path="/timed-interview/results/:id" element={<TimedVideoInterviewResults />} />
-            <Route path="/voice-interview/results/:id" element={<VoiceInterviewResults />} />
-            <Route path="/multi-question-results/:sessionId" element={<MultiQuestionResults />} />
-            <Route path="/voice-assistant" element={<VoiceAssistant />} />
-            <Route path="/video-practice" element={<VideoPracticeHistory />} />
-            <Route path="/progress-analytics" element={<ProgressAnalytics />} />
+          <ProfileCompletionGuard>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/users/:userId" element={<AdminUserDetails />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/blogs" element={<Blogs />} />
+              <Route path="/community" element={<Community />} />
+              <Route path="/learning-paths" element={<LearningPaths />} />
+              <Route path="/interview/new" element={<InterviewNew />} />
+              <Route path="/interview/results/:id" element={<InterviewResults />} />
+              <Route path="/interview/:id" element={<InterviewSession />} />
+              <Route path="/video-interview" element={<VideoInterview />} />
+              <Route path="/video-interview/results/:id" element={<VideoInterviewResults />} />
+              <Route path="/timed-interview/results/:id" element={<TimedVideoInterviewResults />} />
+              <Route path="/voice-interview/results/:id" element={<VoiceInterviewResults />} />
+              <Route path="/multi-question-results/:sessionId" element={<MultiQuestionResults />} />
+              <Route path="/voice-assistant" element={<VoiceAssistant />} />
+              <Route path="/video-practice" element={<VideoPracticeHistory />} />
+              <Route path="/progress-analytics" element={<ProgressAnalytics />} />
 
-            <Route path="/adaptive-interview" element={<AdaptiveInterview />} />
-            <Route path="/peer-interviews" element={<PeerInterviews />} />
-            <Route path="/peer-interviews/create" element={<CreatePeerSession />} />
-            <Route path="/peer-interviews/session/:sessionId" element={<PeerSessionRoom />} />
-            <Route path="/peer-interviews/rate/:sessionId" element={<RatePeerSession />} />
-            <Route path="/leaderboard" element={<Leaderboard />} />
-            <Route path="/job-recommendations" element={<JobRecommendations />} />
-            <Route path="/career-plan/:planId" element={<CareerPlanView />} />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/blog/:id" element={<BlogPost />} />
-            <Route path="/community" element={<Community />} />
-            <Route path="/help" element={<Help />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/daily-challenge" element={<DailyChallenge />} />
-            <Route path="/question-practice" element={<QuestionPractice />} />
-            <Route path="/companies" element={<Companies />} />
-            <Route path="/companies/:slug" element={<CompanyDetail />} />
-            <Route path="/playground" element={<Playground />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              <Route path="/adaptive-interview" element={<AdaptiveInterview />} />
+              <Route path="/peer-interviews" element={<PeerInterviews />} />
+              <Route path="/peer-interviews/create" element={<CreatePeerSession />} />
+              <Route path="/peer-interviews/session/:sessionId" element={<PeerSessionRoom />} />
+              <Route path="/peer-interviews/rate/:sessionId" element={<RatePeerSession />} />
+              <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route path="/job-recommendations" element={<JobRecommendations />} />
+              <Route path="/career-plan/:planId" element={<CareerPlanView />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:id" element={<BlogPost />} />
+              <Route path="/community" element={<Community />} />
+              <Route path="/help" element={<Help />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/daily-challenge" element={<DailyChallenge />} />
+              <Route path="/question-practice" element={<QuestionPractice />} />
+              <Route path="/companies" element={<Companies />} />
+              <Route path="/companies/:slug" element={<CompanyDetail />} />
+              <Route path="/playground" element={<Playground />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </ProfileCompletionGuard>
           <GlobalAIChatbot />
           <SessionRequestNotifier />
         </BrowserRouter>
       </OnlinePresenceProvider>
     </TooltipProvider>
-  </QueryClientProvider>
+  </QueryClientProvider >
 );
 
 export default App;

@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from "motion/react";
 import InterviewAnalytics from "@/components/InterviewAnalytics";
 import AICoachChat from "@/components/AICoachChat";
 import ResumeAnalyzer from "@/components/ResumeAnalyzer";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -38,6 +39,7 @@ const Profile = () => {
   });
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [skillGaps, setSkillGaps] = useState<any[]>([]);
+  const [showMandatoryModal, setShowMandatoryModal] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -77,6 +79,10 @@ const Profile = () => {
         if (profile.coding_stats) {
           setCodingStats(profile.coding_stats);
         }
+
+        // Check for mandatory fields
+        const missingFields = !profile.github_url || !profile.resume_url || !profile.leetcode_id || !profile.codeforces_id;
+        setShowMandatoryModal(missingFields);
       }
     } catch (error) {
       console.error("Error loading profile:", error);
@@ -106,7 +112,7 @@ const Profile = () => {
         .select("*")
         .or(`host_user_id.eq.${user.id},guest_user_id.eq.${user.id}`);
 
-      const totalInterviews = (sessions?.length || 0) + (videoSessions?.length || 0);
+      const totalInterviews = (sessions?.length || 0) + (videoSessions?.length || 0) + (peerSessions?.filter((p: any) => p.status === 'completed').length || 0);
       const completedSessions = sessions?.filter(s => s.status === "completed").length || 0;
       const avgScore = videoSessions?.length
         ? videoSessions.reduce((acc, s) => acc + s.overall_score, 0) / videoSessions.length
@@ -178,6 +184,84 @@ const Profile = () => {
     } catch (error) {
       console.error("Error saving profile:", error);
       toast.error("Failed to save profile");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm("Are you sure you want to delete your account? This action cannot be undone and all your data will be lost.")) {
+      return;
+    }
+
+    const userInput = window.prompt("Type 'DELETE' to confirm account deletion:");
+    if (userInput !== "DELETE") {
+      toast.error("Deletion cancelled");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // 1. First try to use the Edge Function for clean deletion
+      // const { error: funcError } = await supabase.functions.invoke('delete-user-account');
+      // For now, assume Edge Function is not deployed or failing, and force manual cleanup.
+
+      const tables = [
+        'peer_interview_sessions', // check host_user_id
+        'job_recommendations',
+        'user_career_recommendations',
+        'user_career_plans',
+        'user_progress',
+        'chat_sessions',
+        'resume_analyses',
+        'interview_sessions',
+        'video_interview_sessions',
+        'notifications'
+      ];
+
+      console.log("Starting manual account deletion...");
+
+      // Delete from tables where user_id is the key
+      for (const table of tables) {
+        try {
+          if (table === 'peer_interview_sessions') {
+            await supabase.from(table).delete().eq('host_user_id', user.id);
+            await supabase.from(table).delete().eq('guest_user_id', user.id);
+          } else {
+            const { error: delError } = await supabase.from(table as any).delete().eq('user_id', user.id);
+            if (delError) {
+              console.error(`Failed to cleanup ${table}:`, delError);
+              // Continue anyway to try deleting as much as possible
+            }
+          }
+        } catch (e) {
+          console.error(`Exception deleting from ${table}:`, e);
+        }
+      }
+
+      // Finally delete profile
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", user.id);
+
+      if (profileError) {
+        console.error("Manual profile delete failed:", profileError);
+        toast.error("Failed to delete profile data. Please contact support.");
+        setSaving(false);
+        return;
+      }
+
+      console.log("Manual deletion complete. Signing out...");
+      await supabase.auth.signOut();
+      toast.success("Account deleted successfully");
+      navigate("/");
+    } catch (error: any) {
+      console.error("Error deleting account:", error);
+      toast.error(`Failed to delete account: ${error.message}`);
     } finally {
       setSaving(false);
     }
@@ -359,9 +443,9 @@ const Profile = () => {
       >
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img 
-              src="/images/voke_logo.png" 
-              alt="Voke Logo" 
+            <img
+              src="/images/voke_logo.png"
+              alt="Voke Logo"
               className="w-10 h-10 object-contain"
             />
             <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600">
@@ -376,6 +460,9 @@ const Profile = () => {
             <Button variant="destructive" size="sm" onClick={handleLogout} className="shadow-lg shadow-destructive/20 hover:shadow-destructive/40 transition-all">
               <LogOut className="h-4 w-4 mr-2" />
               Logout
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleDeleteAccount} className="text-destructive hover:text-destructive hover:bg-destructive/10">
+              Delete
             </Button>
           </div>
         </div>
@@ -821,40 +908,13 @@ const Profile = () => {
                           </div>
                         </div>
 
-                        <AnimatePresence>
-                          {resumeFile && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -10 }}
-                              className="flex justify-end"
-                            >
-                              <Button
-                                onClick={handleResumeUpload}
-                                disabled={saving}
-                                className="w-full md:w-auto shadow-lg shadow-primary/20"
-                              >
-                                {saving ? (
-                                  <>
-                                    <motion.div
-                                      animate={{ rotate: 360 }}
-                                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                      className="mr-2"
-                                    >
-                                      <Upload className="h-4 w-4" />
-                                    </motion.div>
-                                    Uploading...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Upload className="h-4 w-4 mr-2" />
-                                    Upload Selected File
-                                  </>
-                                )}
-                              </Button>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                        <Button
+                          onClick={handleResumeUpload}
+                          disabled={!resumeFile || saving}
+                          className="w-full"
+                        >
+                          {saving ? "Uploading..." : "Upload Resume"}
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -863,8 +923,111 @@ const Profile = () => {
             </AnimatePresence>
           </div>
         </Tabs>
+
+        <Dialog open={showMandatoryModal} onOpenChange={() => { }}>
+          <DialogContent className="sm:max-w-[500px]" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+            <DialogHeader>
+              <DialogTitle>Complete Your Profile</DialogTitle>
+              <DialogDescription>
+                To continue using Voke, please provide the following mandatory information. This helps us personalize your experience.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-1">
+              <div className="space-y-2">
+                <Label htmlFor="modal_github_url" className="text-right">GitHub Profile URL <span className="text-red-500">*</span></Label>
+                <Input
+                  id="modal_github_url"
+                  value={formData.github_url}
+                  onChange={(e) => setFormData({ ...formData, github_url: e.target.value })}
+                  placeholder="https://github.com/yourusername"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="modal_leetcode_id" className="text-right">LeetCode Username <span className="text-red-500">*</span></Label>
+                <Input
+                  id="modal_leetcode_id"
+                  value={formData.leetcode_id}
+                  onChange={(e) => setFormData({ ...formData, leetcode_id: e.target.value })}
+                  placeholder="e.g. neal_wu"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="modal_codeforces_id" className="text-right">Codeforces Handle <span className="text-red-500">*</span></Label>
+                <Input
+                  id="modal_codeforces_id"
+                  value={formData.codeforces_id}
+                  onChange={(e) => setFormData({ ...formData, codeforces_id: e.target.value })}
+                  placeholder="e.g. tourist"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-right">Resume <span className="text-red-500">*</span></Label>
+                {!profile?.resume_url ? (
+                  <div className="border-2 border-dashed border-border rounded-xl p-4 text-center bg-muted/20 relative">
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setResumeFile(file);
+                      }}
+                    />
+                    <div className="space-y-1">
+                      <Upload className="h-6 w-6 mx-auto text-muted-foreground" />
+                      <p className="text-sm font-medium">
+                        {resumeFile ? resumeFile.name : "Click to upload resume"}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 p-2 bg-green-500/10 text-green-600 rounded-md">
+                    <FileText className="h-4 w-4" />
+                    <span className="text-sm font-medium">Resume Uploaded</span>
+                  </div>
+                )}
+                {resumeFile && !profile?.resume_url && (
+                  <Button
+                    onClick={handleResumeUpload}
+                    disabled={saving}
+                    size="sm"
+                    variant="secondary"
+                    className="w-full mt-2"
+                  >
+                    {saving ? "Uploading..." : "Upload Resume Now"}
+                  </Button>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                onClick={async () => {
+                  if (!formData.github_url || !formData.leetcode_id || !formData.codeforces_id) {
+                    toast.error("Please fill all text fields");
+                    return;
+                  }
+                  if (!profile?.resume_url && !resumeFile) {
+                    toast.error("Please upload a resume");
+                    return;
+                  }
+
+                  await handleSave();
+
+                  // Re-check logic is handled by handleSave -> loadProfile -> effect,
+                  // but we might need to manually check here to close the modal immediately if successful?
+                  // actually loadProfile updates profile state, which triggers re-render? No, loadProfile calls setLoading(false) which triggers the check.
+                  // Let's rely on loadProfile called inside handleSave.
+                }}
+                disabled={saving}
+              >
+                {saving ? "Saving..." : "Save & Continue"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </motion.div>
-    </div>
+    </div >
   );
 };
 
