@@ -3,427 +3,532 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut, CheckCircle, Circle, BookOpen, Settings, Code, Database, Layout, Server, Brain, Rocket, ChevronRight, Star, Lock, Play } from "lucide-react";
+import { 
+  LogOut, CheckCircle2, ChevronRight, BookOpen, 
+  Code2, Layout, Server, Brain, PlayCircle, 
+  FileText, Briefcase, Zap, Target, LineChart, 
+  ArrowUpRight, Clock
+} from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Cell
+} from "recharts";
 
-// Types
+// --- Types ---
+
 interface Resource {
   id: string;
   title: string;
-  type: 'video' | 'doc' | 'code';
+  type: 'video' | 'article' | 'practice';
   link: string;
+  duration?: string;
 }
 
-interface Milestone {
+interface Module {
   id: string;
   title: string;
   description: string;
   status: 'completed' | 'in-progress' | 'locked';
-  resources?: Resource[];
+  resumeImpact: string; // "Adds 'React' to your resume"
+  resources: Resource[];
 }
 
-interface Path {
+interface Track {
   id: string;
   title: string;
+  role: string;
   description: string;
   icon: any;
-  color: string;
-  milestones: Milestone[];
+  modules: Module[];
 }
 
-// Mock Data for Fallback
-const MOCK_PATHS: Path[] = [
+// --- Mock Data ---
+
+const TRACKS: Track[] = [
   {
-    id: "frontend-mastery",
-    title: "Frontend Development Mastery",
-    description: "Master the art of building beautiful, responsive user interfaces.",
+    id: "frontend",
+    title: "Frontend Engineering",
+    role: "Frontend Developer",
+    description: "Master modern web development with React ecosystem.",
     icon: Layout,
-    color: "from-blue-500 to-cyan-500",
-    milestones: [
-      { 
-          id: "m1", 
-          title: "HTML5 & CSS3 Fundamentals", 
-          description: "Semantic HTML, Flexbox, Grid, and responsive design principles.", 
-          status: "completed",
-          resources: [
-              { id: "m1-r1", title: "HTML Crash Course", type: "video", link: "https://www.youtube.com/watch?v=kUMe1FH4CHE" },
-              { id: "m1-r2", title: "MDN Web Docs - HTML", type: "doc", link: "https://developer.mozilla.org/en-US/docs/Web/HTML" },
-              { id: "m1-r3", title: "Build a Portfolio Site", type: "code", link: "/playground" }
-          ]
+    modules: [
+      {
+        id: "fe-1",
+        title: "Modern HTML & CSS Architecture",
+        description: "Semantic HTML5, CSS Grid/Flexbox, and BEM/Utility methodologies.",
+        status: "completed",
+        resumeImpact: "Responsive Design & Semantic HTML",
+        resources: [
+          { id: "r1", title: "Advanced CSS Layouts", type: "video", link: "https://www.youtube.com/watch?v=qm0IfG1GyZU", duration: "15m" },
+          { id: "r2", title: "Semantic HTML Guide", type: "article", link: "https://developer.mozilla.org/en-US/docs/Glossary/Semantics", duration: "10m" },
+          { id: "r3", title: "Build a Landing Page", type: "practice", link: "/playground", duration: "45m" }
+        ]
       },
-      { 
-          id: "m2", 
-          title: "JavaScript ES6+", 
-          description: "Modern JavaScript features, async programming, and DOM manipulation.", 
-          status: "completed",
-          resources: [
-              { id: "m2-r1", title: "JavaScript Survival Guide", type: "video", link: "https://www.youtube.com/watch?v=9emXNzqCKyg" },
-              { id: "m2-r2", title: "JavaScript.info", type: "doc", link: "https://javascript.info/" },
-              { id: "m2-r3", title: "Practice Array Methods", type: "code", link: "/playground" }
-          ]
+      {
+        id: "fe-2",
+        title: "JavaScript Fundamentals & ES6+",
+        description: "Closures, extensive DOM manipulation, and Async/Await patterns.",
+        status: "in-progress",
+        resumeImpact: "JavaScript (ES6+)",
+        resources: [
+          { id: "r4", title: "The Event Loop", type: "video", link: "https://www.youtube.com/watch?v=8aGhZQkoFbQ", duration: "25m" },
+          { id: "r5", title: "Async/Await Patterns", type: "article", link: "https://javascript.info/async-await", duration: "15m" },
+          { id: "r6", title: "Fix the Memory Leak", type: "practice", link: "/playground", duration: "30m" }
+        ]
       },
-      { 
-          id: "m3", 
-          title: "React.js Ecosystem", 
-          description: "Components, hooks, context API, and state management.", 
-          status: "in-progress",
-          resources: [
-              { id: "m3-r1", title: "React in 100 Seconds", type: "video", link: "https://www.youtube.com/watch?v=Tn6-PIqc4UM" },
-              { id: "m3-r2", title: "React Docs (Beta)", type: "doc", link: "https://react.dev/" },
-              { id: "m3-r3", title: "Build a Todo App", type: "code", link: "/playground" }
-          ]
+      {
+        id: "fe-3",
+        title: "React Component Patterns",
+        description: "Higher Order Components, Custom Hooks, and Compound Components.",
+        status: "locked",
+        resumeImpact: "React.js & Hooks",
+        resources: []
       },
-      { id: "m4", title: "TypeScript Integration", description: "Static typing, interfaces, and generics for robust code.", status: "locked" },
-      { id: "m5", title: "Next.js & SSR", description: "Server-side rendering, static site generation, and routing.", status: "locked" },
-      { id: "m6", title: "Performance Optimization", description: "Core Web Vitals, lazy loading, and bundle analysis.", status: "locked" }
+      {
+        id: "fe-4",
+        title: "State Management at Scale",
+        description: "Redux Toolkit, Context API, and Zustand.",
+        status: "locked",
+        resumeImpact: "Redux / State Management",
+        resources: []
+      }
     ]
   },
   {
-    id: "backend-architect",
-    title: "Backend Architect",
-    description: "Design and build scalable, secure server-side applications.",
+    id: "backend",
+    title: "Backend Architecture",
+    role: "Backend Engineer",
+    description: "Design scalable systems and secure APIs.",
     icon: Server,
-    color: "from-emerald-500 to-green-500",
-    milestones: [
-      { 
-          id: "b1", 
-          title: "Node.js & Express", 
-          description: "Building RESTful APIs and middleware architecture.", 
-          status: "completed",
-          resources: [
-              { id: "b1-r1", title: "Node.js Crash Course", type: "video", link: "https://www.youtube.com/watch?v=fBNz5xF-Kx4" },
-              { id: "b1-r2", title: "Express Docs", type: "doc", link: "https://expressjs.com/" }
-          ]
+    modules: [
+      {
+        id: "be-1",
+        title: "Node.js Runtimes",
+        description: "Event loop, streams, and buffer manipulation.",
+        status: "completed",
+        resumeImpact: "Node.js Core",
+        resources: []
       },
-      { id: "b2", title: "Database Design (SQL/NoSQL)", description: "Schema design, normalization, and indexing strategies.", status: "in-progress" },
-      { id: "b3", title: "Authentication & Security", description: "JWT, OAuth, hashing, and preventing common vulnerabilities.", status: "locked" },
-      { id: "b4", title: "Microservices Architecture", description: "Docker, Kubernetes, and inter-service communication.", status: "locked" },
-      { id: "b5", title: "System Design", description: "Scalability, caching, load balancing, and distributed systems.", status: "locked" }
+      {
+        id: "be-2",
+        title: "API Design Standards",
+        description: "RESTful principles, GraphQL, and gRPC basics.",
+        status: "in-progress",
+        resumeImpact: "REST & GraphQL APIs",
+        resources: [
+             { id: "be-r1", title: "Designing REST APIs", type: "article", link: "#", duration: "20m" },
+             { id: "be-r2", title: "Build an API endpoint", type: "practice", link: "/playground", duration: "40m" }
+        ]
+      }
     ]
   },
   {
-    id: "data-science",
-    title: "Data Science & AI",
-    description: "Unlock insights from data and build intelligent models.",
+    id: "system",
+    title: "System Design",
+    role: "Software Architect",
+    description: "Scalability, reliability, and distributed systems.",
     icon: Brain,
-    color: "from-purple-500 to-pink-500",
-    milestones: [
-      { id: "d1", title: "Python for Data Science", description: "NumPy, Pandas, and data manipulation techniques.", status: "completed" },
-      { id: "d2", title: "Exploratory Data Analysis", description: "Data visualization with Matplotlib and Seaborn.", status: "locked" },
-      { id: "d3", title: "Machine Learning Basics", description: "Supervised and unsupervised learning algorithms.", status: "locked" },
-      { id: "d4", title: "Deep Learning with PyTorch", description: "Neural networks, CNNs, and RNNs.", status: "locked" },
-      { id: "d5", title: "MLOps & Deployment", description: "Model serving, monitoring, and pipelines.", status: "locked" }
+    modules: [
+        {
+            id: "sd-1",
+            title: "Load Balancing & Caching",
+            description: "Strategies for high availability.",
+            status: "locked",
+            resumeImpact: "Distributed Systems",
+            resources: []
+        }
     ]
   }
 ];
 
+const ACTIVITY_DATA = [
+  { day: "M", hours: 1.5 },
+  { day: "T", hours: 2.2 },
+  { day: "W", hours: 0.8 },
+  { day: "T", hours: 3.5 },
+  { day: "F", hours: 1.2 },
+  { day: "S", hours: 4.0 },
+  { day: "S", hours: 2.0 },
+];
+
 const LearningPaths = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
-  const [selectedPath, setSelectedPath] = useState(MOCK_PATHS[0]);
-  const [loading, setLoading] = useState(true);
-  const [expandedMilestone, setExpandedMilestone] = useState<string | null>(null);
+  const [selectedTrack, setSelectedTrack] = useState(TRACKS[0]);
   const [completedResources, setCompletedResources] = useState<string[]>([]);
+  const [weeklyGoals, setWeeklyGoals] = useState([
+      { id: 'g1', text: "Complete 'Async/Await'", done: false },
+      { id: 'g2', text: "Solve 2 Practice Questions", done: true },
+      { id: 'g3', text: "Read System Design Intro", done: false },
+  ]);
+  const [expandedModule, setExpandedModule] = useState<string | null>(selectedTrack.modules.find(m => m.status === 'in-progress')?.id || null);
 
   useEffect(() => {
-    checkAuth();
-    // Load progress from local storage
-    const savedProgress = localStorage.getItem('voke_learning_progress');
-    if (savedProgress) {
-        setCompletedResources(JSON.parse(savedProgress));
-    }
-    setTimeout(() => setLoading(false), 1000);
+    // Load persisted data
+    const savedRes = localStorage.getItem("voke_completed_resources");
+    if (savedRes) setCompletedResources(JSON.parse(savedRes));
   }, []);
 
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    setUser(session?.user || null);
+  const toggleResource = (id: string) => {
+    const next = completedResources.includes(id) 
+        ? completedResources.filter(x => x !== id)
+        : [...completedResources, id];
+    setCompletedResources(next);
+    localStorage.setItem("voke_completed_resources", JSON.stringify(next));
+
+    if (!completedResources.includes(id)) {
+        toast.success("Progress Saved", { description: "Resource marked as complete." });
+    }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/");
+  const toggleGoal = (id: string) => {
+      setWeeklyGoals(weeklyGoals.map(g => g.id === id ? { ...g, done: !g.done } : g));
   };
 
-  const toggleResource = (resourceId: string) => {
-      setCompletedResources(prev => {
-          const newProgress = prev.includes(resourceId) 
-              ? prev.filter(id => id !== resourceId)
-              : [...prev, resourceId];
-          localStorage.setItem('voke_learning_progress', JSON.stringify(newProgress));
-          return newProgress;
-      });
+  const calculateProgress = (track: Track) => {
+      // Simplified: items completed / total items
+      // Real app would count resources
+      const totalModules = track.modules.length;
+      const completedModules = track.modules.filter(m => m.status === 'completed').length;
+      return Math.round((completedModules / totalModules) * 100);
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <motion.div
-          animate={{ rotate: 360, scale: [1, 1.2, 1] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <Rocket className="h-12 w-12 text-primary" />
-        </motion.div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <motion.header 
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="border-b border-border/40 bg-background/80 backdrop-blur-md sticky top-0 z-50"
-      >
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate(user ? "/dashboard" : "/")}>
-            <img 
-              src="/images/voke_logo.png" 
-              alt="Voke Logo" 
-              className="w-10 h-10 object-contain"
-            />
-            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600">
-              Learning Paths
-            </h1>
-          </div>
-          <nav className="flex items-center gap-3">
-            <ThemeToggle />
-            {user ? (
-              <>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>Dashboard</Button>
-                <Button variant="ghost" size="icon" onClick={() => navigate("/profile")}>
-                  <Settings className="w-5 h-5" />
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-['Inter',sans-serif]">
+      {/* Navbar */}
+      <header className="h-14 border-b border-border bg-background/50 backdrop-blur-md sticky top-0 z-50 px-4 flex items-center justify-between">
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/dashboard')}>
+                 <div className="bg-primary/10 p-1.5 rounded-md">
+                    <Code2 className="w-5 h-5 text-primary" />
+                 </div>
+                 <span className="font-semibold text-sm">Voke Learning</span>
+                 <span className="text-muted-foreground mx-2">/</span>
+                 <span className="text-sm font-medium">{selectedTrack.role}</span>
+            </div>
+            <div className="flex items-center gap-4">
+                <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
+                    <LogOut className="w-4 h-4 mr-2" /> Exit
                 </Button>
-                <Button variant="destructive" size="sm" onClick={handleLogout}>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </Button>
-              </>
-            ) : (
-              <Button onClick={() => navigate("/auth")}>Sign In</Button>
-            )}
-          </nav>
-        </div>
-      </motion.header>
+                <ThemeToggle />
+            </div>
+      </header>
 
-      <main className="flex-1 container mx-auto px-4 py-8 flex flex-col lg:flex-row gap-8 overflow-hidden">
-        {/* Sidebar / Path Selection */}
-        <motion.div 
-          initial={{ x: -50, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="w-full lg:w-80 shrink-0 space-y-6"
-        >
-          <div>
-            <h2 className="text-xl font-bold mb-2">Career Tracks</h2>
-            <p className="text-sm text-muted-foreground">Select a path to view your roadmap.</p>
-          </div>
+      <div className="flex-1 max-w-[1600px] mx-auto w-full grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] divide-x divide-border">
           
-          <div className="space-y-3">
-            {MOCK_PATHS.map((path) => (
-              <motion.div
-                key={path.id}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Card 
-                  className={`cursor-pointer transition-all duration-300 border-2 ${selectedPath.id === path.id ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10' : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}
-                  onClick={() => setSelectedPath(path)}
-                >
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <div className={`p-3 rounded-xl bg-gradient-to-br ${path.color} text-white shadow-md`}>
-                      <path.icon className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">{path.title}</h3>
-                      <p className="text-xs text-muted-foreground line-clamp-1">{path.description}</p>
-                    </div>
-                    {selectedPath.id === path.id && (
-                      <motion.div layoutId="active-indicator" className="ml-auto">
-                        <ChevronRight className="h-5 w-5 text-primary" />
-                      </motion.div>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
+          {/* LEFT SIDEBAR: TRACK SELECTION */}
+          <aside className="hidden lg:flex flex-col bg-muted/10">
+              <div className="p-4">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2">Career Tracks</h3>
+                  <div className="space-y-1">
+                      {TRACKS.map(track => (
+                          <button
+                            key={track.id}
+                            onClick={() => setSelectedTrack(track)}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all
+                            ${selectedTrack.id === track.id 
+                                ? 'bg-primary/10 text-primary' 
+                                : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                          >
+                              <track.icon className="w-4 h-4" />
+                              <span className="truncate">{track.title}</span>
+                          </button>
+                      ))}
+                  </div>
+              </div>
+              
+              <div className="mt-auto p-4 border-t border-border">
+                  <div className="bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 border border-violet-500/20 rounded-xl p-4">
+                      <div className="flex gap-2 mb-2">
+                          <Zap className="w-4 h-4 text-violet-500" />
+                          <span className="text-xs font-bold text-violet-600 dark:text-violet-400">Pro Feature</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                          Upgrade to unlock AI-Mock Interviews specific to these tracks.
+                      </p>
+                      <Button size="sm" className="w-full mt-3 h-7 text-xs bg-violet-600 hover:bg-violet-700 text-white border-0">
+                          Upgrade Plan
+                      </Button>
+                  </div>
+              </div>
+          </aside>
 
-        {/* Main Content / Timeline */}
-        <motion.div 
-          key={selectedPath.id}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-          className="flex-1 min-w-0"
-        >
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <Badge variant="outline" className="px-3 py-1 text-sm border-primary/30 bg-primary/5 text-primary">
-                Career Path
-              </Badge>
-              <span className="text-sm text-muted-foreground">{selectedPath.milestones.length} Milestones</span>
-            </div>
-            <h2 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70 mb-3">
-              {selectedPath.title}
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl">
-              {selectedPath.description}
-            </p>
-            
-            <div className="mt-6 flex items-center gap-4 max-w-md">
-                <Progress value={(selectedPath.milestones.filter(m => m.status === 'completed').length / selectedPath.milestones.length) * 100} className="h-2" />
-                <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-                    {Math.round((selectedPath.milestones.filter(m => m.status === 'completed').length / selectedPath.milestones.length) * 100)}% Complete
-                </span>
-            </div>
-          </div>
+          {/* CENTER: TIMELINE / CONTENT */}
+          <main className="bg-background relative">
+              <ScrollArea className="h-[calc(100vh-3.5rem)]">
+                  <div className="p-6 md:p-8 max-w-3xl mx-auto space-y-8">
+                      {/* Hero */}
+                      <div className="space-y-4">
+                          <Badge variant="outline" className="w-fit text-primary border-primary/20 bg-primary/5">
+                              {selectedTrack.role} Path
+                          </Badge>
+                          <div className="flex justify-between items-start gap-4">
+                              <div>
+                                  <h1 className="text-3xl font-bold tracking-tight mb-2">{selectedTrack.title}</h1>
+                                  <p className="text-muted-foreground text-lg leading-relaxed">{selectedTrack.description}</p>
+                              </div>
+                              <div className="text-right shrink-0 hidden sm:block">
+                                   <div className="text-2xl font-bold">{calculateProgress(selectedTrack)}%</div>
+                                   <div className="text-xs text-muted-foreground">Complete</div>
+                              </div>
+                          </div>
+                      </div>
 
-          <div className="relative pl-8 md:pl-12 py-4 space-y-8">
-            {/* Timeline Line */}
-            <div className="absolute left-4 md:left-6 top-6 bottom-6 w-0.5 bg-border">
-              <motion.div 
-                initial={{ height: "0%" }}
-                animate={{ height: "100%" }}
-                transition={{ duration: 1.5, ease: "easeInOut" }}
-                className="absolute top-0 left-0 w-full bg-gradient-to-b from-primary via-purple-500 to-transparent"
-              />
-            </div>
+                      <Separator />
 
-            {selectedPath.milestones.map((milestone, index) => (
-              <motion.div
-                key={milestone.id}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.15 + 0.3 }}
-                className="relative"
-              >
-                {/* Timeline Node */}
-                <div className="absolute -left-[2.25rem] md:-left-[2.75rem] top-1">
-                  <motion.div 
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: index * 0.15 + 0.3, type: "spring" }}
-                    onClick={() => setExpandedMilestone(expandedMilestone === milestone.id ? null : milestone.id)}
-                    className={`w-10 h-10 rounded-full border-4 border-background flex items-center justify-center shadow-lg z-10 relative cursor-pointer hover:scale-110 transition-transform
-                      ${milestone.status === 'completed' ? 'bg-green-500 text-white' : 
-                        milestone.status === 'in-progress' ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'}`}
-                  >
-                    {milestone.status === 'completed' ? <CheckCircle className="h-5 w-5" /> :
-                     milestone.status === 'in-progress' ? <Code className="h-5 w-5" /> :
-                     <Lock className="h-4 w-4" />}
-                  </motion.div>
-                </div>
+                      {/* Modules list */}
+                      <div className="space-y-6">
+                            {selectedTrack.modules.map((module, index) => {
+                                const isOpen = expandedModule === module.id;
+                                const isLocked = module.status === 'locked';
+                                const isCompleted = module.status === 'completed';
 
-                <Card 
-                    className={`transition-all duration-300 hover:shadow-lg overflow-hidden
-                    ${milestone.status === 'locked' ? 'opacity-70 bg-muted/30' : 'bg-card/50 backdrop-blur-sm border-primary/20'}
-                    ${expandedMilestone === milestone.id ? 'ring-1 ring-primary' : ''}`}
-                >
-                  <CardContent className="p-0">
-                    <div 
-                        className="p-6 cursor-pointer"
-                        onClick={() => setExpandedMilestone(expandedMilestone === milestone.id ? null : milestone.id)}
-                    >
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <div className="flex items-center gap-3 mb-1">
-                                <h3 className="text-xl font-bold">{milestone.title}</h3>
-                                {milestone.status === 'in-progress' && (
-                                    <Badge className="bg-primary/20 text-primary hover:bg-primary/30 border-none">In Progress</Badge>
-                                )}
-                                </div>
-                                <p className="text-muted-foreground">{milestone.description}</p>
-                            </div>
-                            <div className="shrink-0">
-                                <Button 
-                                    variant={expandedMilestone === milestone.id ? "secondary" : "ghost"} 
-                                    size="sm"
-                                    className="gap-2"
-                                >
-                                    {expandedMilestone === milestone.id ? "Close" : "Resources"}
-                                    <ChevronRight className={`w-4 h-4 transition-transform ${expandedMilestone === milestone.id ? 'rotate-90' : ''}`} />
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
+                                return (
+                                    <div key={module.id} className="group relative pl-8">
+                                        {/* Timeline Line */}
+                                        <div className="absolute left-[11px] top-8 bottom-[-24px] w-px bg-border group-last:bottom-auto group-last:h-full" />
+                                        
+                                        {/* Status Dot */}
+                                        <div className={`absolute left-0 top-1.5 w-6 h-6 rounded-full border-2 flex items-center justify-center z-10 bg-background transition-colors
+                                            ${isCompleted ? 'border-primary text-primary' : 
+                                              isLocked ? 'border-muted text-muted-foreground' : 'border-primary text-primary shadow-[0_0_0_4px_rgba(var(--primary),0.1)]'}`}>
+                                            {isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : 
+                                             !isLocked && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
+                                        </div>
 
-                    <AnimatePresence>
-                        {expandedMilestone === milestone.id && (
-                            <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                className="border-t border-border/50 bg-muted/20"
-                            >
-                                <div className="p-6 space-y-4">
-                                    <h4 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                                        <BookOpen className="w-4 h-4" /> Learning Resources
-                                    </h4>
-                                    <div className="grid gap-3">
-                                        {milestone.resources?.map((resource: any) => (
+                                        <div 
+                                            className={`rounded-xl border transition-all duration-200 overflow-hidden
+                                            ${isOpen ? 'bg-card ring-1 ring-primary/20 shadow-lg' : 'bg-card/40 hover:bg-card hover:shadow-sm border-border'}
+                                            ${isLocked ? 'opacity-60 grayscale' : ''}`}
+                                        >
                                             <div 
-                                                key={resource.id}
-                                                className="flex items-center gap-3 p-3 rounded-lg bg-background border border-border/50 hover:border-primary/50 transition-colors group"
+                                                className="p-5 cursor-pointer flex items-start gap-4"
+                                                onClick={() => !isLocked && setExpandedModule(isOpen ? null : module.id)}
                                             >
-                                                <div 
-                                                    className={`w-5 h-5 rounded border flex items-center justify-center cursor-pointer transition-colors
-                                                    ${completedResources.includes(resource.id) ? 'bg-primary border-primary text-primary-foreground' : 'border-muted-foreground/30 hover:border-primary'}`}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        toggleResource(resource.id);
-                                                    }}
-                                                >
-                                                    {completedResources.includes(resource.id) && <CheckCircle className="w-3.5 h-3.5" />}
-                                                </div>
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-2">
-                                                        {resource.type === 'video' ? <div className="p-1 rounded bg-red-500/10 text-red-500"><Play className="w-3 h-3" /></div> :
-                                                         resource.type === 'doc' ? <div className="p-1 rounded bg-blue-500/10 text-blue-500"><BookOpen className="w-3 h-3" /></div> :
-                                                         <div className="p-1 rounded bg-green-500/10 text-green-500"><Code className="w-3 h-3" /></div>}
-                                                        <span className={`text-sm font-medium ${completedResources.includes(resource.id) ? 'line-through text-muted-foreground' : ''}`}>
-                                                            {resource.title}
-                                                        </span>
+                                                <div className="flex-1 space-y-1">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <h3 className="font-semibold text-base">{module.title}</h3>
+                                                        {module.status === 'in-progress' && <Badge variant="secondary" className="px-1.5 py-0 text-[10px] h-5 rounded-md">In Progress</Badge>}
                                                     </div>
+                                                    <p className="text-sm text-muted-foreground leading-relaxed">{module.description}</p>
+                                                    
+                                                    {!isOpen && (
+                                                        <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Briefcase className="w-3.5 h-3.5" />
+                                                                <span>Adds: <span className="text-foreground font-medium">{module.resumeImpact}</span></span>
+                                                            </div>
+                                                            <span>•</span>
+                                                            <span>{module.resources.length} Lessons</span>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity h-8" asChild>
-                                                    <a href={resource.link} target={resource.link.startsWith('/') ? '_self' : '_blank'} rel="noreferrer">
-                                                        Open <ChevronRight className="w-3 h-3 ml-1" />
-                                                    </a>
+                                                <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground">
+                                                    <ChevronRight className={`w-5 h-5 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
                                                 </Button>
                                             </div>
-                                        ))}
-                                        {!milestone.resources && (
-                                            <p className="text-sm text-muted-foreground italic">No specific resources added yet.</p>
-                                        )}
-                                    </div>
 
-                                    {milestone.status !== 'locked' && (
-                                        <div className="pt-4 flex justify-end">
-                                            <Button onClick={() => navigate("/playground")} className="gap-2 bg-gradient-to-r from-primary to-purple-600 hover:opacity-90">
-                                                <Code className="w-4 h-4" />
-                                                Practice in Playground
-                                            </Button>
+                                            {/* Expanded Content */}
+                                            <AnimatePresence>
+                                                {isOpen && (
+                                                    <motion.div
+                                                        initial={{ height: 0 }}
+                                                        animate={{ height: "auto" }}
+                                                        exit={{ height: 0 }}
+                                                        className="overflow-hidden"
+                                                    >
+                                                        <div className="px-5 pb-5 pt-0">
+                                                            <Separator className="mb-4" />
+                                                            
+                                                            <div className="flex items-center gap-2 mb-4">
+                                                                <Briefcase className="w-4 h-4 text-primary" />
+                                                                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Resume Impact</span>
+                                                                <Badge variant="outline" className="ml-auto bg-green-500/5 text-green-600 border-green-200 dark:border-green-900 dark:text-green-400">
+                                                                    + {module.resumeImpact}
+                                                                </Badge>
+                                                            </div>
+
+                                                            <div className="space-y-2">
+                                                                {module.resources.map(res => {
+                                                                    const isDone = completedResources.includes(res.id);
+                                                                    return (
+                                                                        <div 
+                                                                            key={res.id}
+                                                                            onClick={() => toggleResource(res.id)}
+                                                                            className={`group/res flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors
+                                                                            ${isDone ? 'bg-muted/30 border-transparent' : 'bg-background border-border'}`}
+                                                                        >
+                                                                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isDone ? 'bg-primary border-primary text-primary-foreground' : 'border-muted-foreground/30 group-hover/res:border-primary'}`}>
+                                                                                {isDone && <CheckCircle2 className="w-3.5 h-3.5" />}
+                                                                            </div>
+                                                                            
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <div className="flex items-center justify-between">
+                                                                                    <span className={`text-sm font-medium ${isDone ? 'text-muted-foreground line-through decoration-border' : 'text-foreground'}`}>
+                                                                                        {res.title}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                                                                    <div className="flex items-center gap-1">
+                                                                                        {res.type === 'video' ? <PlayCircle className="w-3 h-3" /> :
+                                                                                         res.type === 'practice' ? <Code2 className="w-3 h-3" /> :
+                                                                                         <FileText className="w-3 h-3" />}
+                                                                                        <span className="capitalize">{res.type}</span>
+                                                                                    </div>
+                                                                                    {res.duration && (
+                                                                                        <div className="flex items-center gap-1">
+                                                                                            <Clock className="w-3 h-3" />
+                                                                                            <span>{res.duration}</span>
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+
+                                                                            <Button 
+                                                                                size="sm" 
+                                                                                variant="ghost" 
+                                                                                className="h-8 w-8 p-0 ml-auto opacity-0 group-hover/res:opacity-100"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    window.open(res.link, '_blank');
+                                                                                }}
+                                                                            >
+                                                                                <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
+                                                                            </Button>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+
+                                                            <div className="mt-5 flex justify-end">
+                                                                <Button size="sm" onClick={() => navigate('/playground')}>
+                                                                    Open Playground
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
                                         </div>
-                                    )}
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-      </main>
+                                    </div>
+                                );
+                            })}
+                      </div>
+                  </div>
+              </ScrollArea>
+          </main>
+
+          {/* RIGHT SIDEBAR: RETENTION & ANALYTICS */}
+          <aside className="hidden xl:block bg-card border-l border-border p-6 space-y-8">
+               
+               {/* Weekly Goals Widget */}
+               <div>
+                   <div className="flex items-center justify-between mb-4">
+                       <h3 className="font-semibold text-sm">Weekly Goals</h3>
+                       <Badge variant="secondary" className="text-[10px] h-5 rounded-md">Week 42</Badge>
+                   </div>
+                   <Card className="shadow-sm border-border/60">
+                       <CardContent className="p-0">
+                           {weeklyGoals.map((goal, i) => (
+                               <div key={goal.id} className={`flex items-start gap-3 p-3 transition-colors ${i !== weeklyGoals.length - 1 ? 'border-b border-border/50' : ''}`}>
+                                   <Checkbox 
+                                        id={goal.id} 
+                                        checked={goal.done} 
+                                        onCheckedChange={() => toggleGoal(goal.id)}
+                                   />
+                                   <label 
+                                        htmlFor={goal.id}
+                                        className={`text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer pt-0.5 ${goal.done ? 'text-muted-foreground line-through' : ''}`}
+                                   >
+                                       {goal.text}
+                                   </label>
+                               </div>
+                           ))}
+                       </CardContent>
+                   </Card>
+                   <p className="text-xs text-muted-foreground mt-2 text-center">
+                       {weeklyGoals.filter(g => g.done).length}/{weeklyGoals.length} completed. Keep pushing!
+                   </p>
+               </div>
+
+               {/* Activity Chart */}
+               <div>
+                   <h3 className="font-semibold text-sm mb-4">Learning Activity</h3>
+                   <div className="h-40 w-full">
+                       <ResponsiveContainer width="100%" height="100%">
+                           <BarChart data={ACTIVITY_DATA}>
+                               <XAxis 
+                                    dataKey="day" 
+                                    axisLine={false} 
+                                    tickLine={false} 
+                                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} 
+                                    dy={10}
+                               />
+                               <Tooltip 
+                                    cursor={{ fill: 'hsl(var(--muted))' }}
+                                    content={({ active, payload }) => {
+                                        if (active && payload && payload.length) {
+                                        return (
+                                            <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                                Study Time
+                                                </span>
+                                                <span className="font-bold text-muted-foreground">
+                                                {payload[0].value} hrs
+                                                </span>
+                                            </div>
+                                            </div>
+                                        )
+                                        }
+                                        return null
+                                    }}
+                               />
+                               <Bar 
+                                    dataKey="hours" 
+                                    fill="hsl(var(--primary))" 
+                                    radius={[4, 4, 0, 0]} 
+                                    barSize={20}
+                               >
+                                    {ACTIVITY_DATA.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.hours > 3 ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.3)'} />
+                                    ))}
+                               </Bar>
+                           </BarChart>
+                       </ResponsiveContainer>
+                   </div>
+               </div>
+               
+               {/* Streak Widget */}
+               <div className="bg-gradient-to-r from-orange-500/10 to-amber-500/10 rounded-xl p-4 border border-orange-500/20 flex items-center justify-between">
+                   <div>
+                       <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">12 Days</div>
+                       <div className="text-xs font-medium text-orange-600/80 dark:text-orange-400/80">Current Streak</div>
+                   </div>
+                   <div className="h-10 w-10 bg-orange-500/20 rounded-full flex items-center justify-center">
+                       <Target className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                   </div>
+               </div>
+
+          </aside>
+      </div>
     </div>
   );
 };
