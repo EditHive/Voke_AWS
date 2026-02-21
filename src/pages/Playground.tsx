@@ -376,16 +376,6 @@ const Playground = () => {
                             <span className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
                                 <Sparkles className="h-4 w-4 text-indigo-400" /> AI Assistant
                             </span>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleAnalyze}
-                                disabled={isTyping}
-                                className="h-6 text-[10px] text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 px-2"
-                                title="Analyze Code"
-                            >
-                                <Search className="h-3 w-3 mr-1" /> Analyze
-                            </Button>
                         </div>
 
                         <div className="flex-1 overflow-hidden relative">
@@ -523,8 +513,18 @@ const Playground = () => {
                             />
                         </div>
 
-                        {/* Floating Run Button */}
-                        <div className="absolute bottom-6 right-6 z-20">
+                        {/* Floating Action Buttons */}
+                        <div className="absolute bottom-6 right-6 z-20 flex items-center gap-3">
+                            <Button
+                                size="sm"
+                                onClick={handleAnalyze}
+                                disabled={isTyping}
+                                className="h-10 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 shadow-[0_4px_20px_rgba(192,38,211,0.4)] font-bold text-xs px-6 rounded-full transition-all hover:scale-105 active:scale-95"
+                            >
+                                <Sparkles className="h-4 w-4 mr-2" />
+                                Analyze Code
+                            </Button>
+
                             <Button
                                 size="sm"
                                 onClick={handleRun}
