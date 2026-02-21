@@ -254,6 +254,107 @@ export type Database = {
         }
         Relationships: []
       }
+      job_postings: {
+        Row: {
+          application_url: string | null
+          company: string
+          created_at: string | null
+          description: string
+          experience_level: string | null
+          id: string
+          location: string | null
+          posted_date: string | null
+          remote_ok: boolean | null
+          requirements: string | null
+          salary_range: string | null
+          skills_required: Json | null
+          source: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          application_url?: string | null
+          company: string
+          created_at?: string | null
+          description: string
+          experience_level?: string | null
+          id?: string
+          location?: string | null
+          posted_date?: string | null
+          remote_ok?: boolean | null
+          requirements?: string | null
+          salary_range?: string | null
+          skills_required?: Json | null
+          source?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          application_url?: string | null
+          company?: string
+          created_at?: string | null
+          description?: string
+          experience_level?: string | null
+          id?: string
+          location?: string | null
+          posted_date?: string | null
+          remote_ok?: boolean | null
+          requirements?: string | null
+          salary_range?: string | null
+          skills_required?: Json | null
+          source?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      job_recommendations: {
+        Row: {
+          created_at: string | null
+          id: string
+          interview_session_ids: Json | null
+          job_posting_id: string
+          match_reasons: Json | null
+          match_score: number
+          skill_gaps: Json | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          interview_session_ids?: Json | null
+          job_posting_id: string
+          match_reasons?: Json | null
+          match_score: number
+          skill_gaps?: Json | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          interview_session_ids?: Json | null
+          job_posting_id?: string
+          match_reasons?: Json | null
+          match_score?: number
+          skill_gaps?: Json | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_recommendations_job_posting_id_fkey"
+            columns: ["job_posting_id"]
+            isOneToOne: false
+            referencedRelation: "job_postings"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       job_profiles: {
         Row: {
           category: string
@@ -476,6 +577,68 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_career_plans: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          current_skill_level: string | null
+          id: string
+          job_recommendation_id: string | null
+          milestones: Json | null
+          month_1_goals: Json | null
+          month_2_goals: Json | null
+          month_3_goals: Json | null
+          progress_percentage: number | null
+          resources: Json | null
+          target_role: string
+          updated_at: string | null
+          user_id: string
+          weekly_tasks: Json | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_skill_level?: string | null
+          id?: string
+          job_recommendation_id?: string | null
+          milestones?: Json | null
+          month_1_goals?: Json | null
+          month_2_goals?: Json | null
+          month_3_goals?: Json | null
+          progress_percentage?: number | null
+          resources?: Json | null
+          target_role: string
+          updated_at?: string | null
+          user_id: string
+          weekly_tasks?: Json | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_skill_level?: string | null
+          id?: string
+          job_recommendation_id?: string | null
+          milestones?: Json | null
+          month_1_goals?: Json | null
+          month_2_goals?: Json | null
+          month_3_goals?: Json | null
+          progress_percentage?: number | null
+          resources?: Json | null
+          target_role?: string
+          updated_at?: string | null
+          user_id?: string
+          weekly_tasks?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_career_plans_job_recommendation_id_fkey"
+            columns: ["job_recommendation_id"]
+            isOneToOne: false
+            referencedRelation: "job_recommendations"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       user_progress: {
         Row: {

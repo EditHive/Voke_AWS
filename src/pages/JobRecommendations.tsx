@@ -75,7 +75,7 @@ export default function JobRecommendations() {
 
             if (error) throw error;
 
-            setRecommendations(data || []);
+            setRecommendations((data as any) || []);
         } catch (error) {
             console.error("Error loading recommendations:", error);
             toast({
