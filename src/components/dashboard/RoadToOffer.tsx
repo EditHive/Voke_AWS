@@ -18,6 +18,52 @@ interface RoadToOfferProps {
   onUpdate?: () => void;
 }
 
+const COMPANY_LOGOS: Record<string, string> = {
+  "google": "https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg",
+  "meta": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Meta-Logo.png",
+  "facebook": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Meta-Logo.png",
+  "amazon": "https://upload.wikimedia.org/wikipedia/commons/4/4a/Amazon_icon.svg",
+  "apple": "https://upload.wikimedia.org/wikipedia/commons/3/31/Apple_logo_white.svg",
+  "netflix": "https://upload.wikimedia.org/wikipedia/commons/7/75/Netflix_icon.svg",
+  "microsoft": "https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg",
+  "uber": "https://upload.wikimedia.org/wikipedia/commons/c/cc/Uber_logo_2018.png",
+  "airbnb": "https://upload.wikimedia.org/wikipedia/commons/6/69/Airbnb_Logo_B%C3%A9lo.svg",
+  "linkedin": "https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png",
+  "twitter": "https://upload.wikimedia.org/wikipedia/commons/6/6f/Logo_of_Twitter.svg",
+  "x": "https://upload.wikimedia.org/wikipedia/commons/5/5a/X_icon_2.svg",
+  "tesla": "https://upload.wikimedia.org/wikipedia/commons/e/e8/Tesla_logo.png",
+  "spacex": "https://upload.wikimedia.org/wikipedia/commons/2/2e/SpaceX_logo_black.svg",
+  "spotify": "https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg",
+  "adobe": "https://upload.wikimedia.org/wikipedia/commons/a/ac/Old_Adobe_logo.svg",
+  "salesforce": "https://upload.wikimedia.org/wikipedia/commons/f/f9/Salesforce.com_logo.svg",
+  "oracle": "https://upload.wikimedia.org/wikipedia/commons/5/50/Oracle_logo.svg",
+  "ibm": "https://upload.wikimedia.org/wikipedia/commons/5/51/IBM_logo.svg",
+  "intel": "https://upload.wikimedia.org/wikipedia/commons/7/7d/Intel_logo_%282006-2020%29.svg",
+  "nvidia": "https://upload.wikimedia.org/wikipedia/commons/a/a4/NVIDIA_logo.svg",
+  "amd": "https://upload.wikimedia.org/wikipedia/commons/7/7c/AMD_Logo.svg",
+  "cisco": "https://upload.wikimedia.org/wikipedia/commons/0/08/Cisco_logo_blue_2016.svg",
+  "paypal": "https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg",
+  "square": "https://upload.wikimedia.org/wikipedia/commons/3/3d/Square_Inc_logo.svg",
+  "stripe": "https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg",
+  "zoom": "https://upload.wikimedia.org/wikipedia/commons/7/7b/Zoom_Communications_Logo.svg",
+  "slack": "https://upload.wikimedia.org/wikipedia/commons/d/d5/Slack_icon_2019.svg",
+  "tiktok": "https://upload.wikimedia.org/wikipedia/en/a/a9/TikTok_logo.svg",
+  "bytedance": "https://upload.wikimedia.org/wikipedia/commons/0/07/ByteDance_Logo.png",
+  "snapchat": "https://upload.wikimedia.org/wikipedia/en/c/c4/Snapchat_logo.svg",
+  "pinterest": "https://upload.wikimedia.org/wikipedia/commons/0/08/Pinterest-logo.png",
+  "reddit": "https://upload.wikimedia.org/wikipedia/commons/b/b4/Reddit_logo.svg",
+  "dropbox": "https://upload.wikimedia.org/wikipedia/commons/7/78/Dropbox_Icon.svg",
+  "gitlab": "https://upload.wikimedia.org/wikipedia/commons/e/e1/GitLab_logo.svg",
+  "github": "https://upload.wikimedia.org/wikipedia/commons/4/4a/GitHub_Mark.png",
+  "atlassian": "https://upload.wikimedia.org/wikipedia/commons/2/2c/Atlassian_logo.svg",
+  "jira": "https://upload.wikimedia.org/wikipedia/commons/8/8a/Jira_Logo.svg",
+  "trello": "https://upload.wikimedia.org/wikipedia/commons/7/7a/Trello-logo-blue.svg",
+  "asana": "https://upload.wikimedia.org/wikipedia/commons/3/3b/Asana_logo.svg",
+  "notion": "https://upload.wikimedia.org/wikipedia/commons/4/45/Notion_app_logo.png",
+  "deutsche bank": "https://upload.wikimedia.org/wikipedia/commons/1/1b/Deutsche_Bank_logo_without_wordmark.svg",
+  "uber eats": "https://upload.wikimedia.org/wikipedia/commons/9/9f/Uber_Eats_2018_Logo_Suite_stacked.png",
+};
+
 export const RoadToOffer = ({ profile, onUpdate }: RoadToOfferProps) => {
   const navigate = useNavigate();
   const [date, setDate] = useState<Date | undefined>(
@@ -27,6 +73,20 @@ export const RoadToOffer = ({ profile, onUpdate }: RoadToOfferProps) => {
   const [isEditing, setIsEditing] = useState(!profile?.target_interview_date);
   const [loading, setLoading] = useState(false);
   const [showBuffering, setShowBuffering] = useState(false);
+
+  // Helper to get logo with fallbacks
+  const getCompanyLogoUrl = (companyName: string) => {
+    // 1. Static map for major companies
+    const logo = COMPANY_LOGOS[companyName.toLowerCase()];
+    if (logo) {
+      return logo;
+    }
+
+    // 2. Clearbit API (try typical domain construction)
+    // Clean name: remove special chars, spaces, lowercase
+    const cleanName = companyName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return `https://logo.clearbit.com/${cleanName}.com`;
+  };
 
   const handleSave = async () => {
     if (!date) return;
@@ -229,15 +289,12 @@ export const RoadToOffer = ({ profile, onUpdate }: RoadToOfferProps) => {
                   whileHover={{ rotate: [0, -5, 5, 0], scale: 1.1 }}
                 >
                   <img
-                    src={`https://logo.clearbit.com/${company.toLowerCase().replace(/\s/g, '')}.com`}
+                    src={getCompanyLogoUrl(company)}
                     onError={(e) => {
                       const target = e.currentTarget;
-                      // Fallback to Google Search icon or generic letter if Clearbit fails
-                      if (company.toLowerCase().includes('google')) {
-                        target.src = "https://www.google.com/favicon.ico";
-                      } else {
-                        target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(company)}&background=random&color=fff&size=64`;
-                      }
+                      // Prevent infinite loop if fallback also fails
+                      if (target.src.includes('ui-avatars.com')) return;
+                      target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(company)}&background=random&color=fff&size=64`;
                     }}
                     alt={`${company} logo`}
                     className="w-full h-full object-contain"

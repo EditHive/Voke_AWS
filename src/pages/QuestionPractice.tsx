@@ -453,10 +453,10 @@ const QuestionPractice = () => {
                                     <CardFooter className="pt-0">
                                         <Button
                                             className="w-full bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-all group/btn shadow-none hover:shadow-lg hover:shadow-primary/20"
-                                            onClick={() => navigate(`/playground?title=${encodeURIComponent(question.title)}&difficulty=${question.difficulty}`)}
+                                            onClick={() => window.open(question.url, '_blank')}
                                         >
                                             <span className="font-semibold">Solve Challenge</span>
-                                            <Code2 className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
+                                            <ExternalLink className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
                                         </Button>
                                     </CardFooter>
                                 </Card>
