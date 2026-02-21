@@ -594,7 +594,13 @@ const Dashboard = () => {
                 { subject: "ATS Score", A: 85, fullMark: 100 }, // Mocked or derived from resume analysis
                 { subject: "Problem Solving", A: sessions.filter(s => s.topic?.includes('Code') || s.topic?.includes('System')).reduce((acc, s) => acc + (s.score || 0), 0) / (sessions.filter(s => s.topic?.includes('Code') || s.topic?.includes('System')).length || 1) || 75, fullMark: 100 },
                 { subject: "Communication", A: sessions.filter(s => s.type === 'Video').reduce((acc, s) => acc + (s.score || 0), 0) / (sessions.filter(s => s.type === 'Video').length || 1) || 80, fullMark: 100 },
-              ] : undefined}
+              ] : [
+                { subject: "Confidence", A: 0, fullMark: 100 },
+                { subject: "Technical", A: 0, fullMark: 100 },
+                { subject: "ATS Score", A: 0, fullMark: 100 },
+                { subject: "Problem Solving", A: 0, fullMark: 100 },
+                { subject: "Communication", A: 0, fullMark: 100 },
+              ]}
             />
 
 

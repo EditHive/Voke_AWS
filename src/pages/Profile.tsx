@@ -503,19 +503,31 @@ const Profile = () => {
 
                     <div className="mt-6 flex flex-wrap gap-2 justify-center lg:justify-start">
                       <Badge variant="outline" className="bg-violet-500/10 text-violet-500 border-violet-500/20 px-3 py-1">
-                        LEVEL 5
+                        LEVEL {Math.floor(((stats.completedSessions * 500) + (stats.peerSessions * 300)) / 2000) + 1}
                       </Badge>
                       <Badge variant="outline" className="bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/20 px-3 py-1">
-                        MASTER
+                        {Math.floor(((stats.completedSessions * 500) + (stats.peerSessions * 300)) / 2000) + 1 >= 5 ? 'MASTER' : 'SCHOLAR'}
                       </Badge>
                     </div>
 
                     <div className="mt-8 space-y-4">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">XP Progress</span>
-                        <span className="text-foreground font-mono">1,240 / 2,000</span>
-                      </div>
-                      <Progress value={62} className="h-2" />
+                      {(() => {
+                        const xp = (stats.completedSessions * 500) + (stats.peerSessions * 300);
+                        const level = Math.floor(xp / 2000) + 1;
+                        const nextLevelXp = level * 2000;
+                        const currentLevelStartXp = (level - 1) * 2000;
+                        const progress = ((xp - currentLevelStartXp) / (nextLevelXp - currentLevelStartXp)) * 100;
+
+                        return (
+                          <>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">XP Progress</span>
+                              <span className="text-foreground font-mono">{xp.toLocaleString()} / {nextLevelXp.toLocaleString()}</span>
+                            </div>
+                            <Progress value={progress} className="h-2" />
+                          </>
+                        );
+                      })()}
                     </div>
 
                     {/* Social/External Links */}

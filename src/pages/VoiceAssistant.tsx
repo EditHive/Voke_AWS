@@ -300,7 +300,7 @@ const VoiceAssistant: React.FC = () => {
             </div>
 
             <div className="absolute top-4 left-4 z-20">
-                <Button variant="ghost" className="text-muted-foreground hover:text-foreground hover:bg-accent" onClick={() => navigate('/dashboard')}>
+                <Button variant="ghost" className="text-white hover:text-white/80 hover:bg-white/10" onClick={() => navigate('/dashboard')}>
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back to Dashboard
                 </Button>
