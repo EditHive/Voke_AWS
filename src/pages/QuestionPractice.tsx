@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,28 @@ const QuestionPractice = () => {
   const [selectedDifficulty, setSelectedDifficulty] = useState("All");
   const [openCompany, setOpenCompany] = useState(false);
   
+  // Loading state
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadingPhase, setLoadingPhase] = useState(0);
+
+  useEffect(() => {
+    // Cycle through companies
+    const interval = setInterval(() => {
+      setLoadingPhase(p => p + 1);
+    }, 500);
+
+    // End loading
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+      clearInterval(interval);
+    }, 2500);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, []);
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
@@ -79,6 +101,64 @@ const QuestionPractice = () => {
       default: return "border-l-gray-500";
     }
   };
+
+  if (isLoading) {
+    const companies = [
+      { name: "GOOGLE", color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20", logo: "https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg" },
+      { name: "AMAZON", color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/20", logo: "https://upload.wikimedia.org/wikipedia/commons/4/4a/Amazon_icon.svg", imgClass: "brightness-0 invert" },
+      { name: "META", color: "text-blue-400", bg: "bg-blue-600/10", border: "border-blue-600/20", logo: "https://upload.wikimedia.org/wikipedia/commons/a/ab/Meta-Logo.png" },
+      { name: "APPLE", color: "text-zinc-300", bg: "bg-zinc-500/10", border: "border-zinc-500/20", logo: "https://upload.wikimedia.org/wikipedia/commons/3/31/Apple_logo_white.svg" },
+      { name: "NETFLIX", color: "text-red-500", bg: "bg-red-600/10", border: "border-red-600/20", logo: "https://upload.wikimedia.org/wikipedia/commons/7/75/Netflix_icon.svg" },
+      { name: "MICROSOFT", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20", logo: "https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg" },
+    ];
+    
+    const currentCompany = companies[loadingPhase % companies.length];
+
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center relative overflow-hidden font-sans">
+        {/* Grid Background */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col items-center">
+            <div className="relative mb-12">
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={loadingPhase}
+                        initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 1.1, y: -10 }}
+                        transition={{ duration: 0.4, ease: "easeOut" }}
+                        className={cn(
+                            "w-64 h-64 rounded-3xl border flex flex-col items-center justify-center backdrop-blur-xl shadow-2xl gap-6",
+                            currentCompany.border,
+                            currentCompany.bg
+                        )}
+                    >
+                        <div className="w-24 h-24 relative flex items-center justify-center">
+                             <img 
+                                src={currentCompany.logo} 
+                                alt={currentCompany.name}
+                                className={cn("w-full h-full object-contain filter drop-shadow-lg", (currentCompany as any).imgClass)}
+                             />
+                        </div>
+                        <h2 className={cn("text-2xl font-bold tracking-widest", currentCompany.color)}>
+                            {currentCompany.name}
+                        </h2>
+                    </motion.div>
+                </AnimatePresence>
+            </div>
+            
+            <div className="flex items-center gap-3 text-sm text-zinc-500 font-medium tracking-widest">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-500"></span>
+                </span>
+                CONNECTING_TO_DATABASE...
+            </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans selection:bg-violet-500/30">
