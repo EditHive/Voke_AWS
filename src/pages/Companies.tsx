@@ -83,6 +83,7 @@ const Companies = () => {
                                         <div className="w-16 h-16 rounded-2xl bg-white p-2 shadow-sm mb-4 border border-gray-100 flex items-center justify-center overflow-hidden">
                                             <img
                                                 src={`https://logo.clearbit.com/${company.name.toLowerCase().replace(/\s/g, '')}.com`}
+                                                crossOrigin="anonymous"
                                                 onError={(e) => {
                                                     e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(company.name)}&background=random&color=fff&size=64`;
                                                 }}

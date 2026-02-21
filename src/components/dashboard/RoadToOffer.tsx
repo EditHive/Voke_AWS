@@ -290,6 +290,7 @@ export const RoadToOffer = ({ profile, onUpdate }: RoadToOfferProps) => {
                 >
                   <img
                     src={getCompanyLogoUrl(company)}
+                    crossOrigin="anonymous"
                     onError={(e) => {
                       const target = e.currentTarget;
                       // Prevent infinite loop if fallback also fails

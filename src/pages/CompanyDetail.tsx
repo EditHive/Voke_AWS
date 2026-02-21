@@ -180,6 +180,7 @@ const CompanyDetail = () => {
                             <div className="w-20 h-20 rounded-2xl bg-white p-2 shadow-sm border border-gray-100 flex items-center justify-center overflow-hidden">
                                 <img
                                     src={getCompanyLogoUrl(company.name)}
+                                    crossOrigin="anonymous"
                                     onError={(e) => {
                                         // Final fallback to UI Avatars
                                         const target = e.currentTarget;

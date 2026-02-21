@@ -8,10 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Brain, LogOut, Upload, FileText, TrendingUp, Target, Award, Calendar, 
-  User, Briefcase, Activity, Sparkles, MessageSquare, BarChart3, 
-  Github, Code, Terminal, Zap, Shield, Crown, ChevronRight, Settings, Camera 
+import {
+  Brain, LogOut, Upload, FileText, TrendingUp, Target, Award, Calendar,
+  User, Briefcase, Activity, Sparkles, MessageSquare, BarChart3,
+  Github, Code, Terminal, Zap, Shield, Crown, ChevronRight, Settings, Camera
 } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -75,7 +75,7 @@ const Profile = () => {
         const profile = profileData as any;
         // Fallback to Google Avatar if not set in profile
         if (!profile.avatar_url && user.user_metadata?.avatar_url) {
-           profile.avatar_url = user.user_metadata.avatar_url;
+          profile.avatar_url = user.user_metadata.avatar_url;
         }
         setProfile(profile);
         setFormData({
@@ -369,11 +369,11 @@ const Profile = () => {
         throw uploadError;
       }
 
-    const { data: { publicUrl } } = supabase.storage
+      const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(fileName);
 
-    const publicUrlWithTimestamp = `${publicUrl}?t=${new Date().getTime()}`;
+      const publicUrlWithTimestamp = `${publicUrl}?t=${new Date().getTime()}`;
 
       const { error: updateError } = await supabase
         .from('profiles')
@@ -383,7 +383,7 @@ const Profile = () => {
       if (updateError) {
         throw updateError;
       }
-      
+
       setProfile({ ...profile, avatar_url: publicUrlWithTimestamp });
       toast.success('Avatar updated!');
     } catch (error: any) {
@@ -437,12 +437,12 @@ const Profile = () => {
               />
               <span className="font-bold text-lg tracking-tight">Voke</span>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <ThemeToggle />
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={handleLogout}
                 className="text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
               >
@@ -456,10 +456,10 @@ const Profile = () => {
         {/* Main Content Layout */}
         <div className="container mx-auto px-4 py-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
+
             {/* Identity Sidebar */}
             <div className="lg:col-span-4 space-y-6">
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="relative group"
@@ -472,27 +472,27 @@ const Profile = () => {
                   <div className="px-6 pb-6 relative">
                     <div className="relative -mt-16 mb-4 flex justify-center lg:justify-start">
                       <div className="relative w-32 h-32 group/avatar">
-                         <div className="w-full h-full rounded-3xl bg-card p-1 ring-4 ring-background/50 shadow-2xl overflow-hidden relative">
-                             {profile?.avatar_url ? (
-                               <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover rounded-2xl" />
-                             ) : (
-                               <div className="w-full h-full rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center">
-                                  <span className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white to-zinc-500">
-                                    {profile?.full_name?.charAt(0) || "U"}
-                                  </span>
-                               </div>
-                             )}
-                             
-                             {/* Upload Overlay */}
-                             <label className="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center cursor-pointer rounded-2xl">
-                                <Camera className="w-8 h-8 text-white/80" />
-                                <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={saving} />
-                             </label>
-                         </div>
-                         <div className="absolute bottom-0 right-0 bg-green-500 w-5 h-5 rounded-full border-4 border-background shadow-lg z-10"></div>
+                        <div className="w-full h-full rounded-3xl bg-card p-1 ring-4 ring-background/50 shadow-2xl overflow-hidden relative">
+                          {profile?.avatar_url ? (
+                            <img src={profile.avatar_url} crossOrigin="anonymous" alt="Avatar" className="w-full h-full object-cover rounded-2xl" />
+                          ) : (
+                            <div className="w-full h-full rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center">
+                              <span className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white to-zinc-500">
+                                {profile?.full_name?.charAt(0) || "U"}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Upload Overlay */}
+                          <label className="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center cursor-pointer rounded-2xl">
+                            <Camera className="w-8 h-8 text-white/80" />
+                            <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={saving} />
+                          </label>
+                        </div>
+                        <div className="absolute bottom-0 right-0 bg-green-500 w-5 h-5 rounded-full border-4 border-background shadow-lg z-10"></div>
                       </div>
                     </div>
-                    
+
                     <div className="text-center lg:text-left space-y-1">
                       <h2 className="text-2xl font-bold text-foreground">{profile?.full_name || "Anonymous User"}</h2>
                       <p className="text-muted-foreground flex items-center justify-center lg:justify-start gap-2">
@@ -520,14 +520,14 @@ const Profile = () => {
 
                     {/* Social/External Links */}
                     <div className="mt-8 pt-6 border-t border-border/50 grid grid-cols-2 gap-3">
-                       <Button variant="outline" className="w-full border-border/50 bg-secondary/20 hover:bg-secondary/40 justify-start" onClick={() => window.open(profile.github_url, '_blank')}>
-                          <Github className="w-4 h-4 mr-2" />
-                          GitHub
-                       </Button>
-                       <Button variant="outline" className="w-full border-border/50 bg-secondary/20 hover:bg-secondary/40 justify-start">
-                          <Terminal className="w-4 h-4 mr-2" />
-                          LeetCode
-                       </Button>
+                      <Button variant="outline" className="w-full border-border/50 bg-secondary/20 hover:bg-secondary/40 justify-start" onClick={() => window.open(profile.github_url, '_blank')}>
+                        <Github className="w-4 h-4 mr-2" />
+                        GitHub
+                      </Button>
+                      <Button variant="outline" className="w-full border-border/50 bg-secondary/20 hover:bg-secondary/40 justify-start">
+                        <Terminal className="w-4 h-4 mr-2" />
+                        LeetCode
+                      </Button>
                     </div>
                   </div>
                 </Card>
@@ -551,8 +551,8 @@ const Profile = () => {
                       <CardContent className="p-4 flex flex-col gap-2">
                         <stat.icon className={`w-5 h-5 ${stat.color}`} />
                         <div>
-                           <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-                           <div className="text-xs text-muted-foreground uppercase tracking-wider font-medium">{stat.label}</div>
+                          <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+                          <div className="text-xs text-muted-foreground uppercase tracking-wider font-medium">{stat.label}</div>
                         </div>
                       </CardContent>
                     </Card>
@@ -572,7 +572,7 @@ const Profile = () => {
                     { id: "skills", label: "Skills", icon: Brain },
                     { id: "settings", label: "Settings", icon: Settings },
                   ].map(tab => (
-                    <TabsTrigger 
+                    <TabsTrigger
                       key={tab.id}
                       value={tab.id}
                       className="flex-1 min-w-[100px] gap-2 rounded-lg data-[state=active]:bg-violet-600 data-[state=active]:text-white transition-all"
@@ -587,59 +587,59 @@ const Profile = () => {
                   {/* OVERVIEW TAB */}
                   <TabsContent value="overview" className="space-y-6 outline-none">
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid gap-6">
-                      
+
                       {/* AI Coach Banner */}
                       <Card className="bg-gradient-to-r from-violet-900/20 to-fuchsia-900/20 border-violet-500/20 overflow-hidden relative">
-                         <div className="absolute right-0 top-0 w-64 h-64 bg-violet-500/10 blur-[100px] rounded-full" />
-                         <CardContent className="p-8 relative z-10 flex items-center justify-between">
-                            <div className="space-y-4 max-w-lg">
-                               <div className="flex items-center gap-2 text-violet-400 font-medium text-sm">
-                                  <Sparkles className="w-4 h-4" />
-                                  <span>AI Interview Coach</span>
-                               </div>
-                               <h3 className="text-3xl font-bold text-foreground leading-tight">Ready for your next mock interview?</h3>
-                               <p className="text-muted-foreground">Your AI coach is ready to analyze your performance and provide real-time feedback.</p>
-                               <Button onClick={() => navigate('/interview/new')} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                                  Start Session <ChevronRight className="w-4 h-4 ml-1" />
-                               </Button>
+                        <div className="absolute right-0 top-0 w-64 h-64 bg-violet-500/10 blur-[100px] rounded-full" />
+                        <CardContent className="p-8 relative z-10 flex items-center justify-between">
+                          <div className="space-y-4 max-w-lg">
+                            <div className="flex items-center gap-2 text-violet-400 font-medium text-sm">
+                              <Sparkles className="w-4 h-4" />
+                              <span>AI Interview Coach</span>
                             </div>
-                            <div className="hidden md:block text-9xl select-none opacity-20 transform rotate-12">
-                               🎙️
-                            </div>
-                         </CardContent>
+                            <h3 className="text-3xl font-bold text-foreground leading-tight">Ready for your next mock interview?</h3>
+                            <p className="text-muted-foreground">Your AI coach is ready to analyze your performance and provide real-time feedback.</p>
+                            <Button onClick={() => navigate('/interview/new')} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                              Start Session <ChevronRight className="w-4 h-4 ml-1" />
+                            </Button>
+                          </div>
+                          <div className="hidden md:block text-9xl select-none opacity-20 transform rotate-12">
+                            🎙️
+                          </div>
+                        </CardContent>
                       </Card>
 
                       {/* Recent Activity Feed */}
                       <Card className="bg-card/50 backdrop-blur-xl border-border/50">
                         <CardHeader>
                           <CardTitle className="flex items-center gap-2">
-                             <Activity className="w-5 h-5 text-muted-foreground" />
-                             Recent Activity
+                            <Activity className="w-5 h-5 text-muted-foreground" />
+                            Recent Activity
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                           {recentActivity.length === 0 ? (
-                              <div className="text-center py-12 text-muted-foreground">No recent activity</div>
-                           ) : (
-                              recentActivity.map((activity, idx) => (
-                                 <div key={activity.id} className="flex items-center justify-between p-4 rounded-xl bg-secondary/10 hover:bg-secondary/20 transition-colors border border-border/50">
-                                    <div className="flex items-center gap-4">
-                                       <div className={`p-3 rounded-full ${activity.status === 'completed' ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
-                                          <Target className="w-5 h-5" />
-                                       </div>
-                                       <div>
-                                          <h4 className="font-semibold text-foreground capitalize">{activity.interview_type} Interview</h4>
-                                          <p className="text-sm text-muted-foreground">
-                                             {new Date(activity.created_at).toLocaleDateString()} • {activity.total_duration_seconds ? Math.round(activity.total_duration_seconds / 60) + ' mins' : 'Incomplete'}
-                                          </p>
-                                       </div>
-                                    </div>
-                                    <Badge variant="secondary">
-                                       {activity.status}
-                                    </Badge>
-                                 </div>
-                              ))
-                           )}
+                          {recentActivity.length === 0 ? (
+                            <div className="text-center py-12 text-muted-foreground">No recent activity</div>
+                          ) : (
+                            recentActivity.map((activity, idx) => (
+                              <div key={activity.id} className="flex items-center justify-between p-4 rounded-xl bg-secondary/10 hover:bg-secondary/20 transition-colors border border-border/50">
+                                <div className="flex items-center gap-4">
+                                  <div className={`p-3 rounded-full ${activity.status === 'completed' ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
+                                    <Target className="w-5 h-5" />
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold text-foreground capitalize">{activity.interview_type} Interview</h4>
+                                    <p className="text-sm text-muted-foreground">
+                                      {new Date(activity.created_at).toLocaleDateString()} • {activity.total_duration_seconds ? Math.round(activity.total_duration_seconds / 60) + ' mins' : 'Incomplete'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <Badge variant="secondary">
+                                  {activity.status}
+                                </Badge>
+                              </div>
+                            ))
+                          )}
                         </CardContent>
                       </Card>
 
@@ -648,188 +648,188 @@ const Profile = () => {
 
                   {/* SETTINGS TAB */}
                   <TabsContent value="settings" className="space-y-6 outline-none">
-                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                        <Card className="bg-card/50 backdrop-blur-xl border-border/50">
-                           <CardHeader>
-                              <CardTitle>Profile Details</CardTitle>
-                              <CardDescription>Manage your personal information and connections.</CardDescription>
-                           </CardHeader>
-                           <CardContent className="space-y-6">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                 <div className="space-y-2">
-                                    <Label>Full Name</Label>
-                                    <Input 
-                                       value={formData.full_name} 
-                                       onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-                                       className="bg-background/50 border-input focus:border-violet-500 transition-colors h-11"
-                                    />
-                                 </div>
-                                 <div className="space-y-2">
-                                    <Label>Email</Label>
-                                    <Input value={profile?.email} disabled className="bg-background/30 border-input text-muted-foreground h-11" />
-                                 </div>
-                                 <div className="space-y-2">
-                                    <Label>GitHub URL</Label>
-                                    <Input 
-                                       value={formData.github_url}
-                                       onChange={(e) => setFormData({...formData, github_url: e.target.value})}
-                                       className="bg-background/50 border-input focus:border-violet-500 transition-colors h-11"
-                                    />
-                                 </div>
-                                 <div className="space-y-2">
-                                    <Label>LeetCode Username</Label>
-                                    <Input 
-                                       value={formData.leetcode_id}
-                                       onChange={(e) => setFormData({...formData, leetcode_id: e.target.value})}
-                                       className="bg-background/50 border-input focus:border-violet-500 transition-colors h-11"
-                                    />
-                                 </div>
-                                 <div className="space-y-2">
-                                    <Label>Codeforces Handle</Label>
-                                    <Input 
-                                       value={formData.codeforces_id}
-                                       onChange={(e) => setFormData({...formData, codeforces_id: e.target.value})}
-                                       className="bg-background/50 border-input focus:border-violet-500 transition-colors h-11"
-                                    />
-                                 </div>
-                              </div>
-                              
-                              <div className="pt-6 border-t border-border/50 flex flex-col sm:flex-row gap-4 justify-between items-center">
-                                 <Button 
-                                    variant="destructive" 
-                                    onClick={handleDeleteAccount}
-                                    className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20"
-                                 >
-                                    Delete Account
-                                 </Button>
-                                 <div className="flex gap-4 w-full sm:w-auto">
-                                    <Button 
-                                       variant="outline" 
-                                       onClick={handleSyncStats}
-                                       disabled={syncing}
-                                       className="border-input bg-secondary/20 hover:bg-secondary/40 flex-1 sm:flex-none"
-                                    >
-                                       {syncing ? "Syncing..." : "Sync Stats"}
-                                    </Button>
-                                    <Button 
-                                       onClick={handleSave}
-                                       disabled={saving}
-                                       className="bg-violet-600 hover:bg-violet-500 text-white flex-1 sm:flex-none"
-                                    >
-                                       {saving ? "Saving..." : "Save Changes"}
-                                    </Button>
-                                 </div>
-                              </div>
-                           </CardContent>
-                        </Card>
-                     </motion.div>
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                      <Card className="bg-card/50 backdrop-blur-xl border-border/50">
+                        <CardHeader>
+                          <CardTitle>Profile Details</CardTitle>
+                          <CardDescription>Manage your personal information and connections.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                              <Label>Full Name</Label>
+                              <Input
+                                value={formData.full_name}
+                                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                                className="bg-background/50 border-input focus:border-violet-500 transition-colors h-11"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Email</Label>
+                              <Input value={profile?.email} disabled className="bg-background/30 border-input text-muted-foreground h-11" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>GitHub URL</Label>
+                              <Input
+                                value={formData.github_url}
+                                onChange={(e) => setFormData({ ...formData, github_url: e.target.value })}
+                                className="bg-background/50 border-input focus:border-violet-500 transition-colors h-11"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>LeetCode Username</Label>
+                              <Input
+                                value={formData.leetcode_id}
+                                onChange={(e) => setFormData({ ...formData, leetcode_id: e.target.value })}
+                                className="bg-background/50 border-input focus:border-violet-500 transition-colors h-11"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Codeforces Handle</Label>
+                              <Input
+                                value={formData.codeforces_id}
+                                onChange={(e) => setFormData({ ...formData, codeforces_id: e.target.value })}
+                                className="bg-background/50 border-input focus:border-violet-500 transition-colors h-11"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="pt-6 border-t border-border/50 flex flex-col sm:flex-row gap-4 justify-between items-center">
+                            <Button
+                              variant="destructive"
+                              onClick={handleDeleteAccount}
+                              className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20"
+                            >
+                              Delete Account
+                            </Button>
+                            <div className="flex gap-4 w-full sm:w-auto">
+                              <Button
+                                variant="outline"
+                                onClick={handleSyncStats}
+                                disabled={syncing}
+                                className="border-input bg-secondary/20 hover:bg-secondary/40 flex-1 sm:flex-none"
+                              >
+                                {syncing ? "Syncing..." : "Sync Stats"}
+                              </Button>
+                              <Button
+                                onClick={handleSave}
+                                disabled={saving}
+                                className="bg-violet-600 hover:bg-violet-500 text-white flex-1 sm:flex-none"
+                              >
+                                {saving ? "Saving..." : "Save Changes"}
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
                   </TabsContent>
 
                   {/* RESUME TAB */}
                   <TabsContent value="resume" className="space-y-6 outline-none">
-                     <Card className="bg-card/50 backdrop-blur-xl border-border/50">
-                        <CardHeader>
-                           <CardTitle>Resume Verification</CardTitle>
-                           <CardDescription>Upload your latest resume to keep your profile updated.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                           <div className="border-2 border-dashed border-border/50 rounded-2xl p-8 hover:border-violet-500/50 transition-colors bg-secondary/5 text-center relative group">
-                              <input
-                                 type="file"
-                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
-                                 accept=".pdf,.doc,.docx"
-                                 onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
-                              />
-                              <div className="mx-auto w-16 h-16 bg-secondary/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                                 {resumeFile ? (
-                                    <FileText className="w-8 h-8 text-violet-500" />
-                                 ) : (
-                                    <Upload className="w-8 h-8 text-muted-foreground" />
-                                 )}
-                              </div>
-                              <h3 className="text-lg font-medium text-foreground mb-2">
-                                 {resumeFile ? resumeFile.name : "Drop your resume here"}
-                              </h3>
-                              <p className="text-muted-foreground text-sm max-w-sm mx-auto">
-                                 Supports PDF, DOC, DOCX. Max file size 5MB.
-                              </p>
-                              {resumeFile && (
-                                 <Button 
-                                    className="mt-6 bg-violet-600 hover:bg-violet-500 text-white relative z-30"
-                                    onClick={handleResumeUpload}
-                                    disabled={saving}
-                                 >
-                                    {saving ? "Uploading..." : "Confirm Upload"}
-                                 </Button>
-                              )}
-                           </div>
-                           
-                           {profile?.resume_url && (
-                              <div className="mt-6 flex items-center justify-between p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
-                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-green-500/20 rounded-lg">
-                                       <Shield className="w-5 h-5 text-green-500" />
-                                    </div>
-                                    <div>
-                                       <div className="font-medium text-green-500">Resume Verified</div>
-                                       <div className="text-xs text-green-500/80">Last updated recently</div>
-                                    </div>
-                                 </div>
-                                 <Button 
-                                    variant="link" 
-                                    className="text-green-500 hover:text-green-600"
-                                    onClick={() => window.open(profile.resume_url, '_blank')}
-                                 >
-                                    View
-                                 </Button>
-                              </div>
-                           )}
-                        </CardContent>
-                     </Card>
+                    <Card className="bg-card/50 backdrop-blur-xl border-border/50">
+                      <CardHeader>
+                        <CardTitle>Resume Verification</CardTitle>
+                        <CardDescription>Upload your latest resume to keep your profile updated.</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="border-2 border-dashed border-border/50 rounded-2xl p-8 hover:border-violet-500/50 transition-colors bg-secondary/5 text-center relative group">
+                          <input
+                            type="file"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+                            accept=".pdf,.doc,.docx"
+                            onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
+                          />
+                          <div className="mx-auto w-16 h-16 bg-secondary/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            {resumeFile ? (
+                              <FileText className="w-8 h-8 text-violet-500" />
+                            ) : (
+                              <Upload className="w-8 h-8 text-muted-foreground" />
+                            )}
+                          </div>
+                          <h3 className="text-lg font-medium text-foreground mb-2">
+                            {resumeFile ? resumeFile.name : "Drop your resume here"}
+                          </h3>
+                          <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+                            Supports PDF, DOC, DOCX. Max file size 5MB.
+                          </p>
+                          {resumeFile && (
+                            <Button
+                              className="mt-6 bg-violet-600 hover:bg-violet-500 text-white relative z-30"
+                              onClick={handleResumeUpload}
+                              disabled={saving}
+                            >
+                              {saving ? "Uploading..." : "Confirm Upload"}
+                            </Button>
+                          )}
+                        </div>
 
-                     <ResumeAnalyzer userId={profile?.id || ""} resumeUrl={profile?.resume_url} />
+                        {profile?.resume_url && (
+                          <div className="mt-6 flex items-center justify-between p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-green-500/20 rounded-lg">
+                                <Shield className="w-5 h-5 text-green-500" />
+                              </div>
+                              <div>
+                                <div className="font-medium text-green-500">Resume Verified</div>
+                                <div className="text-xs text-green-500/80">Last updated recently</div>
+                              </div>
+                            </div>
+                            <Button
+                              variant="link"
+                              className="text-green-500 hover:text-green-600"
+                              onClick={() => window.open(profile.resume_url, '_blank')}
+                            >
+                              View
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <ResumeAnalyzer userId={profile?.id || ""} resumeUrl={profile?.resume_url} />
                   </TabsContent>
 
                   {/* ANALYTICS TAB */}
                   <TabsContent value="analytics" className="outline-none">
-                     <InterviewAnalytics userId={profile?.id || ""} />
+                    <InterviewAnalytics userId={profile?.id || ""} />
                   </TabsContent>
 
                   {/* SKILLS TAB */}
                   <TabsContent value="skills" className="outline-none">
-                     <Card className="bg-card/50 backdrop-blur-xl border-border/50">
-                        <CardHeader>
-                           <CardTitle>Skill Gap Analysis</CardTitle>
-                           <CardDescription>Areas for improvement based on your interview performance.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                           {skillGaps.length === 0 ? (
-                              <div className="text-center py-12">
-                                 <div className="inline-block p-4 rounded-full bg-secondary/20 mb-4">
-                                    <Target className="w-8 h-8 text-muted-foreground" />
-                                 </div>
-                                 <h3 className="text-xl font-bold text-foreground mb-2">No Gaps Detected Yet</h3>
-                                 <p className="text-muted-foreground">Complete more interviews to generate a skill analysis.</p>
+                    <Card className="bg-card/50 backdrop-blur-xl border-border/50">
+                      <CardHeader>
+                        <CardTitle>Skill Gap Analysis</CardTitle>
+                        <CardDescription>Areas for improvement based on your interview performance.</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {skillGaps.length === 0 ? (
+                          <div className="text-center py-12">
+                            <div className="inline-block p-4 rounded-full bg-secondary/20 mb-4">
+                              <Target className="w-8 h-8 text-muted-foreground" />
+                            </div>
+                            <h3 className="text-xl font-bold text-foreground mb-2">No Gaps Detected Yet</h3>
+                            <p className="text-muted-foreground">Complete more interviews to generate a skill analysis.</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            {skillGaps.map((gap: any, i) => (
+                              <div key={i} className="p-4 rounded-xl bg-secondary/10 border border-border/50 hover:bg-secondary/20 transition-colors">
+                                <div className="flex justify-between items-start mb-2">
+                                  <h4 className="font-bold text-foreground text-lg">{gap.skill}</h4>
+                                  <Badge variant={gap.importance === 'High' ? 'destructive' : 'default'}>{gap.importance}</Badge>
+                                </div>
+                                <p className="text-muted-foreground text-sm mb-4">{gap.learning_resource}</p>
+                                <div className="flex items-center gap-3 text-sm">
+                                  <Progress value={Math.random() * 60 + 20} className="h-1.5" />
+                                  <span className="text-muted-foreground font-mono">In Progress</span>
+                                </div>
                               </div>
-                           ) : (
-                              <div className="space-y-4">
-                                 {skillGaps.map((gap: any, i) => (
-                                    <div key={i} className="p-4 rounded-xl bg-secondary/10 border border-border/50 hover:bg-secondary/20 transition-colors">
-                                       <div className="flex justify-between items-start mb-2">
-                                          <h4 className="font-bold text-foreground text-lg">{gap.skill}</h4>
-                                          <Badge variant={gap.importance === 'High' ? 'destructive' : 'default'}>{gap.importance}</Badge>
-                                       </div>
-                                       <p className="text-muted-foreground text-sm mb-4">{gap.learning_resource}</p>
-                                       <div className="flex items-center gap-3 text-sm">
-                                          <Progress value={Math.random() * 60 + 20} className="h-1.5" />
-                                          <span className="text-muted-foreground font-mono">In Progress</span>
-                                       </div>
-                                    </div>
-                                 ))}
-                              </div>
-                           )}
-                        </CardContent>
-                     </Card>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
                   </TabsContent>
 
                 </AnimatePresence>
@@ -865,7 +865,7 @@ const Profile = () => {
                   value={formData.leetcode_id}
                   onChange={(e) => setFormData({ ...formData, leetcode_id: e.target.value })}
                   placeholder="e.g. neal_wu"
-                   className="bg-background/50 border-input"
+                  className="bg-background/50 border-input"
                 />
               </div>
               <div className="space-y-2">
@@ -875,7 +875,7 @@ const Profile = () => {
                   value={formData.codeforces_id}
                   onChange={(e) => setFormData({ ...formData, codeforces_id: e.target.value })}
                   placeholder="e.g. tourist"
-                   className="bg-background/50 border-input"
+                  className="bg-background/50 border-input"
                 />
               </div>
 
