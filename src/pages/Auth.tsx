@@ -8,6 +8,15 @@ import { ADMIN_EMAIL } from "@/config/admin";
 import { useToast } from "@/components/ui/use-toast";
 import { Mail, Lock, User, ArrowRight, Sparkles, Github, Loader2, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { isDisposableEmail } from "@/utils/emailValidation";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -20,6 +29,7 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
 
   useEffect(() => {
     // Check if already logged in
@@ -56,6 +66,15 @@ const Auth = () => {
       toast({
         title: "Error",
         description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isDisposableEmail(email)) {
+      toast({
+        title: "Restricted Email Domain",
+        description: "Please use a permanent email address (e.g., Gmail, Outlook, Yahoo) to sign up.",
         variant: "destructive",
       });
       return;
@@ -108,15 +127,11 @@ const Auth = () => {
           });
         }
       } else {
-        toast({
-          title: "Success!",
-          description: "Account created successfully. You can now sign in.",
-        });
         setEmail("");
         setPassword("");
         setFullName("");
         setConfirmPassword("");
-        setAuthMode("signin");
+        setShowVerificationDialog(true);
       }
     } catch (error: any) {
       toast({
@@ -136,6 +151,15 @@ const Auth = () => {
       toast({
         title: "Error",
         description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isDisposableEmail(email)) {
+      toast({
+        title: "Restricted Email Domain",
+        description: "Access with temporary email addresses is not permitted.",
         variant: "destructive",
       });
       return;
@@ -220,9 +244,9 @@ const Auth = () => {
             transition={{ duration: 0.8 }}
             className="mb-12"
           >
-            <img 
-              src="/images/voke_logo.png" 
-              alt="Voke Logo" 
+            <img
+              src="/images/voke_logo.png"
+              alt="Voke Logo"
               className="w-20 h-20 object-contain mb-8 hover:scale-110 transition-transform duration-300"
             />
             <h1 className="text-5xl font-bold mb-6 leading-tight">
@@ -488,6 +512,35 @@ const Auth = () => {
           </div>
         </div>
       </div>
+
+      <Dialog open={showVerificationDialog} onOpenChange={setShowVerificationDialog}>
+        <DialogContent className="bg-zinc-900 border-white/10 text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Mail className="h-5 w-5 text-violet-500" />
+              Verify your email
+            </DialogTitle>
+            <DialogDescription className="text-gray-400 pt-2">
+              We've sent a verification link to <span className="text-violet-400 font-medium">{email}</span>.
+              <br /><br />
+              Please check your inbox (and spam folder) and click the link to verify your account before signing in.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-end gap-2 pt-4">
+            <Button
+              type="button"
+              variant="default"
+              className="bg-violet-600 hover:bg-violet-700 text-white"
+              onClick={() => {
+                setShowVerificationDialog(false);
+                setAuthMode("signin");
+              }}
+            >
+              I understand, take me to Sign In
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
