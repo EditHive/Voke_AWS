@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
     Search, ArrowLeft, ExternalLink, Loader2, Calendar,
-    TrendingUp, Award, Layers, AlertCircle
+    TrendingUp, Award, Layers, AlertCircle, Code2
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -220,13 +220,15 @@ const CompanyDetail = () => {
 
                                                 <div className="flex items-center gap-2 shrink-0">
                                                     {q.url && (
-                                                        <Button variant="outline" size="sm" asChild className="gap-2">
-                                                            <a href={q.url} target="_blank" rel="noopener noreferrer">
-                                                                Solve <ExternalLink className="h-3 w-3" />
-                                                            </a>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="gap-2"
+                                                            onClick={() => navigate(`/playground?title=${encodeURIComponent(q.title)}&company=${encodeURIComponent(company.name)}`)}
+                                                        >
+                                                            Solve <Code2 className="h-3 w-3" />
                                                         </Button>
                                                     )}
-                                                    {/* Future: Add 'Practice Here' button for internal editor */}
                                                 </div>
                                             </CardContent>
                                         </Card>

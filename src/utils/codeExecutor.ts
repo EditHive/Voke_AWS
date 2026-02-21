@@ -45,136 +45,216 @@ export type ExecutionResult = {
   error?: string;
 };
 
-// --- Pyodide Setup ---
+// --- Pyodide Setup (Main Thread Fallback) ---
 declare global {
   interface Window {
     loadPyodide: (config?: any) => Promise<any>;
   }
 }
 
-let pyodide: any = null;
+let pyodideMain: any = null;
 let pyodideLoadingPromise: Promise<any> | null = null;
 
-const loadPyodide = async () => {
-    if (pyodide) return pyodide;
-    if (pyodideLoadingPromise) return pyodideLoadingPromise;
+const loadPyodideMain = async () => {
+  if (pyodideMain) return pyodideMain;
+  if (pyodideLoadingPromise) return pyodideLoadingPromise;
 
-    pyodideLoadingPromise = new Promise((resolve, reject) => {
-        // Set a global timeout for the entire loading process (20 seconds)
-        const timeoutId = setTimeout(() => {
-            reject(new Error("Pyodide loading timed out (20s). Check your connection or firewall."));
-        }, 20000);
+  pyodideLoadingPromise = new Promise((resolve, reject) => {
+    // ... (Similar loading logic as before) ...
+    // Reusing the simple loading logic or we can just rely on the script being there?
+    // Let's implement robust loading again for fallback.
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js';
+    script.type = 'text/javascript';
+    script.async = true;
 
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js';
-        script.type = 'text/javascript';
-        script.async = true;
-        script.crossOrigin = "anonymous"; // Better for CDN
-        
-        script.onload = async () => {
-             // Poll for loadPyodide availability
-             let checkCount = 0;
-             const checkInterval = setInterval(async () => {
-                 if (typeof window.loadPyodide === 'function') {
-                     clearInterval(checkInterval);
-                     clearTimeout(timeoutId);
-                     try {
-                         const p = await window.loadPyodide({
-                            indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/"
-                         });
-                         pyodide = p;
-                         resolve(p);
-                     } catch (e) {
-                         reject(e);
-                     }
-                 } else {
-                     checkCount++;
-                     if (checkCount > 50) { // Wait up to 5 seconds (50 * 100ms)
-                         clearInterval(checkInterval);
-                         clearTimeout(timeoutId);
-                         reject(new Error('Pyodide script loaded but loadPyodide is not defined after 5s polling.'));
-                     }
-                 }
-             }, 100);
-        };
-        script.onerror = (e) => {
-            clearTimeout(timeoutId);
-            reject(new Error('Failed to load Pyodide script from CDN. Check content blockers.'));
-        };
-        document.body.appendChild(script);
-    });
-
-    return pyodideLoadingPromise;
+    script.onload = async () => {
+      try {
+        // @ts-ignore
+        const p = await window.loadPyodide({
+          indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/"
+        });
+        pyodideMain = p;
+        resolve(p);
+      } catch (e) {
+        reject(e);
+      }
+    };
+    script.onerror = (e) => reject(e);
+    document.body.appendChild(script);
+  });
+  return pyodideLoadingPromise;
 };
 
-export const executeCode = async (userCode: string, language: 'javascript' | 'python' | 'bash'): Promise<ExecutionResult> => {
+
+// --- Pyodide Worker Controller ---
+class PyodideController {
+  worker: Worker | null = null;
+  sharedBuffer: SharedArrayBuffer | null = null;
+  int32Buffer: Int32Array | null = null;
+  uint8Buffer: Uint8Array | null = null;
+
+  callbacks: {
+    onLog: (msg: string) => void;
+    onInput: (prompt: string) => void;
+    onFinished: () => void;
+    onError: (err: string) => void;
+  } | null = null;
+
+  constructor() {
+    if (typeof SharedArrayBuffer !== 'undefined') {
+      try {
+        this.sharedBuffer = new SharedArrayBuffer(1024 + 4);
+        this.int32Buffer = new Int32Array(this.sharedBuffer);
+        this.uint8Buffer = new Uint8Array(this.sharedBuffer, 4);
+      } catch (e) {
+        console.warn("Failed to create SharedArrayBuffer", e);
+      }
+    }
+  }
+
+  initWorker() {
+    if (this.worker) return;
+    this.worker = new Worker(new URL('../workers/pyodideWorker.ts', import.meta.url), {
+      type: 'module'
+    });
+
+    this.worker.onmessage = (event) => {
+      const { type, content, prompt } = event.data;
+      if (type === 'stdout' || type === 'stderr') {
+        this.callbacks?.onLog(content);
+      } else if (type === 'input_request') {
+        this.callbacks?.onInput(prompt);
+      } else if (type === 'finished') {
+        this.callbacks?.onFinished();
+      } else if (type === 'error') {
+        this.callbacks?.onError(content);
+      }
+    };
+  }
+
+  run(code: string, callbacks: NonNullable<typeof this.callbacks>) {
+    this.initWorker();
+    this.callbacks = callbacks;
+    this.worker?.postMessage({
+      type: 'run',
+      code,
+      sharedBuffer: this.sharedBuffer,
+      paramBuffer: this.sharedBuffer
+    });
+  }
+
+  submitInput(text: string) {
+    if (!this.sharedBuffer || !this.int32Buffer || !this.uint8Buffer) return;
+
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(text);
+
+    this.uint8Buffer.fill(0);
+    this.uint8Buffer.set(bytes.slice(0, 1024));
+
+    Atomics.store(this.int32Buffer, 0, 1);
+    Atomics.notify(this.int32Buffer, 0);
+  }
+}
+
+export const pyodideController = new PyodideController();
+
+// --- Main Execution Function ---
+export const executeCode = async (
+  userCode: string,
+  language: 'javascript' | 'python' | 'bash',
+  onLog?: (log: string) => void,
+  onInputRequest?: (prompt: string) => void
+): Promise<ExecutionResult> => {
   const logs: string[] = [];
+  const captureLog = (msg: string) => {
+    logs.push(msg);
+    onLog?.(msg);
+  };
 
   // --- Python Execution ---
   if (language === 'python') {
+    // CHECK: Can we use the worker?
+    if (window.crossOriginIsolated && typeof SharedArrayBuffer !== 'undefined') {
+      // Happy path: Use Worker
+      return new Promise((resolve) => {
+        pyodideController.run(userCode, {
+          onLog: captureLog,
+          onInput: (prompt) => {
+            if (onInputRequest) {
+              onInputRequest(prompt);
+            }
+          },
+          onFinished: () => {
+            resolve({ passed: true, logs, results: [] });
+          },
+          onError: (err) => {
+            resolve({ passed: false, logs, results: [], error: err });
+          }
+        });
+      });
+    } else {
+      // Fallback: Run on main thread (with window.prompt)
+      captureLog("⚠️ Running in Legacy Mode (Worker disabled). Input will be via popup.");
       try {
-          const py = await loadPyodide();
-          
-          // Redirect stdout
-          py.setStdout({
-              batched: (msg: string) => {
-                  logs.push(msg);
-              }
-          });
-          
-          await py.runPythonAsync(userCode);
-          
-          return {
-              passed: true,
-              logs: logs,
-              results: [],
-          };
+        const py = await loadPyodideMain();
+        py.setStdout({ batched: (msg: string) => captureLog(msg) });
+
+        // Input override for main thread
+        const jsInput = (text: string) => {
+          const result = window.prompt(text || "Input required:");
+          return result || "";
+        };
+        py.globals.set("js_input_main", jsInput);
+
+        await py.runPythonAsync(`
+                import builtins
+                def input(prompt=""):
+                    return js_input_main(prompt)
+                builtins.input = input
+              `);
+
+        await py.runPythonAsync(userCode);
+
+        return { passed: true, logs, results: [] };
       } catch (err: any) {
-          return {
-              passed: false,
-              logs: logs,
-              results: [],
-              error: err.toString()
-          };
+        return { passed: false, logs, results: [], error: err.toString() };
       }
+    }
   }
 
   // --- Bash Execution (Simulated) ---
   if (language === 'bash') {
-      // Simple simulation for demo purposes
-      if (userCode.trim().startsWith("echo")) {
-          const output = userCode.replace("echo", "").replace(/"/g, "").replace(/'/g, "").trim();
-          return {
-              passed: true,
-              logs: [output],
-              results: []
-          };
-      }
+    if (userCode.trim().startsWith("echo")) {
+      const output = userCode.replace("echo", "").replace(/"/g, "").replace(/'/g, "").trim();
+      captureLog(output);
       return {
-          passed: false,
-          logs: ["Execution for Bash is currently simulated (try 'echo hello')"],
-          results: [],
-          error: "Full Bash support requires a backend system."
+        passed: true,
+        logs: [output],
+        results: []
       };
+    }
+    return {
+      passed: false,
+      logs: ["Execution for Bash is currently simulated (try 'echo hello')"],
+      results: [],
+      error: "Full Bash support requires a backend system."
+    };
   }
 
   // --- JavaScript Execution ---
-  // (Existing Logic Wrapped in Async)
-  const originalConsoleLog = console.log;
-  
-  // Capture console.log
   const mockConsole = {
     log: (...args: any[]) => {
-      logs.push(args.map(a => 
-        typeof a === 'object' ? JSON.stringify(a) : String(a)
-      ).join(' '));
+      const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+      captureLog(msg);
     },
     error: (...args: any[]) => {
-      logs.push("Error: " + args.map(a => String(a)).join(' '));
+      const msg = "Error: " + args.map(a => String(a)).join(' ');
+      captureLog(msg);
     }
   };
 
-  // Test Cases
   const testCases = [
     { input: [1, 2, 3, 4, 5], expected: [5, 4, 3, 2, 1] },
     { input: [1, 2], expected: [2, 1] },
@@ -187,11 +267,7 @@ export const executeCode = async (userCode: string, language: 'javascript' | 'py
   try {
     const factory = new Function('ListNode', 'console', `
       ${userCode}
-      // If user didn't define reverseList (e.g. just wrote console.log), that's fine for playground unless we enforce it.
-      // For general playground, we might not want to enforce reverseList unless in "Challenge Mode".
-      // But preserving existing logic for now.
       if (typeof reverseList !== 'function') {
-        // Just return null if no function, main execution is done via main body
         return null; 
       }
       return reverseList;
@@ -200,37 +276,34 @@ export const executeCode = async (userCode: string, language: 'javascript' | 'py
     const userFunction = factory(ListNode, mockConsole);
 
     if (userFunction) {
-        // 2. Run Test Cases
-        testCases.forEach((tc, index) => {
-        // Create fresh input per test case to avoid mutation issues
+      testCases.forEach((tc, index) => {
         const inputList = arrayToList(tc.input);
-        
         try {
-            const outputList = userFunction(inputList);
-            const outputArray = listToArray(outputList);
-            
-            const passed = JSON.stringify(outputArray) === JSON.stringify(tc.expected);
-            if (!passed) allPassed = false;
+          const outputList = userFunction(inputList);
+          const outputArray = listToArray(outputList);
 
-            results.push({
+          const passed = JSON.stringify(outputArray) === JSON.stringify(tc.expected);
+          if (!passed) allPassed = false;
+
+          results.push({
             caseId: index + 1,
             input: JSON.stringify(tc.input),
             expected: JSON.stringify(tc.expected),
             actual: JSON.stringify(outputArray),
             passed
-            });
+          });
         } catch (err: any) {
-            allPassed = false;
-            logs.push(`Error in Test Case ${index + 1}: ${err.message}`);
-            results.push({
+          allPassed = false;
+          captureLog(`Error in Test Case ${index + 1}: ${err.message}`);
+          results.push({
             caseId: index + 1,
             input: JSON.stringify(tc.input),
             expected: JSON.stringify(tc.expected),
             actual: "Error: " + err.message,
             passed: false
-            });
+          });
         }
-        });
+      });
     }
 
   } catch (err: any) {

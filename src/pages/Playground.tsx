@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Play, RotateCcw, Terminal, Cpu, Sparkles, Settings, Bot, Send, Code, User, Copy, Check, Search } from "lucide-react";
+import { ArrowLeft, Play, RotateCcw, Terminal, Cpu, Sparkles, Settings, Bot, Send, Code, User, Copy, Check, Search, Trophy, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 import { executeCode } from "@/utils/codeExecutor";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import ReactMarkdown from 'react-markdown';
 import { supabase } from "@/integrations/supabase/client";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion } from "motion/react";
 
 type Language = 'javascript' | 'python' | 'bash';
@@ -55,10 +56,21 @@ interface Message {
 
 const Playground = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const questionTitle = searchParams.get("title");
+    const questionCompany = searchParams.get("company");
+    const [questionDifficulty] = useState(searchParams.get("difficulty"));
+    const [problemDescription, setProblemDescription] = useState<string>("");
+    const [activeTab, setActiveTab] = useState<"problem" | "chat">("problem");
+
     const [language, setLanguage] = useState<Language>('python');
     const [code, setCode] = useState("print('Hello from Python!')");
     const [output, setOutput] = useState("");
     const [isRunning, setIsRunning] = useState(false);
+    const [isWaitingForInput, setIsWaitingForInput] = useState(false);
+    const [inputPrompt, setInputPrompt] = useState("");
+    const [consoleInput, setConsoleInput] = useState("");
+    const consoleInputRef = useRef<HTMLInputElement>(null);
 
     // Loading state
     const [isLoading, setIsLoading] = useState(true);
@@ -81,7 +93,12 @@ const Playground = () => {
 
     // Chat State
     const [messages, setMessages] = useState<Message[]>([
-        { role: 'assistant', content: 'Hi! I\'m your AI coding assistant. How can I help you today?' }
+        {
+            role: 'assistant',
+            content: questionTitle
+                ? `Ready to solve **${questionTitle}**? I'm here to help you crack this interview question! 🚀`
+                : 'Hi! I\'m your AI coding assistant. How can I help you today?'
+        }
     ]);
     const [input, setInput] = useState("");
     const [isTyping, setIsTyping] = useState(false);
@@ -93,41 +110,122 @@ const Playground = () => {
         }
     }, [messages]);
 
+    // Auto-generate problem description if title is present
+    useEffect(() => {
+        const fetchDescription = async () => {
+            if (!questionTitle) return;
+
+            // If we already have it (e.g. from local storage or previous fetch), skip. 
+            // For now, simpler to fetch on mount.
+
+            // Set initial loading state or placeholder
+            setProblemDescription("Generating problem description...");
+            setActiveTab("problem");
+
+            try {
+                const { data, error } = await supabase.functions.invoke("interview-coach-chat", {
+                    body: {
+                        messages: [
+                            {
+                                role: "system",
+                                content: `You are an expert technical interviewer.
+                                The user is solving the question: "${questionTitle}" from "${questionCompany || 'a big tech company'}".
+                                
+                                GENERATE A TEXTUAL PROBLEM DESCRIPTION.
+                                
+                                Format (Markdown):
+                                # ${questionTitle}
+                                
+                                ## Description
+                                [Clear description of the problem]
+                                
+                                ## Examples
+                                **Example 1:**
+                                \`\`\`
+                                Input: ...
+                                Output: ...
+                                \`\`\`
+                                
+                                ## Constraints
+                                - Constraint 1
+                                - Constraint 2
+                                
+                                DO NOT provide the solution code. ONLY the problem statement.`
+                            }
+                        ]
+                    }
+                });
+
+                if (error) throw error;
+                if (data?.response) {
+                    setProblemDescription(data.response);
+                }
+            } catch (err) {
+                console.error("Failed to generate description", err);
+                setProblemDescription("# Error\nFailed to load problem description.");
+            }
+        };
+
+        fetchDescription();
+    }, [questionTitle, questionCompany]);
+
     const handleLanguageChange = (value: Language) => {
         setLanguage(value);
         setCode(TEMPLATES[value]);
     };
 
+    const handleConsoleInput = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && isWaitingForInput) {
+            e.preventDefault();
+            const value = consoleInput;
+
+            // 1. Show user input in log
+            setOutput(prev => prev + value + "\n");
+
+            // 2. Submit to worker
+            import("@/utils/codeExecutor").then(({ pyodideController }) => {
+                pyodideController.submitInput(value);
+            });
+
+            setConsoleInput("");
+            setIsWaitingForInput(false);
+        }
+    };
+
     const handleRun = async () => {
         setIsRunning(true);
-        setOutput("Running...\n");
+        setOutput(""); // Clear previous output
+        setIsWaitingForInput(false);
 
         // Small delay for UX
         await new Promise(resolve => setTimeout(resolve, 300));
 
+        // Check for cross-origin isolation
+        if (language === 'python' && !crossOriginIsolated) {
+            setOutput("⚠️ Advanced features disabled.\nInput() requires 'SharedArrayBuffer' which is blocked by browser security.\nPlease restart the dev server to apply new headers in vite.config.ts.\n\nRunning in legacy mode...\n");
+        }
+
         try {
-            const result = await executeCode(code, language);
+            await executeCode(code, language,
+                // onLog
+                (log) => {
+                    setOutput(prev => prev + log + "\n");
+                },
+                // onInputRequest
+                (prompt) => {
+                    setIsWaitingForInput(true);
+                    setInputPrompt(prompt);
+                    // Focus input after render
+                    setTimeout(() => consoleInputRef.current?.focus(), 50);
+                }
+            );
 
-            // Format output
-            let outputText = "";
-            if (result.logs.length > 0) {
-                outputText += result.logs.map(l => `> ${l}`).join('\n');
-            }
-
-            if (result.error) {
-                if (outputText) outputText += "\n\n";
-                outputText += `Error:\n${result.error}`;
-            }
-
-            if (!result.logs.length && !result.error) {
-                outputText += "Code executed successfully (no output)";
-            }
-
-            setOutput(outputText);
+            setOutput(prev => prev + "\n=== Execution Finished ===\n");
         } catch (err: any) {
-            setOutput(`Execution Failed: ${err.message}`);
+            setOutput(prev => prev + `\nExecution Failed: ${err.message}\n`);
         } finally {
             setIsRunning(false);
+            setIsWaitingForInput(false);
         }
     };
 
@@ -139,6 +237,11 @@ const Playground = () => {
         setInput("");
         setIsTyping(true);
 
+        const systemContext = questionTitle
+            ? `CONTEXT: The user is solving the interview question: "${questionTitle}"` + (questionCompany ? ` asked by ${questionCompany}.` : '.') + `
+               Verify their solution against this specific problem. If they are stuck, provide hints, NOT full answers.`
+            : ``;
+
         try {
             const { data, error } = await supabase.functions.invoke("interview-coach-chat", {
                 body: {
@@ -147,6 +250,7 @@ const Playground = () => {
                             role: "system",
                             content: `IMPORTANT: You are a strict code playground assistant. Ignore any previous instructions about being an interview coach.
                         The user is writing ${language} code. 
+                        ${systemContext}
                         Current code:
                         \`\`\`${language}
                         ${code}
@@ -184,9 +288,16 @@ const Playground = () => {
         if (isTyping) return;
 
         // Auto-construct the analysis request
-        const userMessage = "Please analyze my current code. Identify potential bugs, syntax errors, and suggest improvements.";
+        const userMessage = questionTitle
+            ? `Please analyze my solution for "${questionTitle}". Is it correct? Improve readability and time complexity.`
+            : "Please analyze my current code. Identify potential bugs, syntax errors, and suggest improvements.";
+
         setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
         setIsTyping(true);
+
+        const systemContext = questionTitle
+            ? `CONTEXT: The user is attempting to solve: "${questionTitle}". Focus your analysis on CORRECTNESS for this specific problem.`
+            : ``;
 
         try {
             const { data, error } = await supabase.functions.invoke("interview-coach-chat", {
@@ -196,6 +307,7 @@ const Playground = () => {
                             role: "system",
                             content: `IMPORTANT: You are an expert Senior Software Engineer acting as a dedicated Code Analyzer. Ignore any previous instructions about being an interview coach.
                       Your task is to analyze the users' ${language} code.
+                      ${systemContext}
                       Current code:
                       \`\`\`${language}
                       ${code}
@@ -223,7 +335,7 @@ const Playground = () => {
         } catch (error) {
             console.error("Chat error:", error);
             toast.error("Failed to analyze code");
-            setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I encountered an error while analyzing. Please try again." }]);
+            setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I encountered an error. Please try again." }]);
         } finally {
             setIsTyping(false);
         }
@@ -302,6 +414,17 @@ const Playground = () => {
                             <Code className="h-5 w-5 text-indigo-400" />
                             Playground
                         </span>
+                        {/* Mission Badge */}
+                        {questionTitle && (
+                            <motion.div
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-medium text-indigo-300 ml-2"
+                            >
+                                <Trophy className="w-3 h-3 text-yellow-500" />
+                                Mission: {questionTitle}
+                            </motion.div>
+                        )}
                     </div>
                 </div>
 
@@ -370,95 +493,178 @@ const Playground = () => {
             <main className="flex-1 p-3 min-h-0 bg-[#0d1117] overflow-hidden">
                 <ResizablePanelGroup direction="horizontal" className="h-full rounded-xl border border-[#30363d] overflow-hidden shadow-xl">
 
-                    {/* LEFT PANEL: AI Chat */}
-                    <ResizablePanel defaultSize={25} minSize={20} maxSize={40} className="bg-[#161b22] flex flex-col">
-                        <div className="h-10 bg-[#0d1117]/50 flex items-center px-4 border-b border-[#30363d] backdrop-blur-sm justify-between shrink-0">
-                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                                <Sparkles className="h-4 w-4 text-indigo-400" /> AI Assistant
-                            </span>
-                        </div>
+                    {/* LEFT PANEL: AI Chat & Problem */}
+                    <ResizablePanel defaultSize={30} minSize={20} maxSize={75} className="bg-[#161b22] flex flex-col">
+                        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="h-full flex flex-col">
+                            <div className="h-10 bg-[#0d1117]/50 flex items-center px-2 border-b border-[#30363d] backdrop-blur-sm shrink-0">
+                                <TabsList className="bg-transparent h-8 p-0 gap-1 w-full justify-start">
+                                    <TabsTrigger
+                                        value="problem"
+                                        className="h-7 text-xs data-[state=active]:bg-[#21262d] data-[state=active]:text-white text-gray-400 px-3"
+                                        disabled={!questionTitle}
+                                    >
+                                        Problem
+                                    </TabsTrigger>
+                                    <TabsTrigger value="chat" className="h-7 text-xs data-[state=active]:bg-[#21262d] data-[state=active]:text-white text-gray-400 px-3">
+                                        AI Assistant
+                                    </TabsTrigger>
+                                </TabsList>
+                            </div>
 
-                        <div className="flex-1 overflow-hidden relative">
-                            <ScrollArea className="h-full p-4" ref={scrollRef}>
-                                <div className="space-y-4">
-                                    {messages.map((m, i) => (
-                                        <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${m.role === 'assistant' ? 'bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/30' : 'bg-gray-700 text-gray-300'}`}>
-                                                {m.role === 'assistant' ? <Bot className="w-5 h-5" /> : <User className="w-5 h-5" />}
-                                            </div>
-                                            <div className={`px-3 py-2 rounded-lg text-sm max-w-[85%] ${m.role === 'user'
-                                                ? 'bg-indigo-600 text-white'
-                                                : 'bg-[#21262d] text-gray-300 border border-[#30363d]'
-                                                }`}>
-                                                <div className="markdown-content">
-                                                    <ReactMarkdown
-                                                        components={{
-                                                            code({ node, className, children, ...props }) {
-                                                                const match = /language-(\w+)/.exec(className || '')
-                                                                return match ? (
-                                                                    <div className="rounded-md bg-black/30 p-2 my-2 overflow-x-auto border border-white/10">
-                                                                        <code className={className} {...props}>
-                                                                            {children}
-                                                                        </code>
-                                                                    </div>
-                                                                ) : (
-                                                                    <code className="bg-black/20 px-1 py-0.5 rounded text-indigo-300 font-mono text-xs" {...props}>
-                                                                        {children}
-                                                                    </code>
-                                                                )
-                                                            },
-                                                            p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
-                                                            ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
-                                                            ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
-                                                            li: ({ children }) => <li className="marker:text-gray-500">{children}</li>,
-                                                            h1: ({ children }) => <h1 className="text-lg font-bold mb-2 text-indigo-300">{children}</h1>,
-                                                            h2: ({ children }) => <h2 className="text-base font-bold mb-2 text-indigo-300">{children}</h2>,
-                                                            h3: ({ children }) => <h3 className="text-sm font-bold mb-1 text-indigo-300">{children}</h3>,
-                                                            strong: ({ children }) => <strong className="font-semibold text-indigo-200">{children}</strong>,
-                                                        }}
-                                                    >
-                                                        {m.content}
-                                                    </ReactMarkdown>
-                                                </div>
-                                            </div>
+                            <TabsContent value="problem" className="flex-1 overflow-hidden m-0 p-0 border-none relative data-[state=inactive]:hidden">
+                                <ScrollArea className="h-full p-4 text-gray-300 text-sm">
+                                    {!questionTitle ? (
+                                        <div className="flex flex-col items-center justify-center h-[50vh] text-gray-500 gap-2">
+                                            <Code className="w-8 h-8 opacity-20" />
+                                            <p>Select a question to view description</p>
                                         </div>
-                                    ))}
-                                    {isTyping && (
-                                        <div className="flex gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/30 flex items-center justify-center shrink-0">
-                                                <Bot className="w-5 h-5" />
-                                            </div>
-                                            <div className="bg-[#21262d] border border-[#30363d] px-3 py-2 rounded-lg flex items-center gap-1">
-                                                <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></span>
-                                                <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-75"></span>
-                                                <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-150"></span>
-                                            </div>
+                                    ) : (
+                                        <div className="markdown-content">
+                                            <ReactMarkdown
+                                                components={{
+                                                    code({ node, className, children, ...props }) {
+                                                        const match = /language-(\w+)/.exec(className || '')
+                                                        return match ? (
+                                                            <div className="rounded-md bg-black/30 p-2 my-2 overflow-x-auto border border-white/10">
+                                                                <code className={className} {...props}>
+                                                                    {children}
+                                                                </code>
+                                                            </div>
+                                                        ) : (
+                                                            <code className="bg-black/20 px-1 py-0.5 rounded text-indigo-300 font-mono text-xs" {...props}>
+                                                                {children}
+                                                            </code>
+                                                        )
+                                                    },
+                                                    h1: ({ children }) => <h1 className="text-xl font-bold mb-4 text-indigo-300 border-b border-white/10 pb-2">{children}</h1>,
+                                                    h2: ({ children }) => <h2 className="text-lg font-bold mt-6 mb-3 text-white">{children}</h2>,
+                                                    strong: ({ children }) => <strong className="font-semibold text-indigo-200">{children}</strong>,
+                                                }}
+                                            >
+                                                {problemDescription}
+                                            </ReactMarkdown>
                                         </div>
                                     )}
-                                </div>
-                            </ScrollArea>
-                        </div>
+                                </ScrollArea>
+                            </TabsContent>
 
-                        <div className="p-3 bg-[#0d1117] border-t border-[#30363d] shrink-0">
-                            <div className="relative">
-                                <Input
-                                    value={input}
-                                    onChange={(e) => setInput(e.target.value)}
-                                    onKeyDown={handleKeyDown}
-                                    placeholder="Ask about your code..."
-                                    className="bg-[#21262d] border-[#30363d] text-sm pr-10 focus-visible:ring-indigo-500"
-                                />
-                                <Button
-                                    size="icon"
-                                    className="absolute right-1 top-1 h-7 w-7 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/20"
-                                    variant="ghost"
-                                    onClick={handleSend}
-                                    disabled={!input.trim() || isTyping}
-                                >
-                                    <Send className="w-4 h-4" />
-                                </Button>
-                            </div>
-                        </div>
+                            <TabsContent value="chat" className="flex-1 overflow-hidden flex flex-col m-0 p-0 border-none data-[state=inactive]:hidden">
+                                <div className="flex-1 overflow-hidden relative">
+                                    <ScrollArea className="h-full p-4" ref={scrollRef}>
+                                        <div className="space-y-4">
+                                            {messages.map((m, i) => (
+                                                <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${m.role === 'assistant' ? 'bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/30' : 'bg-gray-700 text-gray-300'}`}>
+                                                        {m.role === 'assistant' ? <Bot className="w-5 h-5" /> : <User className="w-5 h-5" />}
+                                                    </div>
+                                                    <div className={`px-3 py-2 rounded-lg text-sm max-w-[85%] ${m.role === 'user'
+                                                        ? 'bg-indigo-600 text-white'
+                                                        : 'bg-[#21262d] text-gray-300 border border-[#30363d]'
+                                                        }`}>
+                                                        <div className="markdown-content">
+                                                            <ReactMarkdown
+                                                                components={{
+                                                                    code({ node, className, children, ...props }) {
+                                                                        const match = /language-(\w+)/.exec(className || '')
+                                                                        return match ? (
+                                                                            <div className="rounded-md bg-black/30 p-2 my-2 overflow-x-auto border border-white/10">
+                                                                                <code className={className} {...props}>
+                                                                                    {children}
+                                                                                </code>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <code className="bg-black/20 px-1 py-0.5 rounded text-indigo-300 font-mono text-xs" {...props}>
+                                                                                {children}
+                                                                            </code>
+                                                                        )
+                                                                    },
+                                                                    p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed text-gray-300">{children}</p>,
+                                                                    ul: ({ children }) => <ul className="list-disc pl-4 mb-3 space-y-1.5">{children}</ul>,
+                                                                    ol: ({ children }) => <ol className="list-decimal pl-4 mb-3 space-y-1.5">{children}</ol>,
+                                                                    li: ({ children }) => <li className="marker:text-gray-500 leading-relaxed">{children}</li>,
+                                                                    h1: ({ children }) => <h1 className="text-lg font-bold mb-3 text-indigo-300 border-b border-white/10 pb-2">{children}</h1>,
+                                                                    h2: ({ children }) => {
+                                                                        const text = String(children).toLowerCase();
+                                                                        let className = "text-base font-bold mt-4 mb-2 flex items-center gap-2 ";
+
+                                                                        if (text.includes('bug')) {
+                                                                            return (
+                                                                                <div className="mt-4 mb-2 p-2 rounded bg-red-500/10 border border-red-500/20">
+                                                                                    <h2 className="text-red-400 font-bold text-sm flex items-center gap-2">
+                                                                                        {children}
+                                                                                    </h2>
+                                                                                </div>
+                                                                            );
+                                                                        }
+                                                                        if (text.includes('optimization') || text.includes('performance')) {
+                                                                            return (
+                                                                                <div className="mt-4 mb-2 p-2 rounded bg-amber-500/10 border border-amber-500/20">
+                                                                                    <h2 className="text-amber-400 font-bold text-sm flex items-center gap-2">
+                                                                                        {children}
+                                                                                    </h2>
+                                                                                </div>
+                                                                            );
+                                                                        }
+                                                                        if (text.includes('improvement') || text.includes('best practice')) {
+                                                                            return (
+                                                                                <div className="mt-4 mb-2 p-2 rounded bg-emerald-500/10 border border-emerald-500/20">
+                                                                                    <h2 className="text-emerald-400 font-bold text-sm flex items-center gap-2">
+                                                                                        {children}
+                                                                                    </h2>
+                                                                                </div>
+                                                                            );
+                                                                        }
+
+                                                                        return <h2 className="text-base font-bold mt-4 mb-2 text-indigo-300">{children}</h2>
+                                                                    },
+                                                                    h3: ({ children }) => <h3 className="text-sm font-bold mb-1 text-indigo-300">{children}</h3>,
+                                                                    strong: ({ children }) => <strong className="font-semibold text-indigo-200">{children}</strong>,
+                                                                }}
+                                                            >
+                                                                {m.content}
+                                                            </ReactMarkdown>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {isTyping && (
+                                                <div className="flex gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/30 flex items-center justify-center shrink-0">
+                                                        <Bot className="w-5 h-5" />
+                                                    </div>
+                                                    <div className="bg-[#21262d] border border-[#30363d] px-3 py-2 rounded-lg flex items-center gap-1">
+                                                        <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce"></span>
+                                                        <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-75"></span>
+                                                        <span className="w-1.5 h-1.5 bg-gray-500 rounded-full animate-bounce delay-150"></span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </ScrollArea>
+                                </div>
+
+                                <div className="p-3 bg-[#0d1117] border-t border-[#30363d] shrink-0">
+                                    <div className="relative">
+                                        <Input
+                                            value={input}
+                                            onChange={(e) => setInput(e.target.value)}
+                                            onKeyDown={handleKeyDown}
+                                            placeholder="Ask about your code..."
+                                            className="bg-[#21262d] border-[#30363d] text-sm pr-10 focus-visible:ring-indigo-500"
+                                        />
+                                        <Button
+                                            size="icon"
+                                            className="absolute right-1 top-1 h-7 w-7 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/20"
+                                            variant="ghost"
+                                            onClick={handleSend}
+                                            disabled={!input.trim() || isTyping}
+                                        >
+                                            <Send className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </TabsContent>
+                        </Tabs>
                     </ResizablePanel>
 
                     <ResizableHandle className="bg-[#30363d] w-[1px] hover:w-[2px] hover:bg-indigo-500 transition-all" />
@@ -481,6 +687,15 @@ const Playground = () => {
                                     </Select>
                                 </div>
                             </div>
+
+                            {/* Context Banner */}
+                            {questionCompany && (
+                                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#21262d] border border-[#30363d] text-[10px] text-gray-400">
+                                    <Briefcase className="w-3 h-3" />
+                                    <span>{questionCompany}</span>
+                                </div>
+                            )}
+
                             <div className="flex items-center gap-3">
                                 <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{FILE_NAMES[language]}</span>
                                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
@@ -557,13 +772,27 @@ const Playground = () => {
                         </div>
 
                         <ScrollArea className="flex-1 p-4 font-mono text-xs bg-[#0d1117]">
-                            {output ? (
-                                <div className="whitespace-pre-wrap text-gray-300">
-                                    {output}
-                                </div>
-                            ) : (
-                                <div className="h-full flex flex-col items-center justify-center text-gray-600 space-y-3">
-                                    <div className="h-12 w-12 rounded-xl bg-[#21262d] flex items-center justify-center shadow-lg border border-[#30363d] group-hover:border-blue-500/50 transition-colors">
+                            <div className="whitespace-pre-wrap text-gray-300">
+                                {output}
+                                {isWaitingForInput && (
+                                    <div className="flex items-center gap-1 mt-1 text-blue-400">
+                                        <span>{inputPrompt}</span>
+                                        <input
+                                            ref={consoleInputRef}
+                                            type="text"
+                                            value={consoleInput}
+                                            onChange={(e) => setConsoleInput(e.target.value)}
+                                            onKeyDown={handleConsoleInput}
+                                            className="bg-transparent border-none outline-none flex-1 text-white animate-pulse focus:animate-none"
+                                            autoFocus
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            {!output && !isRunning && !isWaitingForInput && (
+                                <div className="h-full flex flex-col items-center justify-center text-gray-600 space-y-3 opacity-50 absolute inset-0 pointer-events-none">
+                                    <div className="h-12 w-12 rounded-xl bg-[#21262d] flex items-center justify-center shadow-lg border border-[#30363d]">
                                         <Play className="h-6 w-6 fill-current text-gray-500" />
                                     </div>
                                     <p className="text-center text-xs font-medium">Run code to see output</p>
