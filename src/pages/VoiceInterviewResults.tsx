@@ -3,342 +3,355 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LogOut, ArrowLeft, TrendingUp, MessageSquare, Award, Mic, CheckCircle2, AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { ArrowRight, CheckCircle, Clock, Trophy, RotateCcw, LayoutDashboard, Mic, MessageSquare } from "lucide-react";
-import { motion } from "motion/react";
-import { toast } from "sonner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import SixQAnalysis from "@/components/SixQAnalysis";
 
 const VoiceInterviewResults = () => {
-    const { id } = useParams();
-    const navigate = useNavigate();
-    const [loading, setLoading] = useState(true);
-    const [analyzing, setAnalyzing] = useState(false);
-    const [session, setSession] = useState<any>(null);
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState<any>(null);
 
-    useEffect(() => {
-        loadSession();
-    }, [id]);
+  useEffect(() => {
+    checkAuth();
+    loadResults();
+  }, [id]);
 
-    const loadSession = async () => {
-        try {
-            const { data, error } = await supabase
-                .from("interview_sessions")
-                .select("*")
-                .eq("id", id)
-                .single();
-
-            if (error) throw error;
-            setSession(data);
-
-            // If session exists but hasn't been analyzed (no score), trigger analysis
-            if (data && data.overall_score === null && !analyzing) {
-                analyzeSession(data);
-            } else {
-                setLoading(false);
-            }
-        } catch (error) {
-            console.error("Error loading session:", error);
-            toast.error("Failed to load results");
-            navigate("/dashboard");
-        }
-    };
-
-    const analyzeSession = async (sessionData: any) => {
-        setAnalyzing(true);
-        try {
-            // Format transcript for the edge function
-            // sessionData.transcript is expected to be an array of { role, text/content }
-            const messages = Array.isArray(sessionData.transcript)
-                ? sessionData.transcript.map((msg: any) => ({
-                    role: msg.role,
-                    content: msg.text || msg.content
-                }))
-                : [];
-
-            if (messages.length === 0) {
-                throw new Error("No transcript available for analysis");
-            }
-
-            const { data, error } = await supabase.functions.invoke('evaluate-interview', {
-                body: {
-                    messages,
-                    interview_type: 'voice'
-                }
-            });
-
-            console.log("Edge Function response:", { data, error });
-
-            if (error) {
-                console.error("Edge Function error:", error);
-                throw new Error(error.message || "Edge Function failed");
-            }
-
-            // Check if data contains an error field (from the Edge Function's error response)
-            if (data && data.error) {
-                console.error("Edge Function returned error:", data.error);
-                throw new Error(data.error);
-            }
-
-            // Check if score exists (allow 0 as a valid score)
-            if (!data || data.score === null || data.score === undefined) {
-                console.error("Invalid response from Edge Function. Full data:", JSON.stringify(data, null, 2));
-                throw new Error(`Invalid response from analysis service. Missing score field. Data: ${JSON.stringify(data)}`);
-            }
-
-            console.log("Analysis successful:", data);
-
-            // Update session with results
-            const { error: updateError } = await supabase
-                .from("interview_sessions")
-                .update({
-                    overall_score: data.score,
-                    six_q_score: data.six_q_score,
-                    personality_cluster: data.personality_cluster,
-                    status: 'completed',
-                })
-                .eq("id", id);
-
-            if (updateError) throw updateError;
-
-            // Reload session to get updated data
-            const { data: updatedSession } = await supabase
-                .from("interview_sessions")
-                .select("*")
-                .eq("id", id)
-                .single();
-
-            setSession({ ...updatedSession, evaluation: data }); // Attach evaluation data for display
-        } catch (error: any) {
-            console.error("Error analyzing session:", error);
-            toast.error(`Failed to analyze interview: ${error.message || "Unknown error"}`);
-        } finally {
-            setAnalyzing(false);
-            setLoading(false);
-        }
-    };
-
-    if (loading || analyzing) {
-        return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                <p className="text-muted-foreground animate-pulse">
-                    {analyzing ? "AI is analyzing your voice interview..." : "Loading results..."}
-                </p>
-            </div>
-        );
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      navigate("/auth");
     }
+  };
 
-    if (!session) return null;
+  const loadResults = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("interview_sessions")
+        .select("*")
+        .eq("id", id)
+        .single();
 
-    // Use evaluation data from state if available (freshly analyzed), otherwise fallback to what we might have stored
-    // Note: We currently don't store the full 'evaluation' JSON in DB, just specific columns. 
-    // So for persistent detailed feedback (strengths/weaknesses), we might need to add a column or rely on what we have.
-    // For now, let's assume we want to display what we just got back or what we can.
-    // If we reload the page, we might lose the detailed 'evaluation' object if not stored.
-    // TODO: Add 'analysis_result' JSONB column to interview_sessions for full persistence.
-    // For this iteration, we'll display what we have.
+      if (error) throw error;
+      setSession(data);
+    } catch (error) {
+      console.error("Error loading results:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const formatTime = (seconds: number) => {
-        if (!seconds) return "0:00";
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
 
-    const evaluation = session.evaluation || {
-        score: session.overall_score,
-        six_q_score: session.six_q_score,
-        personality_cluster: session.personality_cluster,
-        // Mock/Default for missing details if reloaded
-        feedback: "Analysis completed.",
-        strengths: [],
-        weaknesses: [],
-        metrics: { technical_accuracy: 0, communication: 0, problem_solving: 0 }
-    };
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return "text-green-500";
+    if (score >= 60) return "text-yellow-500";
+    return "text-red-500";
+  };
 
+  const getScoreGradient = (score: number) => {
+    if (score >= 80) return "from-green-500 to-emerald-500";
+    if (score >= 60) return "from-yellow-500 to-orange-500";
+    return "from-red-500 to-pink-500";
+  };
+
+  if (loading) {
     return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-4">
-            <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="max-w-4xl w-full"
-            >
-                <Card className="border-border/50 shadow-2xl bg-card/50 backdrop-blur-xl overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-cyan-500 to-primary"></div>
-
-                    <CardHeader className="text-center pt-12 pb-6">
-                        <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                            className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-6"
-                        >
-                            <Mic className="w-10 h-10 text-blue-500" />
-                        </motion.div>
-                        <CardTitle className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-cyan-600">
-                            Voice Interview Analysis
-                        </CardTitle>
-                        <p className="text-muted-foreground mt-2">
-                            Here's how you performed in your voice session.
-                        </p>
-                    </CardHeader>
-
-                    <CardContent className="space-y-8 px-8 pb-12">
-                        {/* Score Section */}
-                        <div className="flex flex-col items-center justify-center p-6 bg-muted/30 rounded-2xl border border-border/50">
-                            <span className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wider">Overall Score</span>
-                            <div className="relative flex items-center justify-center">
-                                <svg className="w-32 h-32 transform -rotate-90">
-                                    <circle
-                                        cx="64"
-                                        cy="64"
-                                        r="60"
-                                        stroke="currentColor"
-                                        strokeWidth="8"
-                                        fill="transparent"
-                                        className="text-muted/20"
-                                    />
-                                    <motion.circle
-                                        initial={{ strokeDasharray: "377 377", strokeDashoffset: 377 }}
-                                        animate={{ strokeDashoffset: 377 - (377 * (session.overall_score || 0)) / 100 }}
-                                        transition={{ duration: 1.5, ease: "easeOut" }}
-                                        cx="64"
-                                        cy="64"
-                                        r="60"
-                                        stroke="currentColor"
-                                        strokeWidth="8"
-                                        fill="transparent"
-                                        className="text-blue-500"
-                                        strokeLinecap="round"
-                                    />
-                                </svg>
-                                <div className="absolute inset-0 flex items-center justify-center flex-col">
-                                    <span className="text-3xl font-bold">{session.overall_score || 0}%</span>
-                                </div>
-                            </div>
-
-                            {session.total_duration_seconds && (
-                                <div className="mt-4 flex items-center gap-2 text-muted-foreground bg-muted/50 px-3 py-1 rounded-full text-sm">
-                                    <Clock className="w-4 h-4" />
-                                    <span>{formatTime(session.total_duration_seconds)}</span>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* 6Q Analysis */}
-                        {(session.six_q_score || evaluation.six_q_score) && (
-                            <div className="pt-4">
-                                <SixQAnalysis
-                                    scores={session.six_q_score || evaluation.six_q_score}
-                                    cluster={session.personality_cluster || evaluation.personality_cluster}
-                                />
-                            </div>
-                        )}
-
-                        {/* Feedback Section */}
-                        <div className="space-y-6">
-                            {evaluation.feedback && (
-                                <div className="p-5 rounded-xl bg-primary/5 border border-primary/10 space-y-2">
-                                    <h3 className="font-semibold text-primary flex items-center gap-2">
-                                        <LayoutDashboard className="w-4 h-4" />
-                                        AI Feedback
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">
-                                        {evaluation.feedback}
-                                    </p>
-                                </div>
-                            )}
-
-                            <div className="grid md:grid-cols-2 gap-4">
-                                {/* Strengths */}
-                                <div className="p-5 rounded-xl bg-green-500/5 border border-green-500/10 space-y-3">
-                                    <div className="flex items-center gap-2 text-green-600 font-semibold">
-                                        <CheckCircle className="w-5 h-5" />
-                                        <h3>Key Strengths</h3>
-                                    </div>
-                                    <ul className="space-y-2">
-                                        {evaluation.strengths && evaluation.strengths.length > 0 ? (
-                                            evaluation.strengths.map((item: string, i: number) => (
-                                                <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 shrink-0" />
-                                                    {item}
-                                                </li>
-                                            ))
-                                        ) : (
-                                            <li className="text-sm text-muted-foreground italic">No specific strengths identified.</li>
-                                        )}
-                                    </ul>
-                                </div>
-
-                                {/* Areas for Improvement */}
-                                <div className="p-5 rounded-xl bg-red-500/5 border border-red-500/10 space-y-3">
-                                    <div className="flex items-center gap-2 text-red-600 font-semibold">
-                                        <RotateCcw className="w-5 h-5" />
-                                        <h3>Areas for Improvement</h3>
-                                    </div>
-                                    <ul className="space-y-2">
-                                        {evaluation.weaknesses && evaluation.weaknesses.length > 0 ? (
-                                            evaluation.weaknesses.map((item: string, i: number) => (
-                                                <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 shrink-0" />
-                                                    {item}
-                                                </li>
-                                            ))
-                                        ) : (
-                                            <li className="text-sm text-muted-foreground italic">No specific improvements identified.</li>
-                                        )}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Transcript Preview (Optional) */}
-                        {session.transcript && (
-                            <div className="mt-8">
-                                <h3 className="font-semibold mb-4 flex items-center gap-2">
-                                    <MessageSquare className="w-4 h-4" />
-                                    Transcript
-                                </h3>
-                                <div className="bg-muted/30 rounded-xl p-4 max-h-60 overflow-y-auto text-sm space-y-3">
-                                    {Array.isArray(session.transcript) && session.transcript.map((msg: any, i: number) => (
-                                        <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                            <div className={`max-w-[80%] p-3 rounded-lg ${msg.role === 'user'
-                                                ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300'
-                                                : 'bg-muted text-foreground'
-                                                }`}>
-                                                <p>{msg.text || msg.content}</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Actions */}
-                        <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                            <Button
-                                variant="outline"
-                                className="flex-1 h-12"
-                                onClick={() => navigate("/voice-assistant")}
-                            >
-                                <RotateCcw className="w-4 h-4 mr-2" />
-                                Start New Session
-                            </Button>
-                            <Button
-                                className="flex-1 h-12 bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/20"
-                                onClick={() => navigate("/dashboard")}
-                            >
-                                <LayoutDashboard className="w-4 h-4 mr-2" />
-                                Go to Dashboard
-                                <ArrowRight className="w-4 h-4 ml-2" />
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </motion.div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-500"></div>
+          <p className="text-muted-foreground animate-pulse">Analyzing your conversation...</p>
         </div>
+      </div>
     );
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md bg-card/50 backdrop-blur-xl border-border/50">
+          <CardHeader>
+            <CardTitle>Session Not Found</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">The voice interview session could not be found.</p>
+            <Button onClick={() => navigate("/dashboard")}>Return to Dashboard</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background overflow-x-hidden">
+      {/* Header */}
+      <header className="bg-background/80 backdrop-blur-md border-b border-border/40 sticky top-0 z-50">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/dashboard")}>
+            <img
+              src="/images/voke_logo.png"
+              alt="Voke Logo"
+              className="w-8 h-8 object-contain"
+            />
+            <h1 className="text-xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">
+              Voice Analysis
+            </h1>
+          </div>
+          <nav className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+              Dashboard
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
+          </nav>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8 max-w-6xl">
+        <Button variant="ghost" onClick={() => navigate("/voice-assistant")} className="mb-8 hover:bg-violet-500/10 hover:text-violet-500 transition-colors">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Assistant
+        </Button>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Left Column: Score */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Score Card */}
+            <Card className="bg-card/30 backdrop-blur-xl border-border/50 overflow-hidden relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-purple-500/5"></div>
+              <CardContent className="pt-8 pb-8 text-center relative z-10">
+                <h3 className="text-lg font-medium text-muted-foreground mb-6">Conversation Score</h3>
+                <div className="relative w-40 h-40 mx-auto mb-6 flex items-center justify-center">
+                  <div className={`absolute inset-0 rounded-full opacity-20 bg-gradient-to-br ${getScoreGradient(session.overall_score || 0)} blur-xl`}></div>
+                  <div className="w-full h-full rounded-full border-4 border-muted flex items-center justify-center bg-background/50 backdrop-blur-sm relative">
+                    <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="46"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="8"
+                        className={`text-transparent stroke-current ${getScoreColor(session.overall_score || 0)}`}
+                        strokeDasharray={`${(session.overall_score || 0) * 2.89} 289`}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="text-center">
+                      <span className={`text-4xl font-bold block ${getScoreColor(session.overall_score || 0)}`}>
+                        {session.overall_score || 0}
+                      </span>
+                      <span className="text-xs text-muted-foreground uppercase tracking-wider">Score</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-center gap-2">
+                  <span className="px-3 py-1 rounded-full bg-violet-500/10 text-violet-500 text-xs font-medium border border-violet-500/20">
+                    AI Analyzed
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-500 text-xs font-medium border border-purple-500/20">
+                    {new Date(session.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Transcript Card */}
+             <Card className="bg-card/30 backdrop-blur-xl border-border/50 overflow-hidden flex flex-col h-[500px]">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5 text-violet-500" />
+                    Transcript
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
+                {session.transcript && Array.isArray(session.transcript) ? (
+                    session.transcript.map((msg: any, idx: number) => (
+                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                             <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${
+                                msg.role === 'user'
+                                ? 'bg-primary/20 text-primary-foreground rounded-tr-sm'
+                                : 'bg-muted/50 text-muted-foreground rounded-tl-sm'
+                             }`}>
+                                {msg.text}
+                             </div>
+                        </div>
+                    ))
+                ) : (
+                    <p className="text-muted-foreground text-center italic">No transcript available.</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column: Detailed Analysis */}
+          <div className="lg:col-span-2 space-y-6">
+           
+            {/* Metrics Grid */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card className="bg-card/30 backdrop-blur-xl border-border/50">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-2 mb-4 text-muted-foreground">
+                    <Mic className="w-4 h-4" />
+                    <span className="text-sm font-medium">Communication</span>
+                  </div>
+                  <div className="flex items-end gap-2 mb-2">
+                    <span className={`text-3xl font-bold ${getScoreColor(session.delivery_score || 0)}`}>
+                      {session.delivery_score || 0}
+                    </span>
+                    <span className="text-sm text-muted-foreground mb-1">/100</span>
+                  </div>
+                  <Progress value={session.delivery_score || 0} className="h-1.5" />
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/30 backdrop-blur-xl border-border/50">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-2 mb-4 text-muted-foreground">
+                    <TrendingUp className="w-4 h-4" />
+                    <span className="text-sm font-medium">Content Quality</span>
+                  </div>
+                  <div className="flex items-end gap-2 mb-2">
+                    <span className={`text-3xl font-bold ${getScoreColor(session.confidence_score || 0)}`}>
+                      {session.confidence_score || 0}
+                    </span>
+                    <span className="text-sm text-muted-foreground mb-1">/100</span>
+                  </div>
+                  <Progress value={session.confidence_score || 0} className="h-1.5" />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Model Answer / Suggestions Section */}
+            {session.feedback_summary && (
+              <Card className="bg-blue-500/5 border-blue-500/20">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Award className="w-5 h-5 text-blue-500" />
+                    Key Feedback
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                   <div className="prose prose-sm max-w-none dark:prose-invert text-muted-foreground leading-relaxed">
+                    <div dangerouslySetInnerHTML={{ __html: session.feedback_summary.replace(/\n/g, "<br>") }} />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* What's Good / What's Wrong Grid */}
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* What's Good */}
+              <Card className="bg-green-500/5 border-green-500/20">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <CheckCircle2 className="w-5 h-5" />
+                    Strengths
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {session.whats_good && Array.isArray(session.whats_good) && session.whats_good.length > 0 ? (
+                    <ul className="space-y-3">
+                      {session.whats_good.map((item: string, idx: number) => (
+                        <li key={idx} className="flex gap-3 text-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 shrink-0"></span>
+                          <span className="text-muted-foreground">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : session.analysis_result?.strengths ? (
+                    <ul className="space-y-3">
+                      {session.analysis_result.strengths.map((strength: string, idx: number) => (
+                        <li key={idx} className="flex gap-3 text-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 shrink-0"></span>
+                          <span className="text-muted-foreground">{strength}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No specific strengths identified yet.</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* What's Wrong */}
+              <Card className="bg-red-500/5 border-red-500/20">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2 text-red-600 dark:text-red-400">
+                    <AlertCircle className="w-5 h-5" />
+                    Areas for Improvement
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {session.whats_wrong && Array.isArray(session.whats_wrong) && session.whats_wrong.length > 0 ? (
+                    <ul className="space-y-3">
+                      {session.whats_wrong.map((item: string, idx: number) => (
+                        <li key={idx} className="flex gap-3 text-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-2 shrink-0"></span>
+                          <span className="text-muted-foreground">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : session.analysis_result?.improvements ? (
+                    <ul className="space-y-3">
+                      {session.analysis_result.improvements.map((improvement: string, idx: number) => (
+                        <li key={idx} className="flex gap-3 text-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-2 shrink-0"></span>
+                          <span className="text-muted-foreground">{improvement}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No specific improvements identified yet.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* 6Q Analysis */}
+            {session.six_q_score ? (
+              <div className="pt-4">
+                <SixQAnalysis
+                  scores={session.six_q_score}
+                  cluster={session.personality_cluster}
+                />
+              </div>
+            ) : (
+              <Card className="bg-muted/30 border-dashed border-border">
+                <CardContent className="py-8 text-center">
+                  <p className="text-muted-foreground">
+                    Personality analysis is not available for this session. <br />
+                    <span className="text-sm">Complete more interviews to build your profile.</span>
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </main>
+
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(30, 41, 59, 0.5);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(71, 85, 105, 0.8);
+          border-radius: 4px;
+        }
+      `}</style>
+    </div>
+  );
 };
 
 export default VoiceInterviewResults;

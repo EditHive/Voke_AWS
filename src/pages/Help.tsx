@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Mic, ArrowLeft, Search, HelpCircle, BookOpen, Video, MessageCircle, Mail } from "lucide-react";
+import { ArrowLeft, Search, HelpCircle, BookOpen, Video, MessageCircle, Mail, Sparkles, Zap, ChevronRight } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { motion } from "motion/react";
-
+import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 
 const Help = () => {
@@ -27,7 +26,9 @@ const Help = () => {
         {
             title: "Getting Started",
             icon: BookOpen,
-            color: "from-blue-500 to-cyan-500",
+            color: "text-blue-500",
+            bg: "bg-blue-500/10",
+            border: "border-blue-500/20",
             faqs: [
                 {
                     question: "How do I create an account?",
@@ -35,7 +36,7 @@ const Help = () => {
                 },
                 {
                     question: "What types of interviews can I practice?",
-                    answer: "Voke offers multiple interview types including General, Technical, Behavioral, Resume-Based, and Role-Specific interviews. You can also practice with AI-powered adaptive interviews and peer mock interviews."
+                    answer: "Voke offers multiple interview types including General, Technical, Behavioral, and Role-Specific interviews. You can also practice with AI-powered adaptive interviews and peer mock interviews."
                 },
                 {
                     question: "Is Voke free to use?",
@@ -46,11 +47,13 @@ const Help = () => {
         {
             title: "Interview Practice",
             icon: Video,
-            color: "from-violet-500 to-purple-500",
+            color: "text-violet-500",
+            bg: "bg-violet-500/10",
+            border: "border-violet-500/20",
             faqs: [
                 {
                     question: "How does the AI interviewer work?",
-                    answer: "Our AI interviewer uses advanced natural language processing to conduct realistic interviews. It asks relevant questions based on your role and experience, and provides real-time feedback on your responses."
+                    answer: "Our AI interviewer uses advanced natural language processing to conduct realistic interviews. It asks relevant questions based on your role and experience, and provides real-time feedback."
                 },
                 {
                     question: "Can I review my past interviews?",
@@ -58,14 +61,16 @@ const Help = () => {
                 },
                 {
                     question: "How accurate is the AI feedback?",
-                    answer: "Our AI is trained on thousands of successful interviews and is continuously improved. It provides detailed feedback on communication skills, technical accuracy, and overall performance with high accuracy."
+                    answer: "Our AI is trained on thousands of successful interviews. It provides detailed feedback on communication skills, technical accuracy, and overall performance."
                 }
             ]
         },
         {
             title: "Features & Tools",
             icon: HelpCircle,
-            color: "from-emerald-500 to-green-500",
+            color: "text-emerald-500",
+            bg: "bg-emerald-500/10",
+            border: "border-emerald-500/20",
             faqs: [
                 {
                     question: "How do Learning Paths work?",
@@ -73,155 +78,175 @@ const Help = () => {
                 },
                 {
                     question: "Can I practice with other users?",
-                    answer: "Yes! The Peer Interviews feature allows you to schedule mock interviews with other users. You can take turns being the interviewer and interviewee, and rate each other's performance."
+                    answer: "Yes! The Peer Interviews feature allows you to schedule mock interviews with other users. You can take turns being the interviewer and interviewee."
                 }
             ]
         },
         {
             title: "Account & Billing",
             icon: MessageCircle,
-            color: "from-amber-500 to-orange-500",
+            color: "text-orange-500",
+            bg: "bg-orange-500/10",
+            border: "border-orange-500/20",
             faqs: [
                 {
                     question: "How do I upgrade to premium?",
-                    answer: "Go to your Profile page and click on 'Upgrade to Premium'. Choose your preferred plan and complete the payment process. Your premium features will be activated immediately."
+                    answer: "Go to your Profile page and click on 'Upgrade to Premium'. Choose your preferred plan and complete the payment process."
                 },
                 {
                     question: "Can I cancel my subscription?",
-                    answer: "Yes, you can cancel your subscription at any time from your Profile settings. You'll continue to have access to premium features until the end of your billing period."
+                    answer: "Yes, you can cancel your subscription at any time from your Profile settings. Your premium features will remain active until the end of the billing period."
                 },
                 {
-                    question: "How do I update my profile information?",
-                    answer: "Navigate to your Profile page by clicking the Settings icon in the header. You can update your personal information, upload your resume, and manage your account settings."
+                    question: "How do I update my profile?",
+                    answer: "Navigate to your Profile page by clicking the Settings icon in the header. You can update your personal information and resume there."
                 }
             ]
         }
     ];
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-background text-foreground font-sans selection:bg-violet-500/30 overflow-x-hidden">
+             {/* Background Ambience */}
+            <div className="fixed inset-0 pointer-events-none">
+                <div className="absolute top-0 left-1/4 w-[1000px] h-[600px] bg-violet-600/5 rounded-full blur-[120px] mix-blend-screen dark:mix-blend-screen mix-blend-multiply" />
+                <div className="absolute bottom-0 right-0 w-[800px] h-[800px] bg-fuchsia-600/5 rounded-full blur-[120px] mix-blend-screen dark:mix-blend-screen mix-blend-multiply" />
+                <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.03] dark:opacity-[0.05]" />
+            </div>
+
             {/* Header */}
-            <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
-                <div className="container mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
-                                <ArrowLeft className="h-5 w-5" />
-                            </Button>
-                            <div className="flex items-center gap-2 cursor-pointer" onClick={handleLogoClick}>
+            <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
+                <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+                     <div className="flex items-center gap-4">
+                        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full hover:bg-secondary/50">
+                            <ArrowLeft className="h-5 w-5" />
+                        </Button>
+                        <div className="flex items-center gap-2 cursor-pointer group" onClick={handleLogoClick}>
+                             <div className="relative">
+                                <div className="absolute inset-0 bg-violet-500/20 blur-lg rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                                 <img
                                     src="/images/voke_logo.png"
                                     alt="Voke Logo"
-                                    className="w-10 h-10 object-contain"
+                                    className="w-9 h-9 object-contain relative z-10"
                                 />
-                                <h1 className="text-xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">
-                                    Help Center
-                                </h1>
                             </div>
+                            <span className="text-xl font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
+                                Help Center
+                            </span>
                         </div>
-                        <ThemeToggle />
                     </div>
+                    <ThemeToggle />
                 </div>
             </header>
 
-            {/* Hero Section */}
-            <section className="pt-32 pb-12 px-4">
-                <div className="container mx-auto max-w-4xl">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="text-center mb-12"
-                    >
-                        <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                            How can we help you?
-                        </h2>
-                        <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-                            Find answers to common questions and learn how to make the most of Voke.
-                        </p>
+            {/* Main Content */}
+            <main className="container mx-auto px-4 py-12 relative z-10">
+                {/* Hero Section */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center mb-16 space-y-6 max-w-3xl mx-auto"
+                >
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/30 border border-border/50 text-sm font-medium text-muted-foreground mb-4">
+                        <Sparkles className="w-4 h-4 text-violet-500" />
+                        <span>Support & Documentation</span>
+                    </div>
+                    
+                    <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
+                        How can we <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-fuchsia-500">empower</span> you?
+                    </h1>
+                    
+                    <p className="text-xl text-muted-foreground leading-relaxed">
+                        Find answers, master the platform, and level up your interview game.
+                    </p>
 
-                        {/* Search Bar */}
-                        <div className="relative max-w-2xl mx-auto">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    {/* Search Bar */}
+                    <div className="relative max-w-2xl mx-auto mt-8 group">
+                        <div className="absolute inset-0 bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                        <div className="relative bg-card/50 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg flex items-center p-2 focus-within:border-violet-500/50 transition-colors">
+                            <Search className="ml-4 h-6 w-6 text-muted-foreground group-focus-within:text-violet-500 transition-colors" />
                             <Input
-                                placeholder="Search for help..."
+                                placeholder="Search for documentation, tutorials, or FAQs..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-12 h-14 bg-card border-border/50 text-lg"
+                                className="border-0 bg-transparent text-lg h-12 focus-visible:ring-0 placeholder:text-muted-foreground/60"
                             />
+                            <Button className="rounded-xl px-6 bg-violet-600 hover:bg-violet-700 text-white">
+                                Search
+                            </Button>
                         </div>
-                    </motion.div>
+                    </div>
+                </motion.div>
 
-                    {/* FAQ Categories */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.2 }}
-                        className="space-y-8"
-                    >
-                        {categories.map((category, catIndex) => {
-                            const Icon = category.icon;
-                            return (
-                                <motion.div
-                                    key={catIndex}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.3 + (catIndex * 0.1) }}
-                                >
-                                    <Card className="border-border/50">
-                                        <CardHeader>
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${category.color} bg-opacity-10 flex items-center justify-center`}>
-                                                    <Icon className="h-6 w-6" style={{ color: `hsl(var(--primary))` }} />
-                                                </div>
-                                                <CardTitle className="text-2xl">{category.title}</CardTitle>
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <Accordion type="single" collapsible className="w-full">
-                                                {category.faqs.map((faq, faqIndex) => (
-                                                    <AccordionItem key={faqIndex} value={`item-${catIndex}-${faqIndex}`}>
-                                                        <AccordionTrigger className="text-left hover:text-primary">
-                                                            {faq.question}
-                                                        </AccordionTrigger>
-                                                        <AccordionContent className="text-muted-foreground leading-relaxed">
-                                                            {faq.answer}
-                                                        </AccordionContent>
-                                                    </AccordionItem>
-                                                ))}
-                                            </Accordion>
-                                        </CardContent>
-                                    </Card>
-                                </motion.div>
-                            );
-                        })}
-                    </motion.div>
+                {/* FAQ Categories Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-16">
+                    {categories.map((category, idx) => (
+                        <motion.div
+                            key={idx}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 + (idx * 0.1) }}
+                        >
+                            <Card className={`h-full bg-card/40 backdrop-blur-xl border-border/50 hover:border-violet-500/30 transition-all duration-300 group overflow-hidden`}>
+                                <CardHeader className="pb-4">
+                                     <div className="flex items-center gap-4 mb-2">
+                                        <div className={`p-3 rounded-xl ${category.bg} ${category.border} border`}>
+                                            <category.icon className={`h-6 w-6 ${category.color}`} />
+                                        </div>
+                                        <CardTitle className="text-xl font-bold">{category.title}</CardTitle>
+                                     </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <Accordion type="single" collapsible className="w-full">
+                                        {category.faqs.map((faq, faqIndex) => (
+                                            <AccordionItem key={faqIndex} value={`item-${idx}-${faqIndex}`} className="border-border/40">
+                                                <AccordionTrigger className="text-sm font-medium text-muted-foreground hover:text-foreground hover:no-underline py-4 data-[state=open]:text-violet-500 transition-colors">
+                                                    {faq.question}
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-muted-foreground leading-relaxed pl-1 pb-4">
+                                                    {faq.answer}
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        ))}
+                                    </Accordion>
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+                    ))}
+                </div>
 
-                    {/* Contact Support */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.8 }}
-                        className="mt-12"
-                    >
-                        <Card className="border-2 border-primary/50 bg-gradient-to-br from-primary/5 to-purple-500/5">
-                            <CardHeader>
-                                <CardTitle className="text-2xl flex items-center gap-2">
-                                    <Mail className="h-6 w-6" />
-                                    Still need help?
-                                </CardTitle>
-                                <CardDescription>
-                                    Can't find what you're looking for? Our support team is here to help.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Button size="lg" className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700">
+                {/* Contact Support CTA */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6 }}
+                >
+                    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-900/40 to-fuchsia-900/40 border border-white/10 p-8 md:p-12 text-center">
+                        <div className="absolute inset-0 bg-noise opacity-10 mix-blend-overlay" />
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/20 blur-[100px] rounded-full" />
+                        
+                        <div className="relative z-10 max-w-2xl mx-auto space-y-6">
+                            <div className="inline-flex p-3 rounded-full bg-white/5 border border-white/10 mb-2">
+                                <Mail className="w-6 h-6 text-white" />
+                            </div>
+                            <h2 className="text-3xl font-bold text-white">Still can't find what you're looking for?</h2>
+                            <p className="text-violet-200/80 text-lg">
+                                Our support team is always ready to help you navigate your interview journey.
+                            </p>
+                            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+                                <Button size="lg" className="bg-white text-black hover:bg-zinc-200 border-0">
+                                    <Zap className="w-4 h-4 mr-2" />
                                     Contact Support
                                 </Button>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                </div>
-            </section>
+                                <Button size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10 bg-transparent">
+                                    Visit Community
+                                    <ChevronRight className="w-4 h-4 ml-1" />
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
+            </main>
         </div>
     );
 };

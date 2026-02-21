@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ADMIN_EMAIL } from "@/config/admin";
 import { useToast } from "@/components/ui/use-toast";
-import { Mail, Lock, User, ArrowRight, Sparkles, Github, Loader2 } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, Sparkles, Github, Loader2, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const Auth = () => {
@@ -17,6 +17,9 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     // Check if already logged in
@@ -49,7 +52,7 @@ const Auth = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email || !password || !fullName) {
+    if (!email || !password || !fullName || !confirmPassword) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
@@ -62,6 +65,15 @@ const Auth = () => {
       toast({
         title: "Error",
         description: "Password must be at least 6 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords do not match",
         variant: "destructive",
       });
       return;
@@ -103,6 +115,7 @@ const Auth = () => {
         setEmail("");
         setPassword("");
         setFullName("");
+        setConfirmPassword("");
         setAuthMode("signin");
       }
     } catch (error: any) {
@@ -167,6 +180,25 @@ const Auth = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+
+      if (error) throw error;
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -338,16 +370,57 @@ const Auth = () => {
                     <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-500 group-focus-within:text-violet-500 transition-colors" />
                     <Input
                       id="password"
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:border-violet-500 focus:ring-violet-500/20 rounded-xl h-12 transition-all"
+                      className="pl-10 pr-10 bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:border-violet-500 focus:ring-violet-500/20 rounded-xl h-12 transition-all"
                       required
                       minLength={6}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-3 text-gray-500 hover:text-white transition-colors focus:outline-none"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
                   </div>
                 </div>
+
+                {authMode === "signup" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword" className="text-gray-300">Confirm Password</Label>
+                    <div className="relative group">
+                      <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-500 group-focus-within:text-violet-500 transition-colors" />
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="pl-10 pr-10 bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:border-violet-500 focus:ring-violet-500/20 rounded-xl h-12 transition-all"
+                        required
+                        minLength={6}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-3 text-gray-500 hover:text-white transition-colors focus:outline-none"
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-5 w-5" />
+                        ) : (
+                          <Eye className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <Button
                   type="submit"
@@ -382,7 +455,7 @@ const Auth = () => {
             <Button
               variant="outline"
               className="h-12 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 hover:text-white text-gray-300"
-              disabled
+              onClick={handleGoogleSignIn}
             >
               <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
                 <path

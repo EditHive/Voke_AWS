@@ -8,10 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Brain, LogOut, Upload, FileText, TrendingUp, Target, Award, Calendar, User, Briefcase, Activity, Sparkles, MessageSquare, BarChart3 } from "lucide-react";
+import { 
+  Brain, LogOut, Upload, FileText, TrendingUp, Target, Award, Calendar, 
+  User, Briefcase, Activity, Sparkles, MessageSquare, BarChart3, 
+  Github, Code, Terminal, Zap, Shield, Crown, ChevronRight, Settings, Camera 
+} from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence } from "framer-motion";
 import InterviewAnalytics from "@/components/InterviewAnalytics";
 import AICoachChat from "@/components/AICoachChat";
 import ResumeAnalyzer from "@/components/ResumeAnalyzer";
@@ -69,6 +73,10 @@ const Profile = () => {
 
       if (profileData) {
         const profile = profileData as any;
+        // Fallback to Google Avatar if not set in profile
+        if (!profile.avatar_url && user.user_metadata?.avatar_url) {
+           profile.avatar_url = user.user_metadata.avatar_url;
+        }
         setProfile(profile);
         setFormData({
           full_name: profile.full_name || "",
@@ -80,9 +88,8 @@ const Profile = () => {
           setCodingStats(profile.coding_stats);
         }
 
-        // Check for mandatory fields
-        const missingFields = !profile.github_url || !profile.resume_url || !profile.leetcode_id || !profile.codeforces_id;
-        setShowMandatoryModal(missingFields);
+        const hasResume = profile.resume_url;
+        setShowMandatoryModal(!profile.github_url || !profile.resume_url || !profile.leetcode_id || !profile.codeforces_id);
       }
     } catch (error) {
       console.error("Error loading profile:", error);
@@ -213,15 +220,8 @@ const Profile = () => {
         throw new Error(funcError.message || "Failed to invoke deletion function");
       }
 
-      // Check if response was actually successful, sometimes invoke returns error in data
-      // but in this case simple invoke failure check is start. 
-      // Ideally we check response status too but throwing on funcError covers network/invocation layer.
-
       console.log("Deletion complete. Signing out...");
-
-      // Force sign out to clear local session
       await supabase.auth.signOut();
-
       toast.success("Account deleted successfully");
       navigate("/");
 
@@ -243,7 +243,6 @@ const Profile = () => {
     const newStats: any = { ...codingStats };
 
     try {
-      // Fetch Codeforces
       if (formData.codeforces_id) {
         try {
           const { data, error } = await supabase.functions.invoke('fetch-codeforces-data', {
@@ -251,7 +250,6 @@ const Profile = () => {
           });
           if (error) throw error;
           if (data.error) throw new Error(data.error);
-
           newStats.codeforces = data;
           toast.success("Codeforces stats synced!");
         } catch (e: any) {
@@ -260,7 +258,6 @@ const Profile = () => {
         }
       }
 
-      // Fetch LeetCode
       if (formData.leetcode_id) {
         try {
           const { data, error } = await supabase.functions.invoke('fetch-leetcode-data', {
@@ -268,7 +265,6 @@ const Profile = () => {
           });
           if (error) throw error;
           if (data.error) throw new Error(data.error);
-
           newStats.leetcode = data;
           toast.success("LeetCode stats synced!");
         } catch (e: any) {
@@ -279,7 +275,6 @@ const Profile = () => {
 
       setCodingStats(newStats);
 
-      // Save to profile
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const updateData: any = {
@@ -332,7 +327,6 @@ const Profile = () => {
         .from("resumes")
         .getPublicUrl(fileName);
 
-      // Safely append timestamp to force refresh and bypass cache
       const separator = publicUrl.includes('?') ? '&' : '?';
       const publicUrlWithTimestamp = `${publicUrl}${separator}t=${new Date().getTime()}`;
 
@@ -354,558 +348,514 @@ const Profile = () => {
     }
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      if (!event.target.files || event.target.files.length === 0) {
+        return;
+      }
+      setSaving(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const file = event.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/avatar.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+    const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+    const publicUrlWithTimestamp = `${publicUrl}?t=${new Date().getTime()}`;
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrlWithTimestamp } as any)
+        .eq('id', user.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+      
+      setProfile({ ...profile, avatar_url: publicUrlWithTimestamp });
+      toast.success('Avatar updated!');
+    } catch (error: any) {
+      console.error("Avatar upload error:", error);
+      toast.error('Error uploading avatar: ' + error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/");
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: { type: "spring" as const, stiffness: 300, damping: 24 }
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <motion.div
-          animate={{ rotate: 360, scale: [1, 1.2, 1] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <Brain className="h-12 w-12 text-primary" />
-        </motion.div>
+        <div className="relative">
+          <div className="absolute inset-0 bg-violet-500/20 blur-xl rounded-full animate-pulse"></div>
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          >
+            <Zap className="h-12 w-12 text-violet-500 relative z-10" />
+          </motion.div>
+          <div className="mt-4 text-muted-foreground font-mono text-sm">LOADING PROFILE_DATA...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Dynamic Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px]" />
-        <div className="absolute top-[40%] -right-[10%] w-[40%] h-[40%] rounded-full bg-purple-500/10 blur-[100px]" />
-        <div className="absolute -bottom-[10%] left-[20%] w-[30%] h-[30%] rounded-full bg-blue-500/10 blur-[80px]" />
+    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-violet-500/30">
+      {/* Background Ambience */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 left-1/4 w-[1000px] h-[600px] bg-violet-600/5 rounded-full blur-[120px] mix-blend-screen dark:mix-blend-screen mix-blend-multiply" />
+        <div className="absolute bottom-0 right-0 w-[800px] h-[800px] bg-fuchsia-600/5 rounded-full blur-[120px] mix-blend-screen dark:mix-blend-screen mix-blend-multiply" />
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.02]" />
       </div>
 
-      {/* Header */}
-      <motion.header
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="border-b border-border/40 bg-background/80 backdrop-blur-md sticky top-0 z-50"
-      >
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img
-              src="/images/voke_logo.png"
-              alt="Voke Logo"
-              className="w-10 h-10 object-contain"
-            />
-            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600">
-              Profile & Settings
-            </h1>
+      <div className="relative">
+        {/* Navigation Bar */}
+        <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
+          <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/dashboard")}>
+              <img
+                src="/images/voke_logo.png"
+                alt="Voke Logo"
+                className="w-10 h-10 object-contain"
+              />
+              <span className="font-bold text-lg tracking-tight">Voke</span>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleLogout}
+                className="text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="hover:bg-primary/5">
-              Dashboard
-            </Button>
-            <Button variant="destructive" size="sm" onClick={handleLogout} className="shadow-lg shadow-destructive/20 hover:shadow-destructive/40 transition-all">
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleDeleteAccount} className="text-destructive hover:text-destructive hover:bg-destructive/10">
-              Delete
-            </Button>
-          </div>
-        </div>
-      </motion.header>
+        </header>
 
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="container mx-auto px-4 py-8 relative z-10"
-      >
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          {[
-            { title: "Total Interviews", value: stats.totalInterviews, icon: Target, color: "text-blue-500", bg: "bg-blue-500/10" },
-            { title: "Completed", value: stats.completedSessions, icon: Award, color: "text-green-500", bg: "bg-green-500/10" },
-            { title: "Avg Score", value: `${stats.averageScore}%`, icon: TrendingUp, color: "text-purple-500", bg: "bg-purple-500/10" },
-            { title: "Peer Sessions", value: stats.peerSessions, icon: Calendar, color: "text-orange-500", bg: "bg-orange-500/10" }
-          ].map((stat, index) => (
-            <motion.div key={index} variants={itemVariants} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
-              <Card className="border-border/50 bg-card/50 backdrop-blur-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 overflow-hidden group">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`p-3 rounded-xl ${stat.bg} group-hover:scale-110 transition-transform duration-300`}>
-                      <stat.icon className={`h-6 w-6 ${stat.color}`} />
+        {/* Main Content Layout */}
+        <div className="container mx-auto px-4 py-8 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            {/* Identity Sidebar */}
+            <div className="lg:col-span-4 space-y-6">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="relative group"
+              >
+                <div className="absolute inset-0 bg-gradient-to-b from-violet-500/20 to-transparent rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <Card className="bg-card/50 backdrop-blur-xl border-border/50 overflow-hidden relative">
+                  <div className="h-32 bg-gradient-to-r from-violet-900/50 to-fuchsia-900/50 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay"></div>
+                  </div>
+                  <div className="px-6 pb-6 relative">
+                    <div className="relative -mt-16 mb-4 flex justify-center lg:justify-start">
+                      <div className="relative w-32 h-32 group/avatar">
+                         <div className="w-full h-full rounded-3xl bg-card p-1 ring-4 ring-background/50 shadow-2xl overflow-hidden relative">
+                             {profile?.avatar_url ? (
+                               <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover rounded-2xl" />
+                             ) : (
+                               <div className="w-full h-full rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center">
+                                  <span className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white to-zinc-500">
+                                    {profile?.full_name?.charAt(0) || "U"}
+                                  </span>
+                               </div>
+                             )}
+                             
+                             {/* Upload Overlay */}
+                             <label className="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center cursor-pointer rounded-2xl">
+                                <Camera className="w-8 h-8 text-white/80" />
+                                <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={saving} />
+                             </label>
+                         </div>
+                         <div className="absolute bottom-0 right-0 bg-green-500 w-5 h-5 rounded-full border-4 border-background shadow-lg z-10"></div>
+                      </div>
                     </div>
-                    <Sparkles className="h-4 w-4 text-muted-foreground/30" />
+                    
+                    <div className="text-center lg:text-left space-y-1">
+                      <h2 className="text-2xl font-bold text-foreground">{profile?.full_name || "Anonymous User"}</h2>
+                      <p className="text-muted-foreground flex items-center justify-center lg:justify-start gap-2">
+                        <Code className="w-4 h-4 text-violet-500" />
+                        Senior Developer
+                      </p>
+                    </div>
+
+                    <div className="mt-6 flex flex-wrap gap-2 justify-center lg:justify-start">
+                      <Badge variant="outline" className="bg-violet-500/10 text-violet-500 border-violet-500/20 px-3 py-1">
+                        LEVEL 5
+                      </Badge>
+                      <Badge variant="outline" className="bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/20 px-3 py-1">
+                        MASTER
+                      </Badge>
+                    </div>
+
+                    <div className="mt-8 space-y-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">XP Progress</span>
+                        <span className="text-foreground font-mono">1,240 / 2,000</span>
+                      </div>
+                      <Progress value={62} className="h-2" />
+                    </div>
+
+                    {/* Social/External Links */}
+                    <div className="mt-8 pt-6 border-t border-border/50 grid grid-cols-2 gap-3">
+                       <Button variant="outline" className="w-full border-border/50 bg-secondary/20 hover:bg-secondary/40 justify-start" onClick={() => window.open(profile.github_url, '_blank')}>
+                          <Github className="w-4 h-4 mr-2" />
+                          GitHub
+                       </Button>
+                       <Button variant="outline" className="w-full border-border/50 bg-secondary/20 hover:bg-secondary/40 justify-start">
+                          <Terminal className="w-4 h-4 mr-2" />
+                          LeetCode
+                       </Button>
+                    </div>
                   </div>
-                  <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                  <p className="text-3xl font-bold text-foreground mt-1">{stat.value}</p>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+                </Card>
+              </motion.div>
+
+              {/* Quick Stats Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: "Interviews", value: stats.totalInterviews, icon: Target, color: "text-blue-500" },
+                  { label: "Completed", value: stats.completedSessions, icon: Award, color: "text-green-500" },
+                  { label: "Avg Score", value: `${stats.averageScore}%`, icon: TrendingUp, color: "text-fuchsia-500" },
+                  { label: "Peers", value: stats.peerSessions, icon: User, color: "text-orange-500" },
+                ].map((stat, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.2 + (i * 0.1) }}
+                  >
+                    <Card className="bg-card/50 border-border/50 hover:bg-secondary/20 transition-colors">
+                      <CardContent className="p-4 flex flex-col gap-2">
+                        <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                        <div>
+                           <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+                           <div className="text-xs text-muted-foreground uppercase tracking-wider font-medium">{stat.label}</div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
+            {/* Main Content Area */}
+            <div className="lg:col-span-8">
+              <Tabs defaultValue="overview" className="space-y-6">
+                <TabsList className="bg-card/50 border border-border/50 p-1 rounded-xl w-full flex overflow-x-auto">
+                  {[
+                    { id: "overview", label: "Overview", icon: Activity },
+                    { id: "analytics", label: "Analytics", icon: BarChart3 },
+                    { id: "resume", label: "Resume", icon: FileText },
+                    { id: "skills", label: "Skills", icon: Brain },
+                    { id: "settings", label: "Settings", icon: Settings },
+                  ].map(tab => (
+                    <TabsTrigger 
+                      key={tab.id}
+                      value={tab.id}
+                      className="flex-1 min-w-[100px] gap-2 rounded-lg data-[state=active]:bg-violet-600 data-[state=active]:text-white transition-all"
+                    >
+                      <tab.icon className="w-4 h-4" />
+                      {tab.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+
+                <AnimatePresence mode="wait">
+                  {/* OVERVIEW TAB */}
+                  <TabsContent value="overview" className="space-y-6 outline-none">
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid gap-6">
+                      
+                      {/* AI Coach Banner */}
+                      <Card className="bg-gradient-to-r from-violet-900/20 to-fuchsia-900/20 border-violet-500/20 overflow-hidden relative">
+                         <div className="absolute right-0 top-0 w-64 h-64 bg-violet-500/10 blur-[100px] rounded-full" />
+                         <CardContent className="p-8 relative z-10 flex items-center justify-between">
+                            <div className="space-y-4 max-w-lg">
+                               <div className="flex items-center gap-2 text-violet-400 font-medium text-sm">
+                                  <Sparkles className="w-4 h-4" />
+                                  <span>AI Interview Coach</span>
+                               </div>
+                               <h3 className="text-3xl font-bold text-foreground leading-tight">Ready for your next mock interview?</h3>
+                               <p className="text-muted-foreground">Your AI coach is ready to analyze your performance and provide real-time feedback.</p>
+                               <Button onClick={() => navigate('/interview/new')} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                                  Start Session <ChevronRight className="w-4 h-4 ml-1" />
+                               </Button>
+                            </div>
+                            <div className="hidden md:block text-9xl select-none opacity-20 transform rotate-12">
+                               🎙️
+                            </div>
+                         </CardContent>
+                      </Card>
+
+                      {/* Recent Activity Feed */}
+                      <Card className="bg-card/50 backdrop-blur-xl border-border/50">
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                             <Activity className="w-5 h-5 text-muted-foreground" />
+                             Recent Activity
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                           {recentActivity.length === 0 ? (
+                              <div className="text-center py-12 text-muted-foreground">No recent activity</div>
+                           ) : (
+                              recentActivity.map((activity, idx) => (
+                                 <div key={activity.id} className="flex items-center justify-between p-4 rounded-xl bg-secondary/10 hover:bg-secondary/20 transition-colors border border-border/50">
+                                    <div className="flex items-center gap-4">
+                                       <div className={`p-3 rounded-full ${activity.status === 'completed' ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
+                                          <Target className="w-5 h-5" />
+                                       </div>
+                                       <div>
+                                          <h4 className="font-semibold text-foreground capitalize">{activity.interview_type} Interview</h4>
+                                          <p className="text-sm text-muted-foreground">
+                                             {new Date(activity.created_at).toLocaleDateString()} • {activity.total_duration_seconds ? Math.round(activity.total_duration_seconds / 60) + ' mins' : 'Incomplete'}
+                                          </p>
+                                       </div>
+                                    </div>
+                                    <Badge variant="secondary">
+                                       {activity.status}
+                                    </Badge>
+                                 </div>
+                              ))
+                           )}
+                        </CardContent>
+                      </Card>
+
+                    </motion.div>
+                  </TabsContent>
+
+                  {/* SETTINGS TAB */}
+                  <TabsContent value="settings" className="space-y-6 outline-none">
+                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                        <Card className="bg-card/50 backdrop-blur-xl border-border/50">
+                           <CardHeader>
+                              <CardTitle>Profile Details</CardTitle>
+                              <CardDescription>Manage your personal information and connections.</CardDescription>
+                           </CardHeader>
+                           <CardContent className="space-y-6">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                 <div className="space-y-2">
+                                    <Label>Full Name</Label>
+                                    <Input 
+                                       value={formData.full_name} 
+                                       onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                                       className="bg-background/50 border-input focus:border-violet-500 transition-colors h-11"
+                                    />
+                                 </div>
+                                 <div className="space-y-2">
+                                    <Label>Email</Label>
+                                    <Input value={profile?.email} disabled className="bg-background/30 border-input text-muted-foreground h-11" />
+                                 </div>
+                                 <div className="space-y-2">
+                                    <Label>GitHub URL</Label>
+                                    <Input 
+                                       value={formData.github_url}
+                                       onChange={(e) => setFormData({...formData, github_url: e.target.value})}
+                                       className="bg-background/50 border-input focus:border-violet-500 transition-colors h-11"
+                                    />
+                                 </div>
+                                 <div className="space-y-2">
+                                    <Label>LeetCode Username</Label>
+                                    <Input 
+                                       value={formData.leetcode_id}
+                                       onChange={(e) => setFormData({...formData, leetcode_id: e.target.value})}
+                                       className="bg-background/50 border-input focus:border-violet-500 transition-colors h-11"
+                                    />
+                                 </div>
+                                 <div className="space-y-2">
+                                    <Label>Codeforces Handle</Label>
+                                    <Input 
+                                       value={formData.codeforces_id}
+                                       onChange={(e) => setFormData({...formData, codeforces_id: e.target.value})}
+                                       className="bg-background/50 border-input focus:border-violet-500 transition-colors h-11"
+                                    />
+                                 </div>
+                              </div>
+                              
+                              <div className="pt-6 border-t border-border/50 flex flex-col sm:flex-row gap-4 justify-between items-center">
+                                 <Button 
+                                    variant="destructive" 
+                                    onClick={handleDeleteAccount}
+                                    className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20"
+                                 >
+                                    Delete Account
+                                 </Button>
+                                 <div className="flex gap-4 w-full sm:w-auto">
+                                    <Button 
+                                       variant="outline" 
+                                       onClick={handleSyncStats}
+                                       disabled={syncing}
+                                       className="border-input bg-secondary/20 hover:bg-secondary/40 flex-1 sm:flex-none"
+                                    >
+                                       {syncing ? "Syncing..." : "Sync Stats"}
+                                    </Button>
+                                    <Button 
+                                       onClick={handleSave}
+                                       disabled={saving}
+                                       className="bg-violet-600 hover:bg-violet-500 text-white flex-1 sm:flex-none"
+                                    >
+                                       {saving ? "Saving..." : "Save Changes"}
+                                    </Button>
+                                 </div>
+                              </div>
+                           </CardContent>
+                        </Card>
+                     </motion.div>
+                  </TabsContent>
+
+                  {/* RESUME TAB */}
+                  <TabsContent value="resume" className="space-y-6 outline-none">
+                     <Card className="bg-card/50 backdrop-blur-xl border-border/50">
+                        <CardHeader>
+                           <CardTitle>Resume Verification</CardTitle>
+                           <CardDescription>Upload your latest resume to keep your profile updated.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                           <div className="border-2 border-dashed border-border/50 rounded-2xl p-8 hover:border-violet-500/50 transition-colors bg-secondary/5 text-center relative group">
+                              <input
+                                 type="file"
+                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+                                 accept=".pdf,.doc,.docx"
+                                 onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
+                              />
+                              <div className="mx-auto w-16 h-16 bg-secondary/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                 {resumeFile ? (
+                                    <FileText className="w-8 h-8 text-violet-500" />
+                                 ) : (
+                                    <Upload className="w-8 h-8 text-muted-foreground" />
+                                 )}
+                              </div>
+                              <h3 className="text-lg font-medium text-foreground mb-2">
+                                 {resumeFile ? resumeFile.name : "Drop your resume here"}
+                              </h3>
+                              <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+                                 Supports PDF, DOC, DOCX. Max file size 5MB.
+                              </p>
+                              {resumeFile && (
+                                 <Button 
+                                    className="mt-6 bg-violet-600 hover:bg-violet-500 text-white relative z-30"
+                                    onClick={handleResumeUpload}
+                                    disabled={saving}
+                                 >
+                                    {saving ? "Uploading..." : "Confirm Upload"}
+                                 </Button>
+                              )}
+                           </div>
+                           
+                           {profile?.resume_url && (
+                              <div className="mt-6 flex items-center justify-between p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
+                                 <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-green-500/20 rounded-lg">
+                                       <Shield className="w-5 h-5 text-green-500" />
+                                    </div>
+                                    <div>
+                                       <div className="font-medium text-green-500">Resume Verified</div>
+                                       <div className="text-xs text-green-500/80">Last updated recently</div>
+                                    </div>
+                                 </div>
+                                 <Button 
+                                    variant="link" 
+                                    className="text-green-500 hover:text-green-600"
+                                    onClick={() => window.open(profile.resume_url, '_blank')}
+                                 >
+                                    View
+                                 </Button>
+                              </div>
+                           )}
+                        </CardContent>
+                     </Card>
+
+                     <ResumeAnalyzer userId={profile?.id || ""} resumeUrl={profile?.resume_url} />
+                  </TabsContent>
+
+                  {/* ANALYTICS TAB */}
+                  <TabsContent value="analytics" className="outline-none">
+                     <InterviewAnalytics userId={profile?.id || ""} />
+                  </TabsContent>
+
+                  {/* SKILLS TAB */}
+                  <TabsContent value="skills" className="outline-none">
+                     <Card className="bg-card/50 backdrop-blur-xl border-border/50">
+                        <CardHeader>
+                           <CardTitle>Skill Gap Analysis</CardTitle>
+                           <CardDescription>Areas for improvement based on your interview performance.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                           {skillGaps.length === 0 ? (
+                              <div className="text-center py-12">
+                                 <div className="inline-block p-4 rounded-full bg-secondary/20 mb-4">
+                                    <Target className="w-8 h-8 text-muted-foreground" />
+                                 </div>
+                                 <h3 className="text-xl font-bold text-foreground mb-2">No Gaps Detected Yet</h3>
+                                 <p className="text-muted-foreground">Complete more interviews to generate a skill analysis.</p>
+                              </div>
+                           ) : (
+                              <div className="space-y-4">
+                                 {skillGaps.map((gap: any, i) => (
+                                    <div key={i} className="p-4 rounded-xl bg-secondary/10 border border-border/50 hover:bg-secondary/20 transition-colors">
+                                       <div className="flex justify-between items-start mb-2">
+                                          <h4 className="font-bold text-foreground text-lg">{gap.skill}</h4>
+                                          <Badge variant={gap.importance === 'High' ? 'destructive' : 'default'}>{gap.importance}</Badge>
+                                       </div>
+                                       <p className="text-muted-foreground text-sm mb-4">{gap.learning_resource}</p>
+                                       <div className="flex items-center gap-3 text-sm">
+                                          <Progress value={Math.random() * 60 + 20} className="h-1.5" />
+                                          <span className="text-muted-foreground font-mono">In Progress</span>
+                                       </div>
+                                    </div>
+                                 ))}
+                              </div>
+                           )}
+                        </CardContent>
+                     </Card>
+                  </TabsContent>
+
+                </AnimatePresence>
+              </Tabs>
+            </div>
+          </div>
         </div>
 
-        <Tabs defaultValue="profile" className="flex flex-col md:flex-row gap-8">
-          <motion.div variants={itemVariants} className="w-full md:w-64 shrink-0">
-            <TabsList className="flex flex-col w-full h-auto bg-transparent p-0 gap-2">
-              {[
-                { value: "profile", label: "Profile Info", icon: User },
-                { value: "analytics", label: "Analytics", icon: BarChart3 },
-                { value: "coach", label: "AI Coach", icon: MessageSquare },
-                { value: "resume-analyzer", label: "Resume Analyzer", icon: TrendingUp },
-                { value: "skills", label: "Skills Progress", icon: Brain },
-                { value: "activity", label: "Recent Activity", icon: Activity },
-                { value: "resume", label: "Resume", icon: FileText }
-              ].map((tab) => (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className="w-full justify-start px-4 py-3 h-auto rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none hover:bg-muted/50 transition-all duration-200"
-                >
-                  <div className="flex items-center gap-3">
-                    <tab.icon className="h-4 w-4" />
-                    <span className="font-medium">{tab.label}</span>
-                  </div>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </motion.div>
-
-          <div className="flex-1 min-w-0">
-            <AnimatePresence mode="wait">
-              <TabsContent value="profile" className="mt-0">
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Card className="border-border/50 bg-card/50 backdrop-blur-sm shadow-xl">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <User className="h-5 w-5 text-primary" />
-                        Personal Information
-                      </CardTitle>
-                      <CardDescription>Update your profile details and public presence</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="grid gap-6 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="email">Email Address</Label>
-                          <Input id="email" value={profile?.email || ""} disabled className="bg-muted/50" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="full_name">Full Name</Label>
-                          <Input
-                            id="full_name"
-                            value={formData.full_name}
-                            onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                            placeholder="Enter your full name"
-                            className="focus:ring-2 focus:ring-primary/20 transition-all"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="codeforces_id">Codeforces Handle</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              id="codeforces_id"
-                              value={formData.codeforces_id}
-                              onChange={(e) => setFormData({ ...formData, codeforces_id: e.target.value })}
-                              placeholder="e.g. tourist"
-                              className="focus:ring-2 focus:ring-primary/20 transition-all"
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="leetcode_id">LeetCode Username</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              id="leetcode_id"
-                              value={formData.leetcode_id}
-                              onChange={(e) => setFormData({ ...formData, leetcode_id: e.target.value })}
-                              placeholder="e.g. neal_wu"
-                              className="focus:ring-2 focus:ring-primary/20 transition-all"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Coding Stats Display */}
-                        {(codingStats?.codeforces || codingStats?.leetcode) && (
-                          <div className="col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                            {codingStats.codeforces && (
-                              <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Activity className="h-5 w-5 text-blue-500" />
-                                  <h3 className="font-semibold text-blue-500">Codeforces</h3>
-                                </div>
-                                <div className="space-y-1 text-sm">
-                                  <p>Rating: <span className="font-bold">{codingStats.codeforces.rating}</span> ({codingStats.codeforces.rank})</p>
-                                  <p>Max Rating: <span className="font-bold">{codingStats.codeforces.maxRating}</span></p>
-                                </div>
-                              </div>
-                            )}
-                            {codingStats.leetcode && (
-                              <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Activity className="h-5 w-5 text-yellow-500" />
-                                  <h3 className="font-semibold text-yellow-500">LeetCode</h3>
-                                </div>
-                                <div className="space-y-1 text-sm">
-                                  <p>Solved: <span className="font-bold">{codingStats.leetcode.submitStats?.find((s: any) => s.difficulty === "All")?.count}</span></p>
-                                  <p>Rating: <span className="font-bold">{Math.round(codingStats.leetcode.contestRanking?.rating || 0)}</span></p>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        <div className="space-y-2">
-                          <Label htmlFor="github_url">GitHub Profile</Label>
-                          <Input
-                            id="github_url"
-                            value={formData.github_url}
-                            onChange={(e) => setFormData({ ...formData, github_url: e.target.value })}
-                            placeholder="https://github.com/yourusername"
-                            className="focus:ring-2 focus:ring-primary/20 transition-all"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex justify-end pt-4 gap-3">
-                        <Button
-                          variant="outline"
-                          onClick={handleSyncStats}
-                          disabled={syncing || (!formData.codeforces_id && !formData.leetcode_id)}
-                          className="w-full md:w-auto min-w-[150px]"
-                        >
-                          {syncing ? (
-                            <motion.div
-                              animate={{ rotate: 360 }}
-                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                              className="mr-2"
-                            >
-                              <Activity className="h-4 w-4" />
-                            </motion.div>
-                          ) : (
-                            <Activity className="h-4 w-4 mr-2" />
-                          )}
-                          {syncing ? "Syncing..." : "Sync Stats"}
-                        </Button>
-                        <Button
-                          onClick={handleSave}
-                          disabled={saving}
-                          className="w-full md:w-auto min-w-[150px] shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all"
-                        >
-                          {saving ? (
-                            <motion.div
-                              animate={{ rotate: 360 }}
-                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                              className="mr-2"
-                            >
-                              <Sparkles className="h-4 w-4" />
-                            </motion.div>
-                          ) : (
-                            <Sparkles className="h-4 w-4 mr-2" />
-                          )}
-                          {saving ? "Saving Changes..." : "Save Changes"}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </TabsContent>
-
-              <TabsContent value="analytics" className="mt-0">
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {/* @ts-ignore */}
-                  <InterviewAnalytics userId={profile?.id || ""} />
-                </motion.div>
-              </TabsContent>
-
-              <TabsContent value="coach" className="mt-0">
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {/* @ts-ignore */}
-                  <AICoachChat userId={profile?.id || ""} />
-                </motion.div>
-              </TabsContent>
-
-              <TabsContent value="resume-analyzer" className="mt-0">
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {/* @ts-ignore */}
-                  <ResumeAnalyzer userId={profile?.id || ""} resumeUrl={profile?.resume_url} />
-                </motion.div>
-              </TabsContent>
-
-              <TabsContent value="skills" className="mt-0">
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Card className="border-border/50 bg-card/50 backdrop-blur-sm shadow-xl">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Brain className="h-5 w-5 text-primary" />
-                        Skill Development
-                      </CardTitle>
-                      <CardDescription>Track your identified skill gaps and learning progress</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      {skillGaps.length === 0 ? (
-                        <div className="text-center py-12 px-4 rounded-2xl bg-muted/30 border border-dashed border-border">
-                          <Target className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                          <h3 className="text-lg font-medium text-foreground">No Skill Gaps Identified</h3>
-                          <p className="text-muted-foreground mt-2 max-w-md mx-auto">
-                            Complete interviews to discover your personalized skill development plan.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="grid gap-4">
-                          {skillGaps.map((gap: any, index: number) => (
-                            <motion.div
-                              key={index}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: index * 0.1 }}
-                              className="p-5 border border-border/50 rounded-xl bg-background/50 hover:bg-background/80 transition-colors"
-                            >
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-3">
-                                  <div className={`h-2 w-2 rounded-full ${gap.importance === 'High' ? 'bg-red-500' : gap.importance === 'Medium' ? 'bg-yellow-500' : 'bg-blue-500'}`} />
-                                  <h4 className="font-semibold text-foreground">{gap.skill}</h4>
-                                </div>
-                                <Badge variant={gap.importance === 'High' ? 'destructive' : gap.importance === 'Medium' ? 'default' : 'secondary'} className="capitalize">
-                                  {gap.importance} Priority
-                                </Badge>
-                              </div>
-                              {gap.learning_resource && (
-                                <p className="text-sm text-muted-foreground mb-4 pl-5 border-l-2 border-border/50">
-                                  {gap.learning_resource}
-                                </p>
-                              )}
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-xs text-muted-foreground">
-                                  <span>Progress</span>
-                                  <span>{Math.round(Math.random() * 60 + 20)}%</span>
-                                </div>
-                                <Progress value={Math.random() * 60 + 20} className="h-2" />
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </TabsContent>
-
-              <TabsContent value="activity" className="mt-0">
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Card className="border-border/50 bg-card/50 backdrop-blur-sm shadow-xl">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Activity className="h-5 w-5 text-primary" />
-                        Recent Activity
-                      </CardTitle>
-                      <CardDescription>Your latest interview sessions and achievements</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {recentActivity.length === 0 ? (
-                        <div className="text-center py-12 px-4 rounded-2xl bg-muted/30 border border-dashed border-border">
-                          <Calendar className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                          <h3 className="text-lg font-medium text-foreground">No Recent Activity</h3>
-                          <p className="text-muted-foreground mt-2">
-                            Start your first interview to see your progress here.
-                          </p>
-                          <Button className="mt-6" onClick={() => navigate("/interview")}>
-                            Start Interview
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {recentActivity.map((activity, index) => (
-                            <motion.div
-                              key={activity.id}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: index * 0.1 }}
-                              className="flex items-center justify-between p-4 border border-border/50 rounded-xl bg-background/50 hover:bg-background/80 transition-all hover:shadow-md"
-                            >
-                              <div className="flex items-center gap-4">
-                                <div className="p-2 rounded-full bg-primary/10">
-                                  <Briefcase className="h-5 w-5 text-primary" />
-                                </div>
-                                <div>
-                                  <h4 className="font-semibold text-foreground">{activity.interview_type}</h4>
-                                  <p className="text-sm text-muted-foreground">
-                                    {new Date(activity.created_at).toLocaleDateString(undefined, {
-                                      weekday: 'long',
-                                      year: 'numeric',
-                                      month: 'long',
-                                      day: 'numeric'
-                                    })}
-                                  </p>
-                                </div>
-                              </div>
-                              <Badge variant={activity.status === 'completed' ? 'default' : 'secondary'} className="capitalize">
-                                {activity.status}
-                              </Badge>
-                            </motion.div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </TabsContent>
-
-              <TabsContent value="resume" className="mt-0">
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Card className="border-border/50 bg-card/50 backdrop-blur-sm shadow-xl">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <FileText className="h-5 w-5 text-primary" />
-                        Resume Management
-                      </CardTitle>
-                      <CardDescription>Upload and manage your resume for AI analysis</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      {profile?.resume_url && (
-                        <motion.div
-                          initial={{ scale: 0.95, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          className="p-6 border border-primary/20 rounded-2xl bg-primary/5 relative overflow-hidden group"
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                          <div className="flex items-center justify-between relative z-10">
-                            <div className="flex items-center gap-4">
-                              <div className="p-3 bg-background rounded-xl shadow-sm">
-                                <FileText className="h-8 w-8 text-primary" />
-                              </div>
-                              <div>
-                                <p className="font-semibold text-foreground text-lg">Current Resume</p>
-                                <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                  <Sparkles className="h-3 w-3 text-green-500" />
-                                  Active & Ready for Analysis
-                                </p>
-                              </div>
-                            </div>
-                            <Button
-                              variant="outline"
-                              onClick={() => window.open(profile.resume_url, "_blank")}
-                              className="hover:bg-primary hover:text-primary-foreground transition-colors"
-                            >
-                              View Document
-                            </Button>
-                          </div>
-                        </motion.div>
-                      )}
-
-                      <div className="space-y-4">
-                        <Label htmlFor="resume" className="text-base">Upload New Resume</Label>
-                        <div className="border-2 border-dashed border-border hover:border-primary/50 rounded-2xl p-8 transition-colors text-center bg-muted/20 hover:bg-muted/40 group cursor-pointer relative">
-                          <input
-                            id="resume"
-                            type="file"
-                            accept=".pdf,.doc,.docx"
-                            onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
-                          />
-                          <div className="flex flex-col items-center gap-3 relative z-10 pointer-events-none">
-                            <div className="p-4 rounded-full bg-background shadow-sm group-hover:scale-110 transition-transform duration-300">
-                              {resumeFile ? (
-                                <FileText className="h-8 w-8 text-primary" />
-                              ) : (
-                                <Upload className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium text-foreground">
-                                {resumeFile ? resumeFile.name : "Click to upload or drag and drop"}
-                              </p>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                PDF, DOC, DOCX (Max 5MB)
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <Button
-                          onClick={handleResumeUpload}
-                          disabled={!resumeFile || saving}
-                          className="w-full"
-                        >
-                          {saving ? "Uploading..." : "Upload Resume"}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </TabsContent>
-            </AnimatePresence>
-          </div>
-        </Tabs>
-
+        {/* Mandatory Modal */}
         <Dialog open={showMandatoryModal} onOpenChange={setShowMandatoryModal}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] bg-background border-border text-foreground">
             <DialogHeader>
               <DialogTitle>Complete Your Profile</DialogTitle>
-              <DialogDescription>
-                To continue using Voke, please provide the following mandatory information. This helps us personalize your experience.
+              <DialogDescription className="text-muted-foreground">
+                To continue using Voke, please provide the following mandatory information.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-1">
               <div className="space-y-2">
-                <Label htmlFor="modal_github_url" className="text-right">GitHub Profile URL <span className="text-red-500">*</span></Label>
+                <Label htmlFor="modal_github_url" className="text-right">GitHub URL <span className="text-red-500">*</span></Label>
                 <Input
                   id="modal_github_url"
                   value={formData.github_url}
                   onChange={(e) => setFormData({ ...formData, github_url: e.target.value })}
                   placeholder="https://github.com/yourusername"
+                  className="bg-background/50 border-input"
                 />
               </div>
               <div className="space-y-2">
@@ -915,6 +865,7 @@ const Profile = () => {
                   value={formData.leetcode_id}
                   onChange={(e) => setFormData({ ...formData, leetcode_id: e.target.value })}
                   placeholder="e.g. neal_wu"
+                   className="bg-background/50 border-input"
                 />
               </div>
               <div className="space-y-2">
@@ -924,13 +875,14 @@ const Profile = () => {
                   value={formData.codeforces_id}
                   onChange={(e) => setFormData({ ...formData, codeforces_id: e.target.value })}
                   placeholder="e.g. tourist"
+                   className="bg-background/50 border-input"
                 />
               </div>
 
               <div className="space-y-2">
                 <Label className="text-right">Resume <span className="text-red-500">*</span></Label>
                 {!profile?.resume_url ? (
-                  <div className="border-2 border-dashed border-border rounded-xl p-4 text-center bg-muted/20 relative">
+                  <div className="border-2 border-dashed border-border rounded-xl p-4 text-center bg-secondary/10 relative">
                     <input
                       type="file"
                       accept=".pdf,.doc,.docx"
@@ -942,13 +894,13 @@ const Profile = () => {
                     />
                     <div className="space-y-1">
                       <Upload className="h-6 w-6 mx-auto text-muted-foreground" />
-                      <p className="text-sm font-medium">
+                      <p className="text-sm font-medium text-foreground">
                         {resumeFile ? resumeFile.name : "Click to upload resume"}
                       </p>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 p-2 bg-green-500/10 text-green-600 rounded-md">
+                  <div className="flex items-center gap-2 p-2 bg-green-500/10 text-green-500 rounded-md">
                     <FileText className="h-4 w-4" />
                     <span className="text-sm font-medium">Resume Uploaded</span>
                   </div>
@@ -958,8 +910,7 @@ const Profile = () => {
                     onClick={handleResumeUpload}
                     disabled={saving}
                     size="sm"
-                    variant="secondary"
-                    className="w-full mt-2"
+                    className="w-full mt-2 bg-primary text-primary-foreground hover:bg-primary/90"
                   >
                     {saving ? "Uploading..." : "Upload Resume Now"}
                   </Button>
@@ -977,23 +928,19 @@ const Profile = () => {
                     toast.error("Please upload a resume");
                     return;
                   }
-
                   await handleSave();
-
-                  // Re-check logic is handled by handleSave -> loadProfile -> effect,
-                  // but we might need to manually check here to close the modal immediately if successful?
-                  // actually loadProfile updates profile state, which triggers re-render? No, loadProfile calls setLoading(false) which triggers the check.
-                  // Let's rely on loadProfile called inside handleSave.
                 }}
                 disabled={saving}
+                className="bg-violet-600 hover:bg-violet-500 text-white"
               >
                 {saving ? "Saving..." : "Save & Continue"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </motion.div>
-    </div >
+
+      </div>
+    </div>
   );
 };
 

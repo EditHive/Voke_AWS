@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import ReactMarkdown from 'react-markdown';
 import { supabase } from "@/integrations/supabase/client";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { motion } from "motion/react";
 
 type Language = 'javascript' | 'python' | 'bash';
 
@@ -58,6 +59,17 @@ const Playground = () => {
     const [code, setCode] = useState("print('Hello from Python!')");
     const [output, setOutput] = useState("");
     const [isRunning, setIsRunning] = useState(false);
+
+    // Loading state
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        // Simulate dev environment initialization
+        const timer = setTimeout(() => {
+            setIsLoading(false);
+        }, 2000);
+        return () => clearTimeout(timer);
+    }, []);
 
     // Editor Settings
     const [editorOptions, setEditorOptions] = useState({
@@ -216,6 +228,57 @@ const Playground = () => {
             setIsTyping(false);
         }
     };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-[#0d1117] flex flex-col items-center justify-center relative overflow-hidden font-mono">
+                {/* Background Effects */}
+                <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-900/10 rounded-full blur-[120px]" />
+                    <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-900/10 rounded-full blur-[120px]" />
+                </div>
+
+                <div className="relative z-10 flex flex-col items-center">
+                    <div className="w-24 h-24 mb-8 relative flex items-center justify-center">
+                        {/* Hexagon Frame */}
+                        <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                            className="absolute inset-0 border-2 border-dashed border-indigo-500/30 rounded-full"
+                        />
+                        <motion.div
+                            animate={{ scale: [1, 1.1, 1] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                            className="relative z-10 p-4 bg-[#161b22] rounded-xl border border-indigo-500/50 shadow-[0_0_30px_rgba(99,102,241,0.2)]"
+                        >
+                            <Terminal className="w-10 h-10 text-indigo-400" />
+                        </motion.div>
+                    </div>
+
+                    <h2 className="text-2xl font-bold text-gray-200 mb-2 tracking-tight">
+                        VOKE <span className="text-indigo-400">DEV</span>
+                    </h2>
+
+                    <div className="flex flex-col items-center gap-1 text-xs text-gray-400">
+                        <motion.div
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                        >
+                            {'>'} INITIALIZING_CONTAINER...
+                        </motion.div>
+                        <motion.div
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.8, duration: 0.5 }}
+                        >
+                            {'>'} LOADING_RUNTIMES... [OK]
+                        </motion.div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="h-screen bg-[#0f1117] text-gray-200 flex flex-col overflow-hidden font-sans selection:bg-indigo-500/30">
