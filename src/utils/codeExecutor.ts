@@ -1,3 +1,4 @@
+import { executePistonCode, isPistonLanguageSupported, type PistonLanguage } from './pistonExecutor';
 
 // Definition for singly-linked list.
 class ListNode {
@@ -163,9 +164,10 @@ export const pyodideController = new PyodideController();
 // --- Main Execution Function ---
 export const executeCode = async (
   userCode: string,
-  language: 'javascript' | 'python' | 'bash',
+  language: 'javascript' | 'python' | 'bash' | 'typescript' | 'java' | 'cpp' | 'c' | 'rust' | 'go' | 'ruby' | 'php' | 'swift' | 'kotlin' | 'scala',
   onLog?: (log: string) => void,
-  onInputRequest?: (prompt: string) => void
+  onInputRequest?: (prompt: string) => void,
+  stdin?: string
 ): Promise<ExecutionResult> => {
   const logs: string[] = [];
   const captureLog = (msg: string) => {
@@ -173,8 +175,52 @@ export const executeCode = async (
     onLog?.(msg);
   };
 
-  // --- Python Execution ---
+  // --- Piston Execution for Supported Languages ---
+  if (isPistonLanguageSupported(language)) {
+    captureLog(`⚡ Running your code...`);
+
+    try {
+      const result = await executePistonCode(
+        language as PistonLanguage,
+        userCode,
+        stdin,
+        {
+          onLog: captureLog,
+          runTimeout: 5000,
+          compileTimeout: 10000,
+        }
+      );
+
+      if (result.success) {
+        captureLog(`\n✨ Done! (${result.executionTime}ms)`);
+        return {
+          passed: true,
+          logs,
+          results: [],
+        };
+      } else {
+        captureLog(`\n❌ ${result.error}`);
+        return {
+          passed: false,
+          logs,
+          results: [],
+          error: result.error,
+        };
+      }
+    } catch (error: any) {
+      captureLog(`\n❌ ${error.message}`);
+      return {
+        passed: false,
+        logs,
+        results: [],
+        error: error.message,
+      };
+    }
+  }
+
+  // --- Python Execution (Pyodide Fallback) ---
   if (language === 'python') {
+
     // CHECK: Can we use the worker?
     if (window.crossOriginIsolated && typeof SharedArrayBuffer !== 'undefined') {
       // Happy path: Use Worker

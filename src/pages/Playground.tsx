@@ -18,7 +18,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion } from "motion/react";
 
-type Language = 'javascript' | 'python' | 'bash';
+type Language = 'javascript' | 'python' | 'bash' | 'typescript' | 'java' | 'cpp' | 'c' | 'rust' | 'go' | 'ruby' | 'php' | 'swift' | 'kotlin' | 'scala';
 
 const TEMPLATES = {
     javascript: `// Write your JavaScript code here
@@ -38,6 +38,128 @@ def example():
 
 print(example())
 `,
+    typescript: `// Write your TypeScript code here
+const greeting: string = "Hello, Voke!";
+console.log(greeting);
+
+function example(): string {
+  return "Happy coding!";
+}
+
+console.log(example());
+`,
+    java: `// Write your Java code here
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello, Voke!");
+        System.out.println(example());
+    }
+    
+    public static String example() {
+        return "Happy coding!";
+    }
+}
+`,
+    cpp: `// Write your C++ code here
+#include <iostream>
+#include <string>
+using namespace std;
+
+string example() {
+    return "Happy coding!";
+}
+
+int main() {
+    cout << "Hello, Voke!" << endl;
+    cout << example() << endl;
+    return 0;
+}
+`,
+    c: `// Write your C code here
+#include <stdio.h>
+
+const char* example() {
+    return "Happy coding!";
+}
+
+int main() {
+    printf("Hello, Voke!\\n");
+    printf("%s\\n", example());
+    return 0;
+}
+`,
+    rust: `// Write your Rust code here
+fn example() -> &'static str {
+    "Happy coding!"
+}
+
+fn main() {
+    println!("Hello, Voke!");
+    println!("{}", example());
+}
+`,
+    go: `// Write your Go code here
+package main
+
+import "fmt"
+
+func example() string {
+    return "Happy coding!"
+}
+
+func main() {
+    fmt.Println("Hello, Voke!")
+    fmt.Println(example())
+}
+`,
+    ruby: `# Write your Ruby code here
+puts "Hello, Voke!"
+
+def example
+  "Happy coding!"
+end
+
+puts example
+`,
+    php: `<?php
+// Write your PHP code here
+echo "Hello, Voke!\\n";
+
+function example() {
+    return "Happy coding!";
+}
+
+echo example() . "\\n";
+?>
+`,
+    swift: `// Write your Swift code here
+import Foundation
+
+func example() -> String {
+    return "Happy coding!"
+}
+
+print("Hello, Voke!")
+print(example())
+`,
+    kotlin: `// Write your Kotlin code here
+fun example(): String {
+    return "Happy coding!"
+}
+
+fun main() {
+    println("Hello, Voke!")
+    println(example())
+}
+`,
+    scala: `// Write your Scala code here
+object Main extends App {
+  def example(): String = "Happy coding!"
+  
+  println("Hello, Voke!")
+  println(example())
+}
+`,
     bash: `# Write your Bash script here
 echo "Hello, Voke!"
 `
@@ -46,6 +168,17 @@ echo "Hello, Voke!"
 const FILE_NAMES = {
     javascript: 'script.js',
     python: 'main.py',
+    typescript: 'script.ts',
+    java: 'Main.java',
+    cpp: 'main.cpp',
+    c: 'main.c',
+    rust: 'main.rs',
+    go: 'main.go',
+    ruby: 'script.rb',
+    php: 'script.php',
+    swift: 'main.swift',
+    kotlin: 'Main.kt',
+    scala: 'Main.scala',
     bash: 'script.sh'
 };
 
@@ -71,6 +204,7 @@ const Playground = () => {
     const [inputPrompt, setInputPrompt] = useState("");
     const [consoleInput, setConsoleInput] = useState("");
     const consoleInputRef = useRef<HTMLInputElement>(null);
+    const [stdinInput, setStdinInput] = useState(""); // For Piston stdin support
 
     // Loading state
     const [isLoading, setIsLoading] = useState(true);
@@ -217,7 +351,9 @@ const Playground = () => {
                     setInputPrompt(prompt);
                     // Focus input after render
                     setTimeout(() => consoleInputRef.current?.focus(), 50);
-                }
+                },
+                // stdin (for Piston API)
+                stdinInput
             );
 
             setOutput(prev => prev + "\n=== Execution Finished ===\n");
@@ -680,8 +816,19 @@ const Playground = () => {
                                             <SelectValue placeholder="Language" />
                                         </SelectTrigger>
                                         <SelectContent className="bg-[#161b22] border-[#30363d] text-gray-200">
-                                            <SelectItem value="javascript">JavaScript</SelectItem>
                                             <SelectItem value="python">Python</SelectItem>
+                                            <SelectItem value="javascript">JavaScript</SelectItem>
+                                            <SelectItem value="typescript">TypeScript</SelectItem>
+                                            <SelectItem value="java">Java</SelectItem>
+                                            <SelectItem value="cpp">C++</SelectItem>
+                                            <SelectItem value="c">C</SelectItem>
+                                            <SelectItem value="rust">Rust</SelectItem>
+                                            <SelectItem value="go">Go</SelectItem>
+                                            <SelectItem value="ruby">Ruby</SelectItem>
+                                            <SelectItem value="php">PHP</SelectItem>
+                                            <SelectItem value="swift">Swift</SelectItem>
+                                            <SelectItem value="kotlin">Kotlin</SelectItem>
+                                            <SelectItem value="scala">Scala</SelectItem>
                                             <SelectItem value="bash">Bash</SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -771,8 +918,32 @@ const Playground = () => {
                             </div>
                         </div>
 
-                        <ScrollArea className="flex-1 p-4 font-mono text-xs bg-[#0d1117]">
-                            <div className="whitespace-pre-wrap text-gray-300">
+                        {/* Stdin Input Section */}
+                        <div className="border-b border-[#30363d] bg-gradient-to-br from-[#161b22] to-[#1a1f26]">
+                            <div className="px-4 py-3">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="w-1 h-4 bg-gradient-to-b from-blue-500 to-indigo-500 rounded-full"></div>
+                                    <label className="text-[11px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 uppercase tracking-wider">
+                                        📥 Test Input
+                                    </label>
+                                </div>
+                                <textarea
+                                    value={stdinInput}
+                                    onChange={(e) => setStdinInput(e.target.value)}
+                                    placeholder="Enter input for your program (one value per line)..."
+                                    className="w-full h-20 bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-xs text-gray-300 font-mono placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 resize-none transition-all duration-200 hover:border-[#40464d]"
+                                />
+                                <div className="flex items-start gap-1.5 mt-2 text-[10px] text-gray-500">
+                                    <span className="text-blue-400/70">💡</span>
+                                    <p className="leading-relaxed">
+                                        Input will be passed to your program via stdin (e.g., <code className="text-indigo-300 bg-indigo-500/10 px-1 rounded">input()</code>, <code className="text-indigo-300 bg-indigo-500/10 px-1 rounded">scanf()</code>, <code className="text-indigo-300 bg-indigo-500/10 px-1 rounded">cin</code>)
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <ScrollArea className="flex-1 p-4 font-mono text-xs bg-gradient-to-br from-[#0d1117] to-[#0a0e13]">
+                            <div className="whitespace-pre-wrap text-gray-300 leading-relaxed">
                                 {output}
                                 {isWaitingForInput && (
                                     <div className="flex items-center gap-1 mt-1 text-blue-400">
@@ -791,11 +962,17 @@ const Playground = () => {
                             </div>
 
                             {!output && !isRunning && !isWaitingForInput && (
-                                <div className="h-full flex flex-col items-center justify-center text-gray-600 space-y-3 opacity-50 absolute inset-0 pointer-events-none">
-                                    <div className="h-12 w-12 rounded-xl bg-[#21262d] flex items-center justify-center shadow-lg border border-[#30363d]">
-                                        <Play className="h-6 w-6 fill-current text-gray-500" />
+                                <div className="h-full flex flex-col items-center justify-center text-gray-600 space-y-4 opacity-60 absolute inset-0 pointer-events-none">
+                                    <div className="relative">
+                                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-2xl blur-xl"></div>
+                                        <div className="relative h-16 w-16 rounded-2xl bg-gradient-to-br from-[#21262d] to-[#1a1f26] flex items-center justify-center shadow-2xl border border-[#30363d]">
+                                            <Play className="h-8 w-8 fill-current text-indigo-400/70" />
+                                        </div>
                                     </div>
-                                    <p className="text-center text-xs font-medium">Run code to see output</p>
+                                    <div className="text-center space-y-1">
+                                        <p className="text-sm font-semibold text-gray-400">Ready to run</p>
+                                        <p className="text-xs text-gray-600">Click "Run Code" to see output</p>
+                                    </div>
                                 </div>
                             )}
                         </ScrollArea>
