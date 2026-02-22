@@ -335,15 +335,15 @@ const Playground = () => {
         await new Promise(resolve => setTimeout(resolve, 300));
 
         // Check for cross-origin isolation
-        if (language === 'python' && !crossOriginIsolated) {
-            setOutput("⚠️ Advanced features disabled.\nInput() requires 'SharedArrayBuffer' which is blocked by browser security.\nPlease restart the dev server to apply new headers in vite.config.ts.\n\nRunning in legacy mode...\n");
-        }
+        // if (language === 'python' && !crossOriginIsolated) {
+        //     setOutput("⚠️ Advanced features disabled.\nInput() requires 'SharedArrayBuffer' which is blocked by browser security.\nPlease restart the dev server to apply new headers in vite.config.ts.\n\nRunning in legacy mode...\n");
+        // }
 
         try {
             await executeCode(code, language,
                 // onLog
                 (log) => {
-                    setOutput(prev => prev + log + "\n");
+                    setOutput(prev => prev + log + (log.endsWith('\n') ? '' : '\n'));
                 },
                 // onInputRequest
                 (prompt) => {

@@ -177,7 +177,7 @@ export const executeCode = async (
 
   // --- Piston Execution for Supported Languages ---
   if (isPistonLanguageSupported(language)) {
-    captureLog(`⚡ Running your code...`);
+    captureLog(`⚡ Running your code...\n\n`);
 
     try {
       const result = await executePistonCode(
