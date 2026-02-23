@@ -42,6 +42,7 @@ import Companies from "./pages/Companies";
 import CompanyDetail from "./pages/CompanyDetail";
 import Playground from "./pages/Playground";
 import Pricing from "./pages/Pricing";
+import ElitePrep from "./pages/ElitePrep";
 import CareerPlanView from "./pages/CareerPlanView";
 import NotFound from "./pages/NotFound";
 import { Footer } from "./components/Footer";
@@ -101,6 +102,7 @@ const App = () => (
               <Route path="/companies/:slug" element={<CompanyDetail />} />
               <Route path="/playground" element={<Playground />} />
               <Route path="/pricing" element={<Pricing />} />
+              <Route path="/elite-prep" element={<ElitePrep />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

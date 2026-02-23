@@ -18,7 +18,7 @@ export const UpgradeButton = () => {
             >
                 <Zap className="w-3.5 h-3.5 mr-2 fill-white" />
             </motion.div>
-            <span className="relative font-semibold tracking-wide">Upgrade to Pro</span>
+            <span className="relative font-semibold tracking-wide">Voke Elite</span>
         </Button>
     );
 };

@@ -9,12 +9,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   FileText, LogOut, TrendingUp, Upload, Play, Target, Users, Mic, Settings,
   Flame, Trophy, Clock, Star, ArrowRight, Zap, Code, MessageSquare, Bell, Search,
-  Globe, BookOpen, Briefcase, FileQuestion
+  Globe, BookOpen, Briefcase, FileQuestion, ChevronRight
 } from "lucide-react";
 import { SkillRadar } from "@/components/dashboard/SkillRadar";
 import { RoadToOffer } from "@/components/dashboard/RoadToOffer";
 import { MarketPulse } from "@/components/dashboard/MarketPulse";
 import { UpgradeButton } from "@/components/UpgradeButton";
+import { TRACKS } from "./LearningPaths";
 
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -300,12 +301,6 @@ const Dashboard = () => {
     );
   }
 
-  const recommended = [
-    { title: "Master React Hooks", type: "Technical", duration: "30 min", level: "Intermediate" },
-    { title: "System Design: Scalability", type: "Architecture", duration: "45 min", level: "Advanced" },
-    { title: "Behavioral: Leadership", type: "Soft Skills", duration: "20 min", level: "Beginner" },
-  ];
-
   return (
     <div className="min-h-screen bg-muted/30">
       {/* Header */}
@@ -531,13 +526,18 @@ const Dashboard = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="hover:shadow-lg transition-all cursor-pointer group border-l-4 border-l-blue-500" onClick={() => navigate("/learning-paths")}>
+                <Card className="relative hover:shadow-lg transition-all cursor-pointer group border-l-4 border-l-blue-500 overflow-hidden" onClick={() => navigate("/elite-prep")}>
+                  {/* Pro Sticker */}
+                  <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg shadow-[0_0_12px_rgba(245,158,11,0.8)] z-10 flex items-center gap-1 animate-pulse">
+                    <Zap className="w-3 h-3 fill-white" />
+                    Elite
+                  </div>
                   <CardContent className="p-4 flex flex-col items-center text-center pt-6">
                     <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <Target className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                      <Zap className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                     </div>
-                    <h4 className="font-semibold text-sm">Learning Paths</h4>
-                    <p className="text-xs text-muted-foreground mt-1">Structured Plans</p>
+                    <h4 className="font-semibold text-sm">Elite Prep</h4>
+                    <p className="text-xs text-muted-foreground mt-1">Premium Coaching</p>
                   </CardContent>
                 </Card>
 
@@ -649,24 +649,31 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Recommended Practice */}
+            {/* Learning Paths */}
             <Card className="border-border/50">
               <CardHeader>
-                <CardTitle className="text-base">Recommended for You</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-violet-500" />
+                  Learning Paths
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {recommended.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted transition-colors cursor-pointer group">
+                {TRACKS.map((track, i) => (
+                  <div 
+                    key={i} 
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted transition-colors cursor-pointer group"
+                    onClick={() => navigate("/learning-paths")}
+                  >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-md bg-background flex items-center justify-center shadow-sm">
-                        <Star className="w-4 h-4 text-yellow-500" />
+                      <div className="w-8 h-8 rounded-md bg-background flex items-center justify-center shadow-sm text-primary">
+                        <track.icon className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium group-hover:text-primary transition-colors">{item.title}</p>
-                        <p className="text-[10px] text-muted-foreground">{item.type} • {item.duration}</p>
+                        <p className="text-sm font-medium group-hover:text-primary transition-colors">{track.title}</p>
+                        <p className="text-[10px] text-muted-foreground">{track.role}</p>
                       </div>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 ))}
               </CardContent>

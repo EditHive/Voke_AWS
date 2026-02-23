@@ -36,7 +36,7 @@ import {
 
 // --- Types ---
 
-interface Resource {
+export interface Resource {
   id: string;
   title: string;
   type: 'video' | 'article' | 'practice';
@@ -44,7 +44,7 @@ interface Resource {
   duration?: string;
 }
 
-interface Module {
+export interface Module {
   id: string;
   title: string;
   description: string;
@@ -53,7 +53,7 @@ interface Module {
   resources: Resource[];
 }
 
-interface Track {
+export interface Track {
   id: string;
   title: string;
   role: string;
@@ -64,7 +64,7 @@ interface Track {
 
 // --- Mock Data ---
 
-const TRACKS: Track[] = [
+export const TRACKS: Track[] = [
   {
     id: "frontend",
     title: "Frontend Engineering",
