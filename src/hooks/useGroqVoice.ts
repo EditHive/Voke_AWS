@@ -2,9 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import Groq from 'groq-sdk';
 import { LiveStatus, MessageLog } from '../types/voice';
 import { toast } from 'sonner';
-// import { HfInference } from '@huggingface/inference';
 
-// Initialize Groq client
 // Initialize Groq client safely
 const getGroqClient = () => {
     const apiKey = import.meta.env.VITE_GROQ_API_KEY;
@@ -20,9 +18,6 @@ const getGroqClient = () => {
 
 const groq = getGroqClient();
 
-// Initialize Hugging Face client
-// const hf = new HfInference(import.meta.env.VITE_HUGGING_FACE_TOKEN);
-
 const SYSTEM_INSTRUCTION = `YOU ARE:
 A real-time voice-based conversational assistant designed to conduct a professional yet friendly interview.
 
@@ -36,6 +31,33 @@ A real-time voice-based conversational assistant designed to conduct a professio
 - Respond quickly.
 - If unclear, ask "Could you repeat that?".
 - Do not mention you are an AI unless asked.
+
+3. INTERVIEW FLOW & CODING CHALLENGE (IMPORTANT):
+- Start with 2-3 behavioral or technical screening questions based on their background.
+- Once you are satisfied with the verbal screening, say exactly: "[START_CODING]" followed by a brief intro to the coding problem.
+- DO NOT ask "Are you ready for a coding challenge?". Just announce it naturally like "Great, let's move on to a practical problem. [START_CODING] I'd like you to solve..." giving a brief 1-sentence summary of the task.
+
+4. DURING CODING:
+- When the user submits code, DO NOT just give the answer or say "Correct".
+- Use **Socratic Questioning**: Ask probing questions about their choices. Examples:
+    - "Why did you choose this data structure?"
+    - "How does this handle edge case X?"
+    - "Can you explain the time complexity?"
+- If the code is buggy, ask: "Walk me through your logic for [specific part]. What happens if input is X?"
+
+5. ENDING CODING & FEEDBACK:
+- Once you are satisfied with the coding discussion (or if user asks to stop), you MUST provide:
+    - Spoken transition: "Excellent work on that. Let's move on."
+    - Token: "[END_CODING]" (to switch back to voice mode).
+    - Detailed Feedback (Hidden from speech): "[DETAILED_FEEDBACK]" followed by a structured Markdown summary of their code quality, correct logic, and areas for improvement.
+
+Example Output when finishing coding:
+"That was a great solution. [END_CODING] Let's discuss your experience with..."
+[DETAILED_FEEDBACK]
+### Code Review
+- **Logic**: Correct approach using Hash Map.
+- **Style**: Good variable naming, but missed type hints.
+- **Optimization**: O(n) is optimal.
 `;
 
 interface UseGroqVoiceReturn {
@@ -47,6 +69,7 @@ interface UseGroqVoiceReturn {
     volume: number;
     logs: MessageLog[];
     errorDetails: string | null;
+    sendHiddenContext: (text: string) => Promise<void>;
 }
 
 export function useGroqVoice(): UseGroqVoiceReturn {
@@ -74,8 +97,67 @@ export function useGroqVoice(): UseGroqVoiceReturn {
     // Forward declaration for use in speakResponse
     const startListeningRef = useRef<() => Promise<void>>();
 
+    // Helper to send messages to Groq
+    const sendToGroq = async (fullMessages: any[]) => {
+        if (!groq) {
+            const errorText = "I cannot process your request because my API key is missing.";
+            speakResponse(errorText);
+            return;
+        }
+
+        let completion;
+        try {
+            completion = await groq.chat.completions.create({
+                messages: fullMessages,
+                model: 'llama-3.3-70b-versatile',
+                temperature: 0.7,
+                max_tokens: 800, // Increased for detailed feedback
+            });
+        } catch (error: any) {
+            // Rate Limit Fallback
+            if (error?.status === 429) {
+                console.log('DEBUG: Rate limit reached, switching to fallback model...');
+                toast.info("Rate limit hit. Switching to lighter model (Llama 3.1 8B)...");
+                completion = await groq.chat.completions.create({
+                    messages: fullMessages,
+                    model: 'llama-3.1-8b-instant', // Fallback model
+                    temperature: 0.7,
+                    max_tokens: 800,
+                });
+            } else {
+                throw error;
+            }
+        }
+
+        const aiText = completion.choices[0]?.message?.content || "I didn't catch that.";
+        console.log('DEBUG: Groq response:', aiText);
+
+        const aiMsg: MessageLog = {
+            id: Date.now().toString() + '-ai',
+            role: 'assistant',
+            text: aiText,
+            timestamp: new Date(),
+        };
+        setLogs(prev => [...prev, aiMsg]);
+        conversationHistoryRef.current.push({ role: 'assistant', content: aiText });
+
+        speakResponse(aiText);
+    }
+
     const speakResponse = async (text: string) => {
         if (!text) return;
+
+        // Strip out tokens and hidden content for speech
+        let speechText = text
+            .replace('[START_CODING]', '')
+            .replace('[END_CODING]', '');
+
+        // Remove detailed feedback content (everything after the token)
+        if (speechText.includes('[DETAILED_FEEDBACK]')) {
+            speechText = speechText.split('[DETAILED_FEEDBACK]')[0];
+        }
+
+        speechText = speechText.trim();
 
         try {
             console.log('DEBUG: Generating speech with Local macOS TTS...');
@@ -88,7 +170,7 @@ export function useGroqVoice(): UseGroqVoiceReturn {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ text }),
+                body: JSON.stringify({ text: speechText }),
             });
 
             if (!response.ok) {
@@ -130,7 +212,7 @@ export function useGroqVoice(): UseGroqVoiceReturn {
                 audioRef.current = null;
             };
 
-            console.log('DEBUG: Playing audio for:', text);
+            console.log('DEBUG: Playing audio for:', speechText);
             await audio.play();
 
         } catch (error) {
@@ -141,7 +223,7 @@ export function useGroqVoice(): UseGroqVoiceReturn {
             // Fallback to browser TTS
             console.log('DEBUG: Falling back to browser TTS');
             window.speechSynthesis.cancel(); // Cancel any previous speech
-            const utterance = new SpeechSynthesisUtterance(text);
+            const utterance = new SpeechSynthesisUtterance(speechText);
             utterance.onend = () => {
                 setIsAiSpeaking(false);
                 if (statusRef.current === LiveStatus.CONNECTED && startListeningRef.current) {
@@ -207,50 +289,7 @@ export function useGroqVoice(): UseGroqVoiceReturn {
             ];
 
             console.log('DEBUG: Full messages being sent:', JSON.stringify(messages, null, 2));
-
-            if (!groq) {
-                const errorText = "I cannot process your request because my API key is missing.";
-                speakResponse(errorText);
-                return;
-            }
-
-            let completion;
-            try {
-                completion = await groq.chat.completions.create({
-                    messages: messages as any,
-                    model: 'llama-3.3-70b-versatile',
-                    temperature: 0.7,
-                    max_tokens: 300,
-                });
-            } catch (error: any) {
-                // Rate Limit Fallback
-                if (error?.status === 429) {
-                    console.log('DEBUG: Rate limit reached, switching to fallback model...');
-                    toast.info("Rate limit hit. Switching to lighter model (Llama 3.1 8B)...");
-                    completion = await groq.chat.completions.create({
-                        messages: messages as any,
-                        model: 'llama-3.1-8b-instant', // Fallback model
-                        temperature: 0.7,
-                        max_tokens: 300,
-                    });
-                } else {
-                    throw error;
-                }
-            }
-
-            const aiText = completion.choices[0]?.message?.content || "I didn't catch that.";
-            console.log('DEBUG: Groq response:', aiText);
-
-            const aiMsg: MessageLog = {
-                id: Date.now().toString() + '-ai',
-                role: 'assistant',
-                text: aiText,
-                timestamp: new Date(),
-            };
-            setLogs(prev => [...prev, aiMsg]);
-            conversationHistoryRef.current.push({ role: 'assistant', content: aiText });
-
-            speakResponse(aiText);
+            await sendToGroq(messages);
 
         } catch (error: any) {
             console.error('DEBUG: Groq API Error:', error);
@@ -272,6 +311,29 @@ export function useGroqVoice(): UseGroqVoiceReturn {
             }
 
             speakResponse(errorMessage);
+        }
+    };
+
+    const sendHiddenContext = async (text: string) => {
+        console.log('DEBUG: Sending hidden context to Groq:', text);
+
+        // Add as system or user message but NOT to logs
+        const contextMsg = { role: 'system' as const, content: `[HIDDEN CONTEXT]: ${text}` };
+
+        // We push to history so AI remembers it, but we DO NOT add to 'logs' state
+        conversationHistoryRef.current.push(contextMsg);
+
+        try {
+            const messages = [
+                { role: 'system', content: SYSTEM_INSTRUCTION + '\n\nCONTEXT:\n' + contextRef.current },
+                ...conversationHistoryRef.current
+            ];
+
+            await sendToGroq(messages);
+
+        } catch (error: any) {
+            console.error("Error sending hidden context:", error);
+            // Non-blocking error for context
         }
     };
 
@@ -559,6 +621,7 @@ export function useGroqVoice(): UseGroqVoiceReturn {
         isAiSpeaking,
         volume,
         logs,
-        errorDetails
+        errorDetails,
+        sendHiddenContext
     };
 }

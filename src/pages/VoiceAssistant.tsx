@@ -1,12 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useGroqVoice } from '@/hooks/useGroqVoice';
 import { AudioVisualizer } from '@/components/AudioVisualizer';
-import { LiveStatus } from '@/types/voice';
-import { Mic, X, MessageSquare, Sparkles, AlertCircle, ArrowLeft } from 'lucide-react';
+import { LiveStatus, MessageLog } from '@/types/voice';
+import { Mic, X, MessageSquare, Sparkles, AlertCircle, ArrowLeft, Code, Play, Send, Maximize2, Minimize2, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import Editor from "@monaco-editor/react";
+import { executeCode } from "@/utils/codeExecutor";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import ReactMarkdown from 'react-markdown';
 
 const VoiceAssistant: React.FC = () => {
     const navigate = useNavigate();
@@ -19,11 +24,23 @@ const VoiceAssistant: React.FC = () => {
         volume,
         logs,
         errorDetails,
+        sendHiddenContext
     } = useGroqVoice();
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [userContext, setUserContext] = useState<string>('');
     const [loadingContext, setLoadingContext] = useState(true);
+    const [interviewMode, setInterviewMode] = useState<'voice' | 'coding'>('voice');
+
+    // Coding State
+    const [code, setCode] = useState<string>("# Write your solution here\ndef solve():\n    pass");
+    const [codeOutput, setCodeOutput] = useState<string>("");
+    const [isRunning, setIsRunning] = useState(false);
+    const [problemStatement, setProblemStatement] = useState<string>("Waiting for problem statement...");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Detailed Feedback State
+    const [feedback, setFeedback] = useState<string | null>(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -32,6 +49,54 @@ const VoiceAssistant: React.FC = () => {
     useEffect(() => {
         scrollToBottom();
     }, [logs]);
+
+    // Monitor logs for transition tokens and feedback
+    useEffect(() => {
+        if (logs.length > 0) {
+            const lastMsg = logs[logs.length - 1];
+            if (lastMsg.role === 'assistant') {
+
+                // Handle START_CODING
+                if (lastMsg.text.includes('[START_CODING]')) {
+                    if (interviewMode !== 'coding') {
+                        console.log("Transitioning to CODING mode");
+                        setInterviewMode('coding');
+
+                        const text = lastMsg.text.replace('[START_CODING]', '').trim();
+                        // Clean up other tokens just in case
+                        const cleanText = text.replace(/\[.*?\]/g, '').trim();
+                        setProblemStatement(cleanText || "Listen to the interviewer for the problem statement.");
+                        toast.info("Coding Phase Started!");
+                    }
+                }
+
+                // Handle END_CODING
+                if (lastMsg.text.includes('[END_CODING]')) {
+                    if (interviewMode !== 'voice') {
+                        console.log("Transitioning back to VOICE mode");
+                        setInterviewMode('voice');
+                        toast.success("Coding phase completed. Switching back to voice.");
+                    }
+                }
+
+                // Handle DETAILED_FEEDBACK
+                if (lastMsg.text.includes('[DETAILED_FEEDBACK]')) {
+                    const parts = lastMsg.text.split('[DETAILED_FEEDBACK]');
+                    if (parts.length > 1) {
+                        const feedbackContent = parts[1].trim();
+                        setFeedback(feedbackContent);
+                        // Optional: automatically show feedback panel or toast
+                        toast("New feedback available!", {
+                            action: {
+                                label: "View",
+                                onClick: () => console.log("Feedback clicked") // Could open a modal
+                            }
+                        });
+                    }
+                }
+            }
+        }
+    }, [logs, interviewMode]);
 
     useEffect(() => {
         loadUserContext();
@@ -81,159 +146,47 @@ const VoiceAssistant: React.FC = () => {
                 .eq('id', user.id)
                 .single();
 
-            console.log('[VoiceAssistant] Profile:', profile);
-            console.log('[VoiceAssistant] Profile error:', profileError);
-
             if (profile) {
                 let context = `User Name: ${profile.full_name || 'Candidate'}\n`;
-                let projectCount = 0;
 
-                // Add coding stats if available
-                const codingStats = (profile as any).coding_stats;
-                if (codingStats) {
-                    const cfRating = codingStats.codeforces?.rating;
-                    const lcSolved = codingStats.leetcode?.submitStats?.find((s: any) => s.difficulty === "All")?.count;
-
-                    if (cfRating || lcSolved) {
-                        context += `\nCODING PROFILE:\n`;
-                        if (cfRating) context += `- Codeforces Rating: ${cfRating}\n`;
-                        if (lcSolved) context += `- LeetCode Problems Solved: ${lcSolved}\n`;
-                    }
-                }
-
-                // Fetch GitHub context
                 if (profile.github_url) {
-                    console.log('[VoiceAssistant] Fetching GitHub context for:', profile.github_url);
                     try {
                         const githubToken = import.meta.env.VITE_GITHUB_TOKEN;
-                        console.log('[VoiceAssistant] GitHub token available:', !!githubToken);
-
-                        // Extract username from GitHub URL
                         const usernameMatch = profile.github_url.match(/github\.com\/([^\/]+)/);
-                        if (!usernameMatch) {
-                            console.warn('[VoiceAssistant] Invalid GitHub URL format');
-                            context += `GitHub Profile: ${profile.github_url}\n`;
-                        } else {
+                        if (usernameMatch) {
                             const username = usernameMatch[1];
-
-                            // Fetch repos with README content
                             const headers: Record<string, string> = {
                                 'Accept': 'application/vnd.github.v3+json',
                                 'User-Agent': 'Voke-Interview-App'
                             };
-
-                            if (githubToken) {
-                                headers['Authorization'] = `token ${githubToken}`;
-                            }
+                            if (githubToken) headers['Authorization'] = `token ${githubToken}`;
 
                             const reposResponse = await fetch(
-                                `https://api.github.com/users/${username}/repos?sort=updated&per_page=5`,
+                                `https://api.github.com/users/${username}/repos?sort=updated&per_page=3`,
                                 { headers }
                             );
 
                             if (reposResponse.ok) {
                                 const repos = await reposResponse.json();
-                                projectCount = repos.length;
-
-                                // Fetch README for each repo
                                 const projectSummaries = await Promise.all(
                                     repos.map(async (repo: any) => {
-                                        let readmeSummary = 'No README available';
-
-                                        try {
-                                            const readmeResponse = await fetch(
-                                                `https://api.github.com/repos/${username}/${repo.name}/readme`,
-                                                { headers }
-                                            );
-
-                                            if (readmeResponse.ok) {
-                                                const readmeData = await readmeResponse.json();
-                                                const decodedContent = atob(readmeData.content);
-                                                readmeSummary = decodedContent.substring(0, 300).replace(/[#*`\n]/g, ' ').trim();
-                                            }
-                                        } catch (e) {
-                                            console.log(`[VoiceAssistant] No README for ${repo.name}`);
-                                        }
-
-                                        return `Project: ${repo.name}\n- Description: ${repo.description || 'No description'}\n- Tech: ${repo.language || 'Not specified'}\n- Stars: ${repo.stargazers_count}\n- Summary: ${readmeSummary}`;
+                                        return `Project: ${repo.name}\n- Description: ${repo.description || 'No description'}\n- Tech: ${repo.language || 'Not specified'}`;
                                     })
                                 );
-
                                 context += `\nGITHUB PROJECTS:\n${projectSummaries.join('\n\n')}\n`;
-                                console.log('[VoiceAssistant] ✓ GitHub projects loaded with READMEs:', projectCount);
-                            } else {
-                                console.warn('[VoiceAssistant] GitHub API error:', reposResponse.status);
-                                context += `GitHub Profile: ${profile.github_url}\n`;
                             }
                         }
                     } catch (e) {
-                        console.error('[VoiceAssistant] Failed to fetch GitHub context:', e);
-                        context += `GitHub Profile: ${profile.github_url}\n`;
+                        console.error('GitHub fetch failed', e);
                     }
-                } else {
-                    console.log('[VoiceAssistant] No GitHub URL in profile');
-                    context += `GitHub Profile: Not provided\n`;
                 }
 
-                // Parse resume PDF if available
-                if (profile.resume_url) {
-                    console.log('[VoiceAssistant] Fetching resume from:', profile.resume_url);
-                    try {
-                        const resumeResponse = await fetch(profile.resume_url);
-                        console.log('[VoiceAssistant] Resume fetch status:', resumeResponse.status);
-
-                        const resumeBlob = await resumeResponse.blob();
-                        console.log('[VoiceAssistant] Resume blob size:', resumeBlob.size, 'type:', resumeBlob.type);
-
-                        // Dynamically import pdfjs
-                        const pdfjsLib = await import('pdfjs-dist');
-                        // Use the correct worker from node_modules
-                        pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-                            'pdfjs-dist/build/pdf.worker.min.mjs',
-                            import.meta.url
-                        ).toString();
-
-                        const arrayBuffer = await resumeBlob.arrayBuffer();
-                        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                        console.log('[VoiceAssistant] PDF loaded, pages:', pdf.numPages);
-
-                        let resumeText = '';
-                        for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) {
-                            const page = await pdf.getPage(i);
-                            const textContent = await page.getTextContent();
-                            const pageText = textContent.items.map((item: any) => item.str).join(' ');
-                            resumeText += pageText + '\n';
-                        }
-
-                        // Clean and truncate resume text
-                        resumeText = resumeText.replace(/\s+/g, ' ').trim().substring(0, 2000);
-                        context += `\nRESUME CONTENT:\n${resumeText}\n`;
-                        console.log('[VoiceAssistant] ✓ Resume parsed successfully, length:', resumeText.length);
-                    } catch (e) {
-                        console.error('[VoiceAssistant] Failed to parse resume:', e);
-                        context += `Resume URL: ${profile.resume_url}\n`;
-                    }
-                } else {
-                    console.log('[VoiceAssistant] No resume URL in profile');
-                }
-
-                if (profile.linkedin_url) context += `LinkedIn Profile: ${profile.linkedin_url}\n`;
-
-                // Add instruction
-                if (projectCount > 0) {
-                    context += `\nINSTRUCTION: You have detailed information about the user's ${projectCount} GitHub projects and their resume. You know about ALL of them. Start by greeting them warmly by name. Then, instead of just asking generic questions, **ask creative, unconventional, and thought-provoking questions** to test their problem-solving and adaptability. Mix these with specific technical questions about their projects.`;
-                } else {
-                    context += `\nINSTRUCTION: Start by greeting the user warmly by name. Then, **ask creative, unconventional, and thought-provoking questions** to test their problem-solving and adaptability. Avoid generic "tell me about yourself" questions.`;
-                }
-
-                console.log('[VoiceAssistant] Final context length:', context.length);
-                console.log('[VoiceAssistant] Full context:', context);
+                context += `\nINSTRUCTION: You are conducting a technical interview. Start with introductions and behavioral questions. When you feel ready to test their coding skills, say "[START_CODING]" and present a problem.`;
                 setUserContext(context);
             }
         } catch (error) {
             console.error('[VoiceAssistant] Error loading context:', error);
             toast.error('Failed to load profile context');
-            // Set minimal context so the interview can still proceed
             setUserContext('User Name: Candidate\nINSTRUCTION: Greet the user and ask them a creative, unconventional interview question.');
         } finally {
             setLoadingContext(false);
@@ -258,11 +211,11 @@ const VoiceAssistant: React.FC = () => {
                 .insert({
                     user_id: user.id,
                     role: 'Voice Interviewer',
-                    time_limit_minutes: 0, // Unlimited
+                    time_limit_minutes: 0,
                     status: 'completed',
                     interview_type: 'voice',
-                    interview_mode: 'voice',
-                    transcript: logs, // Save the full logs
+                    interview_mode: 'voice', // could update to 'mixed' if coding happened
+                    transcript: logs,
                     total_duration_seconds: duration,
                     created_at: new Date().toISOString()
                 } as any)
@@ -271,6 +224,18 @@ const VoiceAssistant: React.FC = () => {
 
             if (error) throw error;
 
+            toast.loading("Analyzing session...", { id: toastId });
+
+            // Trigger analysis (Assuming there is an Edge Function for this)
+            try {
+                await supabase.functions.invoke('evaluate-interview', {
+                    body: { session_id: data.id }
+                });
+            } catch (evalError) {
+                console.error("Evaluation trigger failed:", evalError);
+                // Continue anyway so user can see what IS there
+            }
+
             toast.dismiss(toastId);
             toast.success("Session saved!");
             navigate(`/voice-interview/results/${data.id}`);
@@ -278,7 +243,7 @@ const VoiceAssistant: React.FC = () => {
         } catch (error: any) {
             console.error("Error saving session:", error);
             toast.dismiss(toastId);
-            toast.error(`Failed to save session: ${error.message || error.error_description || "Unknown error"}`);
+            toast.error(`Failed to save session: ${error.message}`);
         }
     };
 
@@ -286,12 +251,49 @@ const VoiceAssistant: React.FC = () => {
         connect(userContext);
     };
 
-    // Handle errors or disconnects with a visual cue
+    // Code Execution
+    const handleRunCode = async () => {
+        setIsRunning(true);
+        setCodeOutput("Running...");
+        try {
+            await executeCode(code, 'python',
+                (log) => setCodeOutput(prev => prev === "Running..." ? log : prev + log),
+                () => { }, // No input support for now in this mini-editor
+                ""
+            );
+        } catch (err: any) {
+            setCodeOutput(`Error: ${err.message}`);
+        } finally {
+            setIsRunning(false);
+        }
+    };
+
+    const handleSubmitCode = async () => {
+        setIsSubmitting(true);
+        try {
+            const prompt = `USER SUBMITTED CODE:\n\`\`\`python\n${code}\n\`\`\`\n\nOUTPUT:\n${codeOutput}\n\nINSTRUCTION: Review this code. Do NOT simply accept it or say it's correct. Ask a SOCRATIC QUESTION about their implementation choices, efficiency, or potential bugs. engage in a discussion.`;
+            await sendHiddenContext(prompt);
+            toast.success("Code submitted for discussion!");
+        } catch (e) {
+            toast.error("Failed to submit code");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     const isError = status === LiveStatus.ERROR;
     const isConnected = status === LiveStatus.CONNECTED;
 
     return (
-        <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 relative overflow-hidden">
+        <div className="min-h-screen bg-background text-foreground flex flex-col relative overflow-hidden">
+
+            {/* Header / Nav */}
+            <div className="absolute top-4 left-4 z-50">
+                <Button variant="ghost" className="text-white hover:text-white/80 hover:bg-white/10" onClick={() => navigate('/dashboard')}>
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Dashboard
+                </Button>
+            </div>
 
             {/* Background Decoration */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
@@ -299,151 +301,231 @@ const VoiceAssistant: React.FC = () => {
                 <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl mix-blend-screen animate-pulse" style={{ animationDelay: '1s' }}></div>
             </div>
 
-            <div className="absolute top-4 left-4 z-20">
-                <Button variant="ghost" className="text-white hover:text-white/80 hover:bg-white/10" onClick={() => navigate('/dashboard')}>
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back to Dashboard
-                </Button>
-            </div>
+            {/* MAIN CONTENT AREA */}
+            <div className="z-10 flex-1 flex flex-col">
 
-            <div className="z-10 w-full max-w-md flex flex-col gap-6">
-
-                {/* Header */}
-                <div className="text-center space-y-2">
-                    <div className="flex items-center justify-center gap-3">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-card border border-border text-xs font-medium text-muted-foreground">
-                            <Sparkles className="w-3 h-3 text-purple-400" />
-                            <span>AI Interviewer</span>
-                        </div>
-                        {status === LiveStatus.CONNECTED && (
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-card border border-border text-xs font-medium text-muted-foreground font-mono">
-                                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                                <span>{formatTime(duration)}</span>
+                {interviewMode === 'voice' ? (
+                    // === VOICE MODE LAYOUT ===
+                    <div className="flex-1 flex flex-col items-center justify-center p-4">
+                        <div className="w-full max-w-md flex flex-col gap-6">
+                            {/* Header Info */}
+                            <div className="text-center space-y-2">
+                                <div className="flex items-center justify-center gap-3">
+                                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-card border border-border text-xs font-medium text-muted-foreground">
+                                        <Sparkles className="w-3 h-3 text-purple-400" />
+                                        <span>AI Interviewer</span>
+                                    </div>
+                                    {status === LiveStatus.CONNECTED && (
+                                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-card border border-border text-xs font-medium text-muted-foreground font-mono">
+                                            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                                            <span>{formatTime(duration)}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <h1 className="text-3xl font-bold tracking-tight text-foreground">Voice Interview</h1>
+                                <p className="text-muted-foreground text-sm">
+                                    {loadingContext ? "Loading profile..." : "Ready to interview you based on your profile."}
+                                </p>
                             </div>
-                        )}
-                    </div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Voice Interview</h1>
-                    <p className="text-muted-foreground text-sm">
-                        {loadingContext ? "Loading profile..." : "Ready to interview you based on your profile."}
-                    </p>
-                </div>
 
-                {/* Visualizer Area */}
-                <div className="relative bg-card/50 border border-border rounded-3xl overflow-hidden backdrop-blur-sm shadow-2xl transition-all duration-500 min-h-[320px]">
-                    {/* Connection Status Overlay */}
-                    {status === LiveStatus.CONNECTING && (
-                        <div className="absolute inset-0 flex items-center justify-center z-20 bg-background/80 backdrop-blur-sm">
-                            <div className="flex flex-col items-center gap-3">
-                                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                                <span className="text-sm font-medium text-muted-foreground">Connecting...</span>
-                            </div>
-                        </div>
-                    )}
-
-                    {isError && (
-                        <div className="absolute inset-0 flex items-center justify-center z-20 bg-background/80 backdrop-blur-sm">
-                            <div className="flex flex-col items-center gap-3 text-destructive p-4 text-center">
-                                <AlertCircle className="w-10 h-10" />
-                                <span className="text-sm font-medium">Connection Error</span>
-                                {errorDetails && (
-                                    <p className="text-xs text-destructive/80 mt-1 max-w-[200px] break-words">
-                                        {errorDetails}
-                                    </p>
+                            {/* Visualizer */}
+                            <div className="relative bg-card/50 border border-border rounded-3xl overflow-hidden backdrop-blur-sm shadow-2xl transition-all duration-500 min-h-[320px]">
+                                {status === LiveStatus.CONNECTING && (
+                                    <div className="absolute inset-0 flex items-center justify-center z-20 bg-background/80 backdrop-blur-sm">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                            <span className="text-sm font-medium text-muted-foreground">Connecting...</span>
+                                        </div>
+                                    </div>
                                 )}
-                                <button
-                                    onClick={() => window.location.reload()}
-                                    className="mt-2 px-4 py-2 bg-accent rounded-lg hover:bg-accent/80 text-xs text-foreground transition-colors"
-                                >
-                                    Reload
-                                </button>
+                                <AudioVisualizer
+                                    isUserSpeaking={isUserSpeaking}
+                                    isAiSpeaking={isAiSpeaking}
+                                    volume={volume}
+                                />
                             </div>
-                        </div>
-                    )}
 
-                    <AudioVisualizer
-                        isUserSpeaking={isUserSpeaking}
-                        isAiSpeaking={isAiSpeaking}
-                        volume={volume}
-                    />
-                </div>
+                            {/* Controls */}
+                            <div className="flex items-center justify-center gap-6 mb-6">
+                                {!isConnected ? (
+                                    <button
+                                        onClick={handleConnect}
+                                        disabled={status === LiveStatus.CONNECTING || loadingContext}
+                                        className="group relative flex items-center justify-center w-20 h-20 bg-primary hover:bg-primary/90 rounded-full shadow-lg hover:shadow-primary/25 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <div className="absolute inset-0 rounded-full border-2 border-white/20 group-hover:scale-110 transition-transform duration-300"></div>
+                                        <Mic className="w-8 h-8 text-primary-foreground" />
+                                    </button>
+                                ) : (
+                                    <div className="flex gap-4">
+                                        <button onClick={disconnect} className="group relative flex items-center justify-center w-16 h-16 bg-muted hover:bg-muted/80 rounded-full shadow-lg transition-all duration-300">
+                                            <X className="w-6 h-6 text-foreground" />
+                                        </button>
+                                        <button onClick={handleEndInterview} className="group relative flex items-center justify-center w-20 h-20 bg-destructive hover:bg-destructive/90 rounded-full shadow-lg hover:shadow-destructive/25 transition-all duration-300">
+                                            <MessageSquare className="w-8 h-8 text-destructive-foreground" />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
 
-                {/* Controls */}
-                <div className="flex items-center justify-center gap-6">
-                    {!isConnected ? (
-                        <button
-                            onClick={handleConnect}
-                            disabled={status === LiveStatus.CONNECTING || loadingContext}
-                            className="group relative flex items-center justify-center w-20 h-20 bg-primary hover:bg-primary/90 rounded-full shadow-lg hover:shadow-primary/25 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <div className="absolute inset-0 rounded-full border-2 border-white/20 group-hover:scale-110 transition-transform duration-300"></div>
-                            <Mic className="w-8 h-8 text-primary-foreground" />
-                        </button>
-                    ) : (
-                        <div className="flex gap-4">
-                            <button
-                                onClick={disconnect}
-                                className="group relative flex items-center justify-center w-16 h-16 bg-muted hover:bg-muted/80 rounded-full shadow-lg transition-all duration-300"
-                                title="Mute/Pause"
-                            >
-                                <X className="w-6 h-6 text-foreground" />
-                            </button>
-                            <button
-                                onClick={handleEndInterview}
-                                className="group relative flex items-center justify-center w-20 h-20 bg-destructive hover:bg-destructive/90 rounded-full shadow-lg hover:shadow-destructive/25 transition-all duration-300"
-                                title="End Interview & Get Results"
-                            >
-                                <div className="absolute inset-0 rounded-full border-2 border-white/20 group-hover:scale-110 transition-transform duration-300"></div>
-                                <MessageSquare className="w-8 h-8 text-destructive-foreground" />
-                            </button>
-                        </div>
-                    )}
-                </div>
+                            {/* Transcript Display */}
+                            <div className="w-full max-h-48 overflow-y-auto mb-4 p-4 rounded-xl bg-background/50 backdrop-blur border border-white/10 shadow-inner">
+                                <div className="space-y-3">
+                                    {logs.map((log) => (
+                                        <div
+                                            key={log.id}
+                                            className={`flex ${log.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                                        >
+                                            <div className={`
+                                                max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm
+                                                ${log.role === 'user'
+                                                    ? 'bg-primary text-primary-foreground rounded-br-sm'
+                                                    : 'bg-muted text-muted-foreground rounded-bl-sm'
+                                                }
+                                            `}>
+                                                {log.text.replace('[START_CODING]', '').replace('[END_CODING]', '').split('[DETAILED_FEEDBACK]')[0]}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <div ref={messagesEndRef} />
+                                </div>
+                            </div>
 
-                {/* Transcript Log (Optional but useful for context) */}
-                {isConnected && logs.length > 0 && (
-                    <div className="mt-4 p-4 rounded-2xl bg-card/40 border border-border/50 backdrop-blur-sm max-h-48 overflow-y-auto custom-scrollbar">
-                        <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                            <MessageSquare className="w-3 h-3" />
-                            <span>Transcript</span>
+                            {/* Feedback Display (Voice Mode) */}
+                            {feedback && (
+                                <div className="mt-6 w-full bg-card/80 border border-green-500/30 rounded-xl p-4 animate-in slide-in-from-bottom-5">
+                                    <h3 className="text-green-400 font-semibold mb-2 flex items-center gap-2">
+                                        <FileText className="w-4 h-4" /> Feedback from Last Challenge
+                                    </h3>
+                                    <ScrollArea className="h-32 rounded bg-black/20 p-2">
+                                        <div className="prose prose-invert prose-sm">
+                                            <ReactMarkdown>{feedback}</ReactMarkdown>
+                                        </div>
+                                    </ScrollArea>
+                                </div>
+                            )}
                         </div>
-                        <div className="flex flex-col gap-3">
-                            {logs.map((msg) => (
-                                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${msg.role === 'user'
-                                        ? 'bg-primary/20 text-primary-foreground rounded-tr-sm'
-                                        : 'bg-muted/50 text-muted-foreground rounded-tl-sm'
-                                        }`}>
-                                        {msg.text}
+                    </div>
+                ) : (
+                    // === CODING MODE LAYOUT ===
+                    <div className="flex-1 flex flex-col h-screen pt-16 px-4 pb-4 gap-4">
+                        <ResizablePanelGroup direction="horizontal" className="flex-1 rounded-xl border border-border bg-card/50 backdrop-blur-sm overflow-hidden">
+                            {/* Left Panel: Problem & Chat */}
+                            <ResizablePanel defaultSize={30} minSize={20} className="flex flex-col border-r border-border bg-[#1e1e1e]">
+                                <div className="p-4 border-b border-border bg-[#252526]">
+                                    <h2 className="font-semibold text-white flex items-center gap-2">
+                                        <Code className="w-4 h-4 text-blue-400" />
+                                        Coding Challenge
+                                    </h2>
+                                </div>
+                                <div className="flex-1 overflow-auto p-4 text-sm text-gray-300 font-sans leading-relaxed">
+                                    <div className="space-y-4">
+                                        {!feedback ? (
+                                            <>
+                                                <div className="font-medium text-indigo-300">Problem Statement:</div>
+                                                <p className="whitespace-pre-wrap">{problemStatement}</p>
+                                            </>
+                                        ) : (
+                                            <div className="bg-green-900/10 border border-green-500/20 p-3 rounded">
+                                                <div className="font-medium text-green-400 mb-2">Previous Feedback:</div>
+                                                <div className="prose prose-invert prose-xs">
+                                                    <ReactMarkdown>{feedback}</ReactMarkdown>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-8 border-t border-white/10 pt-4">
+                                        <div className="font-medium text-indigo-300 mb-2">Transcript:</div>
+                                        <div className="flex flex-col gap-2 opacity-70">
+                                            {logs.slice(-5).map((msg) => (
+                                                <div key={msg.id} className={`text-xs p-2 rounded ${msg.role === 'user' ? 'bg-indigo-500/20 self-end' : 'bg-gray-700/50 self-start'}`}>
+                                                    <span className="font-bold opacity-50 block mb-0.5">{msg.role === 'user' ? 'You' : 'Interviewer'}:</span>
+                                                    {msg.text
+                                                        .replace('[START_CODING]', '')
+                                                        .replace('[END_CODING]', '')
+                                                        .split('[DETAILED_FEEDBACK]')[0]
+                                                    }
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
-                            ))}
-                            <div ref={messagesEndRef} />
+                            </ResizablePanel>
+
+                            <ResizableHandle />
+
+                            {/* Right Panel: Code Editor */}
+                            <ResizablePanel defaultSize={70} className="flex flex-col bg-[#1e1e1e]">
+                                <div className="h-10 bg-[#252526] flex items-center justify-between px-4 border-b border-border">
+                                    <span className="text-xs text-gray-400">main.py</span>
+                                    <div className="flex items-center gap-2">
+                                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1 border-green-500/30 text-green-400 hover:text-green-300 hover:bg-green-500/10" onClick={handleRunCode} disabled={isRunning}>
+                                            <Play className="w-3 h-3" /> Run
+                                        </Button>
+                                        <Button size="sm" className="h-7 text-xs gap-1 bg-indigo-600 hover:bg-indigo-700 text-white border-none" onClick={handleSubmitCode} disabled={isSubmitting}>
+                                            <Send className="w-3 h-3" /> Submit & Discuss
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="flex-1 relative">
+                                    <Editor
+                                        height="100%"
+                                        defaultLanguage="python"
+                                        theme="vs-dark"
+                                        value={code}
+                                        onChange={(val) => setCode(val || "")}
+                                        options={{
+                                            minimap: { enabled: false },
+                                            fontSize: 14,
+                                            padding: { top: 16 }
+                                        }}
+                                    />
+                                </div>
+                                {/* Terminal / Output */}
+                                <div className="h-32 bg-[#0f0f0f] border-t border-[#333] flex flex-col">
+                                    <div className="px-4 py-1.5 text-xs text-gray-500 font-mono border-b border-[#333]">Output</div>
+                                    <ScrollArea className="flex-1 p-3 font-mono text-sm text-gray-300">
+                                        <pre>{codeOutput || "Run code to see output..."}</pre>
+                                    </ScrollArea>
+                                </div>
+                            </ResizablePanel>
+                        </ResizablePanelGroup>
+
+                        {/* Sticky Voice Control Bar (Mini) */}
+                        <div className="h-16 bg-card border border-border rounded-xl flex items-center px-4 justify-between shadow-lg">
+                            <div className="flex items-center gap-4">
+                                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                <div className="text-sm font-medium">Live Interview</div>
+                                <div className="text-xs text-muted-foreground font-mono">{formatTime(duration)}</div>
+                            </div>
+
+                            <div className="flex-1 max-w-xs mx-4 h-8 bg-black/20 rounded-lg overflow-hidden relative">
+                                {/* Mini Visualizer */}
+                                <div className="absolute inset-0 flex items-center justify-center gap-0.5">
+                                    {/* Simplified visualizer bars */}
+                                    {[...Array(10)].map((_, i) => (
+                                        <div
+                                            key={i}
+                                            className="w-1 bg-indigo-500/80 rounded"
+                                            style={{
+                                                height: Math.max(4, Math.random() * (volume * 100)) + 'px',
+                                                opacity: 0.5 + (volume * 0.5)
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <Button size="icon" variant="destructive" onClick={handleEndInterview} className="rounded-full w-10 h-10">
+                                    <MessageSquare className="w-5 h-5" />
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 )}
             </div>
-
-            {/* Instructions / Footer */}
-            {!isConnected && (
-                <div className="absolute bottom-8 text-center text-muted-foreground text-xs max-w-sm px-4">
-                    <p>Make sure your microphone is enabled.</p>
-                    <p className="mt-1">Powered by Google Gemini 2.5 Native Audio API.</p>
-                </div>
-            )}
-
-            {/* Tailwind Custom Scrollbar Hack */}
-            <style>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(30, 41, 59, 0.5);
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(71, 85, 105, 0.8);
-          border-radius: 4px;
-        }
-      `}</style>
         </div>
     );
 };
