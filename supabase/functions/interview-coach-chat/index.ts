@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -15,9 +15,12 @@ Deno.serve(async (req: Request) => {
     try {
         const { messages, userContext } = await req.json();
 
-        const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+        // Check for standard key first, then the user's custom named key
+        const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") || Deno.env.get("Groq NEW KEY");
+        
         if (!GROQ_API_KEY) {
-            throw new Error("GROQ_API_KEY is not configured");
+            console.error("Missing GROQ_API_KEY");
+            throw new Error("Server configuration error: Missing API Key");
         }
 
         const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
