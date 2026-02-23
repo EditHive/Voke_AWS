@@ -409,13 +409,50 @@ REMEMBER: This is an ELITE interview. The bar is high. No feedback. strict time 
                         {/* LEFT: Interviewer / Feedback */}
                         <ResizablePanel defaultSize={35} minSize={25} maxSize={50} className="bg-[#111] border-r border-[#333] flex flex-col relative">
 
+                            {/* Start Button Overlay - Covers entire left panel */}
+                            {status !== LiveStatus.CONNECTED && (
+                                <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/90 backdrop-blur-md">
+                                    <div className="text-center space-y-6 p-6 bg-[#111] border border-white/10 rounded-2xl shadow-2xl max-w-xs w-full mx-4">
+                                        <div className="space-y-4">
+                                            <h2 className="text-lg font-bold text-white tracking-tight">Select Interview Duration</h2>
+                                            <div className="grid grid-cols-5 gap-2">
+                                                {[7, 15, 30, 45, 60].map((mins) => (
+                                                    <button
+                                                        key={mins}
+                                                        onClick={() => setSelectedDuration(mins)}
+                                                        className={`py-2 rounded-lg text-sm font-medium transition-all ${selectedDuration === mins
+                                                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25 ring-1 ring-indigo-400'
+                                                            : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                                                            }`}
+                                                    >
+                                                        {mins} m
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <p className="text-xs text-gray-500">
+                                                Strict timing. Interview will not end early.
+                                            </p>
+                                        </div>
+
+                                        <Button
+                                            size="lg"
+                                            onClick={handleStartInterview}
+                                            disabled={loadingProfile}
+                                            className="w-full h-12 text-base bg-white text-black hover:bg-white/90 rounded-xl font-bold transition-all hover:scale-[1.02]"
+                                        >
+                                            <Play className="w-5 h-5 mr-2 fill-current" />
+                                            {loadingProfile ? 'Loading Profile...' : 'Start Session'}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* AI Agent Visualizer Area */}
-                            {/* AI Agent Visualizer Area */}
-                            <div className="relative h-2/5 min-h-[300px] border-b border-[#333] flex flex-col items-center justify-center bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] p-6 gap-6">
+                            <div className="flex-[2] flex flex-col items-center justify-center bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] p-6 relative border-b border-[#333]">
                                 <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5"></div>
 
-                                <div className="z-10 w-full max-w-[280px] aspect-square relative flex items-center justify-center">
-                                    <div className="absolute inset-0 bg-indigo-500/10 rounded-full blur-[100px] animate-pulse"></div>
+                                {/* Visualizer */}
+                                <div className="z-10 w-48 h-48 relative flex items-center justify-center mb-4 overflow-visible">
                                     <AudioVisualizer
                                         isUserSpeaking={isUserSpeaking}
                                         isAiSpeaking={isAiSpeaking}
@@ -424,73 +461,25 @@ REMEMBER: This is an ELITE interview. The bar is high. No feedback. strict time 
                                 </div>
 
                                 {/* Status Text */}
-                                <div className="z-10 text-center space-y-3 max-w-sm mx-auto">
-                                    <h3 className="text-white/90 font-semibold text-lg tracking-wide">AI Interviewer</h3>
-
-                                    <div className="flex flex-col gap-1.5 items-center">
-                                        <div className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border ${isAiSpeaking ? 'bg-indigo-500/20 border-indigo-500/30 text-indigo-300' : isUserSpeaking ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300' : 'bg-white/5 border-white/10 text-white/40'}`}>
-                                            {isAiSpeaking ? "Speaking" : isUserSpeaking ? "Listening" : "Ready"}
-                                        </div>
-
-                                        {profileContext && (
-                                            <p className="text-xs text-white/30 flex items-center gap-1.5">
-                                                <span>Interviewing</span>
-                                                <span className="w-1 h-1 rounded-full bg-white/20"></span>
-                                                <span className="text-indigo-400/80 font-medium">{profileContext.fullName}</span>
-                                            </p>
-                                        )}
+                                <div className="z-10 text-center">
+                                    <h3 className="text-white/90 font-semibold text-sm tracking-wide mb-2">AI Interviewer</h3>
+                                    <div className={`inline-flex px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border ${isAiSpeaking ? 'bg-indigo-500/20 border-indigo-500/30 text-indigo-300' : isUserSpeaking ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300' : 'bg-white/5 border-white/10 text-white/40'}`}>
+                                        {isAiSpeaking ? "Speaking" : isUserSpeaking ? "Listening" : "Ready"}
                                     </div>
+                                    {profileContext && (
+                                        <p className="text-[11px] text-white/30 mt-2">
+                                            Interviewing · <span className="text-indigo-400/80 font-medium">{profileContext.fullName}</span>
+                                        </p>
+                                    )}
                                 </div>
-
-                                {/* Start Button Overlay */}
-                                {status !== LiveStatus.CONNECTED && (
-                                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 backdrop-blur-md">
-                                        <div className="text-center space-y-8 p-8 bg-[#111] border border-white/10 rounded-2xl shadow-2xl max-w-sm w-full mx-4">
-
-                                            <div className="space-y-4">
-                                                <h2 className="text-xl font-bold text-white tracking-tight">Select Interview Duration</h2>
-                                                <div className="grid grid-cols-5 gap-2">
-                                                    {[7, 15, 30, 45, 60].map((mins) => (
-                                                        <button
-                                                            key={mins}
-                                                            onClick={() => setSelectedDuration(mins)}
-                                                            className={`py-2 rounded-lg text-sm font-medium transition-all ${selectedDuration === mins
-                                                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25 ring-1 ring-indigo-400'
-                                                                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
-                                                                }`}
-                                                        >
-                                                            {mins} m
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                <p className="text-xs text-gray-500">
-                                                    Strict timing. Interview will not end early.
-                                                </p>
-                                            </div>
-
-                                            <Button
-                                                size="lg"
-                                                onClick={handleStartInterview}
-                                                disabled={loadingProfile}
-                                                className="w-full h-12 text-base bg-white text-black hover:bg-white/90 rounded-xl font-bold transition-all hover:scale-[1.02]"
-                                            >
-                                                <Play className="w-5 h-5 mr-2 fill-current" />
-                                                {loadingProfile ? 'Loading Profile...' : 'Start Session'}
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
 
                             {/* Transcript / Chat Area */}
-                            <div className="flex-1 flex flex-col min-h-0 bg-[#0f0f0f]">
-                                <div className="flex items-center gap-4 px-4 py-2 border-b border-[#333]">
-                                    <button
-                                        onClick={() => setActiveTab('transcript')}
-                                        className={`text-xs font-medium pb-2 border-b-2 transition-colors ${activeTab === 'transcript' ? 'text-white border-indigo-500' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
-                                    >
+                            <div className="flex-[3] flex flex-col min-h-0 bg-[#0f0f0f]">
+                                <div className="px-4 py-2 border-b border-[#333]">
+                                    <span className="text-xs font-medium text-white border-b-2 border-indigo-500 pb-2">
                                         Live Transcript
-                                    </button>
+                                    </span>
                                 </div>
                                 <ScrollArea className="flex-1 p-4">
                                     <div className="space-y-4">
