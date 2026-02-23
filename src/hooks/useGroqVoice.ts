@@ -180,6 +180,13 @@ export function useGroqVoice(): UseGroqVoiceReturn {
             const blob = await response.blob();
             const audioUrl = URL.createObjectURL(blob);
 
+            // STOP: Check if we are still connected before playing
+            if (statusRef.current !== LiveStatus.CONNECTED) {
+                console.log('DEBUG: Disconnected while generating speech, cancelling playback.');
+                URL.revokeObjectURL(audioUrl);
+                return;
+            }
+
             // Play the audio
             if (audioRef.current) {
                 audioRef.current.pause();

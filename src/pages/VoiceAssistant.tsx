@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useGroqVoice } from '@/hooks/useGroqVoice';
 import { AudioVisualizer } from '@/components/AudioVisualizer';
 import { LiveStatus, MessageLog } from '@/types/voice';
-import { Mic, X, MessageSquare, Sparkles, AlertCircle, ArrowLeft, Code, Play, Send, Maximize2, Minimize2, FileText } from 'lucide-react';
+import { Mic, X, MessageSquare, Sparkles, AlertCircle, ArrowLeft, Code, Play, Send, Maximize2, Minimize2, FileText, LogOut } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -518,8 +518,14 @@ const VoiceAssistant: React.FC = () => {
                             </div>
 
                             <div className="flex items-center gap-2">
-                                <Button size="icon" variant="destructive" onClick={handleEndInterview} className="rounded-full w-10 h-10">
-                                    <MessageSquare className="w-5 h-5" />
+                                <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={handleEndInterview}
+                                    className="gap-2 px-4 shadow-md hover:shadow-red-500/20 transition-all hover:scale-105 font-semibold tracking-wide"
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                    End Interview
                                 </Button>
                             </div>
                         </div>
