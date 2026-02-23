@@ -88,6 +88,8 @@ export function useGroqVoice(): UseGroqVoiceReturn {
     const isAiSpeakingRef = useRef(isAiSpeaking);
     const isListeningRef = useRef(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+    const audioContextRef = useRef<AudioContext | null>(null);
 
     useEffect(() => {
         statusRef.current = status;
@@ -114,16 +116,36 @@ export function useGroqVoice(): UseGroqVoiceReturn {
                 max_tokens: 800, // Increased for detailed feedback
             });
         } catch (error: any) {
-            // Rate Limit Fallback
+            // Level 1 Fallback: Llama 3.1 8B
             if (error?.status === 429) {
-                console.log('DEBUG: Rate limit reached, switching to fallback model...');
-                toast.info("Rate limit hit. Switching to lighter model (Llama 3.1 8B)...");
-                completion = await groq.chat.completions.create({
-                    messages: fullMessages,
-                    model: 'llama-3.1-8b-instant', // Fallback model
-                    temperature: 0.7,
-                    max_tokens: 800,
-                });
+                console.log('DEBUG: Rate limit on 70b, waiting 1s and switching to 8b...');
+                // toast.warning("Optimizing connection (1/2)..."); 
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                try {
+                    completion = await groq.chat.completions.create({
+                        messages: fullMessages,
+                        model: 'llama-3.1-8b-instant',
+                        temperature: 0.7,
+                        max_tokens: 800,
+                    });
+                } catch (retryError: any) {
+                    // Level 2 Fallback: Mixtral
+                    if (retryError?.status === 429) {
+                        console.log('DEBUG: Rate limit on 8b, waiting 2s and switching to Mixtral...');
+                        // toast.warning("Optimizing connection (2/2)...");
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+
+                        completion = await groq.chat.completions.create({
+                            messages: fullMessages,
+                            model: 'mixtral-8x7b-32768',
+                            temperature: 0.7,
+                            max_tokens: 800,
+                        });
+                    } else {
+                        throw retryError;
+                    }
+                }
             } else {
                 throw error;
             }
@@ -347,11 +369,20 @@ export function useGroqVoice(): UseGroqVoiceReturn {
     const startListening = async () => {
         if (isListeningRef.current || isAiSpeakingRef.current) return;
 
+        // Check if we're still connected before starting
+        if (statusRef.current !== LiveStatus.CONNECTED) {
+            console.log('DEBUG: Not connected, skipping startListening');
+            return;
+        }
+
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            streamRef.current = stream; // Store for cleanup
 
             // Audio Context for VAD (Voice Activity Detection)
             const audioContext = new AudioContext();
+            audioContextRef.current = audioContext; // Store for cleanup
+
             const source = audioContext.createMediaStreamSource(stream);
             const analyser = audioContext.createAnalyser();
             analyser.fftSize = 256;
@@ -373,9 +404,11 @@ export function useGroqVoice(): UseGroqVoiceReturn {
             let silenceTimer: any = null;
             const startTime = Date.now();
 
-            const SPEECH_THRESHOLD = 5; // Lower capability for quiet mics (range 0-255)
-            const SILENCE_AFTER_SPEECH = 2500; // Increased to 2.5s for natural pauses
-            const INITIAL_WAIT_TIMEOUT = 10000; // 10s wait
+            // VAD Sensitivity Settings (volume range: 0-255)
+            // Normal speech typically registers 40-100+, quiet speech 20-40
+            const SPEECH_THRESHOLD = 20; // Higher threshold filters background noise while catching clear speech
+            const SILENCE_AFTER_SPEECH = 1500; // 1.5s silence to detect sentence end (was 2.5s - too long)
+            const INITIAL_WAIT_TIMEOUT = 8000; // 8s wait for user to start speaking
 
             const detectSilence = () => {
                 if (!isListeningRef.current) return;
@@ -559,7 +592,13 @@ export function useGroqVoice(): UseGroqVoiceReturn {
                     if (error?.status === 429) {
                         console.log('DEBUG: Rate limit reached during greeting, switching to fallback...');
                         greetingCompletion = await groq.chat.completions.create({
-                            messages: [{ role: 'user', content: 'Say hello and ask for introduction.' }],
+                            messages: [
+                                {
+                                    role: 'system',
+                                    content: SYSTEM_INSTRUCTION + '\n\nCONTEXT:\n' + contextRef.current
+                                },
+                                { role: 'user', content: 'Say hello and ask for introduction.' }
+                            ],
                             model: 'llama-3.1-8b-instant',
                             temperature: 0.7,
                             max_tokens: 60,
@@ -605,19 +644,48 @@ export function useGroqVoice(): UseGroqVoiceReturn {
         setStatus(LiveStatus.DISCONNECTED);
         isListeningRef.current = false;
 
+        // Stop media recorder
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-            mediaRecorderRef.current.stop();
+            try {
+                mediaRecorderRef.current.stop();
+            } catch (e) {
+                console.log('DEBUG: MediaRecorder already stopped');
+            }
+        }
+        mediaRecorderRef.current = null;
+
+        // Stop microphone stream
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => {
+                track.stop();
+                console.log('DEBUG: Stopped track:', track.kind);
+            });
+            streamRef.current = null;
+        }
+
+        // Close audio context
+        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+            try {
+                audioContextRef.current.close();
+            } catch (e) {
+                console.log('DEBUG: AudioContext already closed');
+            }
+            audioContextRef.current = null;
         }
 
         // Stop audio playback
         if (audioRef.current) {
             audioRef.current.pause();
+            audioRef.current.src = '';
             audioRef.current = null;
         }
+
+        // Stop browser speech synthesis
         window.speechSynthesis.cancel();
 
         setIsUserSpeaking(false);
         setIsAiSpeaking(false);
+        setVolume(0);
     }, []);
 
     return {
