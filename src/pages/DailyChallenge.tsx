@@ -10,28 +10,38 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import Confetti from "react-confetti";
 
+import { getDailyQuestion } from "@/data/questions";
+
 type Language = 'javascript' | 'python' | 'bash';
+
+const dailyQuestion = getDailyQuestion();
 
 const TEMPLATES = {
   javascript: `/**
- * @param {ListNode} head
- * @return {ListNode}
+ * Daily Challenge: ${dailyQuestion.title}
+ * Platform: ${dailyQuestion.platform}
+ * 
+ * Write your solution here.
+ * Note: This is a sandbox environment. Run tests on the official platform.
  */
-function reverseList(head) {
+
+function solution() {
   // Your code here
   
 }`,
-  python: `# Definition for singly-linked list.
-# class ListNode:
-#     def __init__(self, val=0, next=None):
-#         self.val = val
-#         self.next = next
-class Solution:
-    def reverseList(self, head: Optional[ListNode]) -> Optional[ListNode]:
-        # Your code here
-        pass`,
-  bash: `# Read from the file file.txt and output the tenth line to stdout.
-# Your code here
+  python: `# Daily Challenge: ${dailyQuestion.title}
+# Platform: ${dailyQuestion.platform}
+#
+# Write your solution here.
+# Note: This is a sandbox environment. Run tests on the official platform.
+
+def solution():
+    # Your code here
+    pass`,
+  bash: `# Daily Challenge: ${dailyQuestion.title}
+# Platform: ${dailyQuestion.platform}
+#
+# Write your solution here.
 `
 };
 
@@ -107,7 +117,7 @@ const DailyChallenge = () => {
     // Small delay to let UI show loading state
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    const result = executeCode(code, language);
+    const result = await executeCode(code, language);
     
     // Format output
     let outputText = "";
@@ -158,7 +168,7 @@ const DailyChallenge = () => {
                 messages: [
                     {
                         role: "user",
-                        content: `I am solving the "Reverse Linked List" problem. 
+                        content: `I am solving the "${dailyQuestion.title}" problem. 
                         My current code in ${language} is:
                         ${code}
                         
@@ -204,9 +214,13 @@ const DailyChallenge = () => {
           
           <div className="flex items-center gap-4">
              <div className="flex items-center gap-3">
-                <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">Reverse Linked List</span>
-                <Badge className="bg-gradient-to-r from-orange-500/20 to-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider shadow-[0_0_10px_rgba(251,191,36,0.1)]">
-                  Hard
+                <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent line-clamp-1 max-w-[300px]" title={dailyQuestion.title}>{dailyQuestion.title}</span>
+                <Badge className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider shadow-[0_0_10px_rgba(251,191,36,0.1)] ${
+                    dailyQuestion.difficulty === 'Easy' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                    dailyQuestion.difficulty === 'Medium' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                    'bg-red-500/10 text-red-400 border-red-500/20'
+                }`}>
+                  {dailyQuestion.difficulty}
                 </Badge>
              </div>
           </div>
@@ -330,43 +344,43 @@ const DailyChallenge = () => {
                 {activeTab === 'description' && (
                   <div className="p-5 space-y-6 text-[#c9d1d9] text-sm">
                     <div>
-                      <h2 className="text-xl font-bold mb-4 text-white">Reverse Linked List</h2>
-                      <div className="flex items-center gap-2 mb-4 flex-wrap">
-                        <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors cursor-pointer">Easy</Badge>
-                        <Badge className="bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-colors cursor-pointer">Linked List</Badge>
-                        <Badge className="bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors cursor-pointer">Recursion</Badge>
-                      </div>
-                      <p className="leading-relaxed text-gray-300">
-                        Given the <code className="bg-[#21262d] px-1.5 py-0.5 rounded text-gray-200 font-mono text-xs border border-[#30363d]">head</code> of a singly linked list, reverse the list, and return <em>the reversed list</em>.
-                      </p>
-                    </div>
-
-                    <div className="space-y-6">
-                      <div className="space-y-2">
-                        <p className="font-bold text-xs text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Example 1
-                        </p>
-                        <div className="bg-[#0d1117] rounded-lg p-3 border border-[#30363d] space-y-2">
-                             <div className="font-mono text-xs text-blue-300/90">
-                                <span className="text-gray-500 select-none mr-2">Input :</span> head = [1,2,3,4,5]
-                             </div>
-                             <div className="font-mono text-xs text-green-300/90">
-                                <span className="text-gray-500 select-none mr-2">Output:</span> [5,4,3,2,1]
-                             </div>
-                        </div>
+                      <h2 className="text-xl font-bold mb-4 text-white">{dailyQuestion.title}</h2>
+                      
+                      <div className="flex flex-wrap gap-2 mb-6">
+                         {dailyQuestion.companies.slice(0, 5).map(company => (
+                             <Badge key={company} variant="secondary" className="bg-[#21262d] text-gray-400 hover:text-white transition-colors">{company}</Badge>
+                         ))}
+                         {dailyQuestion.companies.length > 5 && (
+                             <Badge variant="secondary" className="bg-[#21262d] text-gray-400">+{dailyQuestion.companies.length - 5}</Badge>
+                         )}
                       </div>
 
-                      <div className="space-y-2">
-                        <p className="font-bold text-xs text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span> Example 2
-                        </p>
-                        <div className="bg-[#0d1117] rounded-lg p-3 border border-[#30363d] space-y-2">
-                             <div className="font-mono text-xs text-blue-300/90">
-                                <span className="text-gray-500 select-none mr-2">Input :</span> head = [1,2]
-                             </div>
-                             <div className="font-mono text-xs text-green-300/90">
-                                <span className="text-gray-500 select-none mr-2">Output:</span> [2,1]
-                             </div>
+                      <div className="p-6 rounded-xl bg-[#0d1117] border border-[#30363d] text-center space-y-4">
+                          <div className="w-16 h-16 mx-auto rounded-full bg-[#161b22] flex items-center justify-center border border-[#30363d]">
+                             <Code2 className="h-8 w-8 text-purple-500" />
+                          </div>
+                          <div>
+                              <h3 className="text-base font-semibold text-white mb-2">External Challenge</h3>
+                              <p className="text-gray-400 max-w-xs mx-auto mb-4">
+                                  This Daily Challenge is hosted on {dailyQuestion.platform}. Solve it there and track your progress here.
+                              </p>
+                              <Button 
+                                className="bg-purple-600 hover:bg-purple-700 text-white"
+                                onClick={() => window.open(dailyQuestion.url, '_blank')}
+                              >
+                                  Open in {dailyQuestion.platform} <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />
+                              </Button>
+                          </div>
+                      </div>
+                      
+                      <div className="mt-6">
+                        <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-purple-400" /> Topics
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                            {dailyQuestion.tags.map(tag => (
+                                <Badge key={tag} className="bg-purple-500/10 text-purple-400 border border-purple-500/20">{tag}</Badge>
+                            ))}
                         </div>
                       </div>
                     </div>
@@ -379,8 +393,8 @@ const DailyChallenge = () => {
                         <div className="absolute top-0 right-0 p-2 opacity-10">
                             <Sparkles className="h-20 w-20 text-blue-500" />
                         </div>
-                        <h4 className="font-bold text-blue-400 mb-2 flex items-center gap-2"><Sparkles className="h-4 w-4" /> Hint 1</h4>
-                        <p className="relative z-10">A linked list can be reversed either iteratively or recursively. Could you implement both?</p>
+                        <h4 className="font-bold text-blue-400 mb-2 flex items-center gap-2"><Sparkles className="h-4 w-4" /> AI Assistance</h4>
+                        <p className="relative z-10">Need a hint? Use the "Get AI Hint" button below. Make sure to paste your work-in-progress code in the editor first!</p>
                      </div>
                      
                      {hints.map((hint, i) => (

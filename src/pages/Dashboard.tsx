@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Footer } from "@/components/Footer";
+import { getDailyQuestion } from "@/data/questions";
 
 interface Notification {
   id: string;
@@ -610,21 +611,41 @@ const Dashboard = () => {
               <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-orange-400 to-red-500"></div>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Target className="w-4 h-4 text-orange-500" />
-                    Daily Challenge
-                  </CardTitle>
-                  <span className="text-xs font-medium px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 rounded-md">Hard</span>
+                  {(() => {
+                    const dailyQ = getDailyQuestion();
+                    return (
+                      <>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Target className="w-4 h-4 text-orange-500" />
+                          Daily Challenge
+                        </CardTitle>
+                        <span className={`text-xs font-medium px-2 py-1 rounded-md ${
+                          dailyQ.difficulty === 'Easy' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30' :
+                          dailyQ.difficulty === 'Medium' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30' :
+                          'bg-red-100 text-red-600 dark:bg-red-900/30'
+                        }`}>
+                          {dailyQ.difficulty}
+                        </span>
+                      </>
+                    );
+                  })()}
                 </div>
               </CardHeader>
               <CardContent>
-                <h4 className="font-semibold mb-2">Reverse a Linked List</h4>
-                <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                  Given the head of a singly linked list, reverse the list, and return the reversed list.
-                </p>
-                <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white" onClick={() => navigate("/daily-challenge")}>
-                  Solve Now <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
+                {(() => {
+                   const dailyQ = getDailyQuestion();
+                   return (
+                     <>
+                        <h4 className="font-semibold mb-2 line-clamp-1">{dailyQ.title}</h4>
+                        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                          {dailyQ.tags.join(" • ")}
+                        </p>
+                        <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white" onClick={() => navigate("/daily-challenge")}>
+                          Solve Now <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                     </>
+                   );
+                })()}
               </CardContent>
             </Card>
 

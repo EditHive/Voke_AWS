@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { CreatingPlanLoader } from "@/components/ui/CreatingPlanLoader";
 
 interface JobPosting {
     id: string;
@@ -41,6 +42,7 @@ export default function JobRecommendations() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
+    const [creatingPlan, setCreatingPlan] = useState(false);
     const [recommendations, setRecommendations] = useState<JobRecommendation[]>([]);
     const [filteredRecs, setFilteredRecs] = useState<JobRecommendation[]>([]);
     const [filterLevel, setFilterLevel] = useState<string>("all");
@@ -190,10 +192,7 @@ export default function JobRecommendations() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            toast({
-                title: "Creating Career Plan...",
-                description: "This may take a moment",
-            });
+            setCreatingPlan(true);
 
             const { data, error } = await supabase.functions.invoke("create-career-plan", {
                 body: {
@@ -205,11 +204,6 @@ export default function JobRecommendations() {
 
             if (error) throw error;
 
-            toast({
-                title: "Success!",
-                description: "Your 3-month career plan is ready",
-            });
-
             navigate(`/career-plan/${data.plan.id}`);
         } catch (error: any) {
             console.error("Error creating career plan:", error);
@@ -218,6 +212,7 @@ export default function JobRecommendations() {
                 description: error.message || "Failed to create career plan",
                 variant: "destructive",
             });
+            setCreatingPlan(false);
         }
     };
 
@@ -238,6 +233,8 @@ export default function JobRecommendations() {
 
     return (
         <div className="min-h-screen bg-black text-white selection:bg-violet-500/30">
+            {creatingPlan && <CreatingPlanLoader />}
+            
             {/* Background Effects */}
             <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-violet-900/20 rounded-full blur-[120px]" />

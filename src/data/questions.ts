@@ -33517,3 +33517,20 @@ export const QUESTIONS: Question[] = [
 
 export const COMPANIES = ["All", ...Array.from(new Set(QUESTIONS.flatMap(q => q.companies))).sort()];
 export const DIFFICULTIES = ["All", "Easy", "Medium", "Hard"];
+
+export const getDailyQuestion = () => {
+    // Create a stable daily random seed based on UTC date
+    const today = new Date();
+    const dateStr = `${today.getUTCFullYear()}-${today.getUTCMonth() + 1}-${today.getUTCDate()}`;
+    
+    let hash = 0;
+    for (let i = 0; i < dateStr.length; i++) {
+        const char = dateStr.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    
+    // Ensure positive index
+    const index = Math.abs(hash) % QUESTIONS.length;
+    return QUESTIONS[index];
+};
