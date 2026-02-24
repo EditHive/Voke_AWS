@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Mic, Bell, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
@@ -15,10 +15,15 @@ import { UpgradeButton } from "@/components/UpgradeButton";
 
 export const Navbar = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [notifications, setNotifications] = useState<any[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [userId, setUserId] = useState<string | null>(null);
     const [profile, setProfile] = useState<any>(null);
+
+    const isCommunityPage = location.pathname === '/community';
+    const brandName = isCommunityPage ? "Voke Pulse" : "Voke";
+    const logoSrc = isCommunityPage ? "/images/voke_pulse_logo.png" : "/images/voke_logo.png";
 
     useEffect(() => {
         checkUser();
@@ -105,12 +110,12 @@ export const Navbar = () => {
                         onClick={handleLogoClick}
                     >
                         <img
-                            src="/images/voke_logo.png"
-                            alt="Voke Logo"
+                            src={logoSrc}
+                            alt={`${brandName} Logo`}
                             className="w-10 h-10 object-contain group-hover:scale-110 transition-transform duration-300"
                         />
                         <span className="text-xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 dark:from-violet-400 dark:via-purple-400 dark:to-fuchsia-400 bg-clip-text text-transparent">
-                            Voke
+                            {brandName}
                         </span>
                     </div>
 
