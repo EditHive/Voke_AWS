@@ -549,7 +549,7 @@ export function useGroqVoice(props?: UseGroqVoiceProps): UseGroqVoiceReturn {
     // Assign startListening to ref so it can be called from speakResponse
     useEffect(() => {
         startListeningRef.current = startListening;
-    }, []);
+    });
 
     const connect = useCallback(async (context?: string) => {
         if (status === LiveStatus.CONNECTED) return;
