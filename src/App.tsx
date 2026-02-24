@@ -36,6 +36,7 @@ import Community from "./pages/Community";
 import Help from "./pages/Help";
 import Privacy from "./pages/Privacy";
 import DailyChallenge from "./pages/DailyChallenge";
+import DailyChallengeLanding from "./pages/DailyChallengeLanding";
 import JobRecommendations from "./pages/JobRecommendations";
 import QuestionPractice from "./pages/QuestionPractice";
 import Companies from "./pages/Companies";
@@ -97,7 +98,8 @@ const App = () => (
               <Route path="/community" element={<Community />} />
               <Route path="/help" element={<Help />} />
               <Route path="/privacy" element={<Privacy />} />
-              <Route path="/daily-challenge" element={<DailyChallenge />} />
+              <Route path="/daily-challenge" element={<DailyChallengeLanding />} />
+              <Route path="/daily-challenge/solve" element={<DailyChallenge />} />
               <Route path="/question-practice" element={<QuestionPractice />} />
               <Route path="/companies" element={<Companies />} />
               <Route path="/companies/:slug" element={<CompanyDetail />} />

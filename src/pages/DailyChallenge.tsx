@@ -207,7 +207,7 @@ const DailyChallenge = () => {
             variant="ghost" 
             size="icon" 
             className="h-9 w-9 text-gray-400 hover:text-white hover:bg-[#2d333b] rounded-full transition-all duration-300" 
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate("/daily-challenge")}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>

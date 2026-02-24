@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,7 @@ const MOCK_DATA: Record<string, { salary: string; growth: string; companies: str
 
 export const MarketPulse = ({ profile }: MarketPulseProps) => {
     const [role, setRole] = useState(profile?.target_role || "Full Stack Developer");
+    const navigate = useNavigate();
 
     const handleRoleChange = async (newRole: string) => {
         setRole(newRole);
@@ -155,6 +157,7 @@ export const MarketPulse = ({ profile }: MarketPulseProps) => {
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: 0.4 }}
+                                onClick={() => navigate("/companies")}
                             >
                                 + 142 others
                             </motion.div>
