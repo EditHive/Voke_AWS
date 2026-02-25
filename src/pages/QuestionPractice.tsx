@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import {
     ArrowLeft, Search, Filter, ExternalLink, Code2,
     Briefcase, CheckCircle2, Star, Zap, Flame, Trophy,
-    ChevronDown, Check, ChevronsUpDown, Bookmark, BookmarkCheck
+    ChevronDown, Check, ChevronsUpDown, Bookmark, BookmarkCheck,
+    Hash
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Navbar } from "@/components/Navbar";
@@ -31,12 +32,17 @@ import { supabase } from "@/integrations/supabase/client";
 
 import { QUESTIONS, COMPANIES, DIFFICULTIES } from "@/data/questions";
 
+// Derive Topics
+const TOPICS = ["All", ...Array.from(new Set(QUESTIONS.flatMap(q => q.tags))).sort()];
+
 const QuestionPractice = () => {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCompany, setSelectedCompany] = useState("All");
     const [selectedDifficulty, setSelectedDifficulty] = useState("All");
+    const [selectedTopic, setSelectedTopic] = useState("All");
     const [openCompany, setOpenCompany] = useState(false);
+    const [openTopic, setOpenTopic] = useState(false);
 
     // Loading state
     const [isLoading, setIsLoading] = useState(true);
@@ -109,9 +115,10 @@ const QuestionPractice = () => {
 
         const matchesCompany = selectedCompany === "All" || q.companies.includes(selectedCompany);
         const matchesDifficulty = selectedDifficulty === "All" || q.difficulty === selectedDifficulty;
+        const matchesTopic = selectedTopic === "All" || q.tags.includes(selectedTopic);
         const matchesReviewed = !showOnlyReviewed || reviewedQuestionIds.has(q.id);
 
-        return matchesSearch && matchesCompany && matchesDifficulty && matchesReviewed;
+        return matchesSearch && matchesCompany && matchesDifficulty && matchesTopic && matchesReviewed;
     });
 
     // Calculate pagination
@@ -487,6 +494,58 @@ const QuestionPractice = () => {
                                 </PopoverContent>
                             </Popover>
 
+                            {/* Topic Select Popover */}
+                            <Popover open={openTopic} onOpenChange={setOpenTopic}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={openTopic}
+                                        className="justify-between min-w-[160px] bg-background/50"
+                                    >
+                                        {selectedTopic === "All" ? (
+                                            <span className="flex items-center gap-2 text-muted-foreground">
+                                                <Hash className="w-4 h-4" /> Filter Topic
+                                            </span>
+                                        ) : (
+                                            <span className="flex items-center gap-2 text-primary font-medium">
+                                                <Hash className="w-4 h-4" /> {selectedTopic}
+                                            </span>
+                                        )}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[200px] p-0">
+                                    <Command>
+                                        <CommandInput placeholder="Search topic..." />
+                                        <CommandList>
+                                            <CommandEmpty>No topic found.</CommandEmpty>
+                                            <CommandGroup>
+                                                {TOPICS.map((topic) => (
+                                                    <CommandItem
+                                                        key={topic}
+                                                        value={topic}
+                                                        onSelect={() => {
+                                                            setSelectedTopic(topic);
+                                                            setOpenTopic(false);
+                                                            setCurrentPage(1);
+                                                        }}
+                                                    >
+                                                        <Check
+                                                            className={cn(
+                                                                "mr-2 h-4 w-4",
+                                                                selectedTopic === topic ? "opacity-100" : "opacity-0"
+                                                            )}
+                                                        />
+                                                        {topic === "All" ? "All Topics" : topic}
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+
                             <Button
                                 variant={showOnlyReviewed ? "default" : "outline"}
                                 size="sm"
@@ -503,13 +562,14 @@ const QuestionPractice = () => {
                                 <span className="hidden sm:inline">My List</span>
                             </Button>
 
-                            {(selectedCompany !== "All" || selectedDifficulty !== "All" || searchQuery || showOnlyReviewed) && (
+                            {(selectedCompany !== "All" || selectedDifficulty !== "All" || selectedTopic !== "All" || searchQuery || showOnlyReviewed) && (
                                 <Button
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => {
                                         setSelectedCompany("All");
                                         setSelectedDifficulty("All");
+                                        setSelectedTopic("All");
                                         setSearchQuery("");
                                         setShowOnlyReviewed(false);
                                         setCurrentPage(1);
@@ -593,7 +653,13 @@ const QuestionPractice = () => {
                                                 )}
                                                 <div className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/50 px-2 py-1 rounded-full border border-border/50">
                                                     <img
-                                                        src={question.platform === "LeetCode" ? "https://upload.wikimedia.org/wikipedia/commons/1/19/LeetCode_logo_black.png" : "/favicon.ico"}
+                                                        src={
+                                                            question.platform === "LeetCode"
+                                                                ? "https://upload.wikimedia.org/wikipedia/commons/1/19/LeetCode_logo_black.png"
+                                                                : question.platform === "Codeforces"
+                                                                    ? "https://cdn.iconscout.com/icon/free/png-256/free-code-forces-3628695-3029920.png"
+                                                                    : "/favicon.ico"
+                                                        }
                                                         alt={question.platform}
                                                         className="w-3 h-3 object-contain opacity-70"
                                                     />
@@ -799,7 +865,7 @@ const QuestionPractice = () => {
                         <p className="text-muted-foreground mb-6">Seems like we couldn't find what you're looking for.</p>
                         <Button
                             variant="secondary"
-                            onClick={() => { setSearchQuery(""); setSelectedCompany("All"); setSelectedDifficulty("All"); setCurrentPage(1); }}
+                            onClick={() => { setSearchQuery(""); setSelectedCompany("All"); setSelectedDifficulty("All"); setSelectedTopic("All"); setCurrentPage(1); }}
                             className="px-8"
                         >
                             Clear Filters

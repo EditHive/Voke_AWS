@@ -33512,6 +33512,289 @@ export const QUESTIONS: Question[] = [
     "tags": [
       "Array"
     ]
+  },
+  {
+    "id": 1821,
+    "title": "Watermelon",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/4/A",
+    "tags": [
+      "Math",
+      "Brute Force"
+    ]
+  },
+  {
+    "id": 1822,
+    "title": "Way Too Long Words",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/71/A",
+    "tags": [
+      "String",
+      "Implementation"
+    ]
+  },
+  {
+    "id": 1823,
+    "title": "Team",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/231/A",
+    "tags": [
+      "Implementation",
+      "Greedy"
+    ]
+  },
+  {
+    "id": 1824,
+    "title": "Theatre Square",
+    "difficulty": "Medium",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/1/A",
+    "tags": [
+      "Math"
+    ]
+  },
+  {
+    "id": 1825,
+    "title": "Next Round",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/158/A",
+    "tags": [
+      "Implementation"
+    ]
+  },
+  {
+    "id": 1826,
+    "title": "Domino piling",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/50/A",
+    "tags": ["Math", "Greedy"]
+  },
+  {
+    "id": 1827,
+    "title": "Bit++",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/282/A",
+    "tags": ["Implementation"]
+  },
+  {
+    "id": 1828,
+    "title": "Petya and Strings",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/112/A",
+    "tags": ["String", "Implementation"]
+  },
+  {
+    "id": 1829,
+    "title": "Beautiful Matrix",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/263/A",
+    "tags": ["Implementation"]
+  },
+  {
+    "id": 1830,
+    "title": "Helpful Maths",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/339/A",
+    "tags": ["String", "Sorting"]
+  },
+  {
+    "id": 1831,
+    "title": "Word Capitalization",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/281/A",
+    "tags": ["String", "Implementation"]
+  },
+  {
+    "id": 1832,
+    "title": "Stones on the Table",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/266/A",
+    "tags": ["Implementation"]
+  },
+  {
+    "id": 1833,
+    "title": "Boy or Girl",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/236/A",
+    "tags": ["String", "Brute Force"]
+  },
+  {
+    "id": 1834,
+    "title": "Word",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/59/A",
+    "tags": ["String"]
+  },
+  {
+    "id": 1835,
+    "title": "Elephant",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/617/A",
+    "tags": ["Math"]
+  },
+  {
+    "id": 1836,
+    "title": "Soldier and Bananas",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/546/A",
+    "tags": ["Math", "Implementation"]
+  },
+  {
+    "id": 1837,
+    "title": "Bear and Big Brother",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/791/A",
+    "tags": ["Math"]
+  },
+  {
+    "id": 1838,
+    "title": "Wrong Subtraction",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/977/A",
+    "tags": ["Implementation"]
+  },
+  {
+    "id": 1839,
+    "title": "Nearly Lucky Number",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/110/A",
+    "tags": ["Implementation"]
+  },
+  {
+    "id": 1840,
+    "title": "Tram",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/116/A",
+    "tags": ["Implementation"]
+  },
+  {
+    "id": 1841,
+    "title": "Queue at the School",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/266/B",
+    "tags": ["Constructive Algorithms"]
+  },
+  {
+    "id": 1842,
+    "title": "Anton and Danik",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/734/A",
+    "tags": ["Implementation"]
+  },
+  {
+    "id": 1843,
+    "title": "Translation",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/41/A",
+    "tags": ["String"]
+  },
+  {
+    "id": 1844,
+    "title": "Vanya and Fence",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/677/A",
+    "tags": ["Implementation"]
+  },
+  {
+    "id": 1845,
+    "title": "George and Accommodation",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/467/A",
+    "tags": ["Implementation"]
+  },
+  {
+    "id": 1846,
+    "title": "Magnets",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/344/A",
+    "tags": ["Implementation"]
+  },
+  {
+    "id": 1847,
+    "title": "In Search of an Easy Problem",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/1030/A",
+    "tags": ["Implementation"]
+  },
+  {
+    "id": 1848,
+    "title": "Calculating Function",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/486/A",
+    "tags": ["Math"]
+  },
+  {
+    "id": 1849,
+    "title": "Presents",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/136/A",
+    "tags": ["Implementation"]
+  },
+  {
+    "id": 1850,
+    "title": "Drinks",
+    "difficulty": "Easy",
+    "companies": [],
+    "platform": "Codeforces",
+    "url": "https://codeforces.com/problemset/problem/200/B",
+    "tags": ["Math", "Implementation"]
   }
 ];
 
@@ -33519,18 +33802,18 @@ export const COMPANIES = ["All", ...Array.from(new Set(QUESTIONS.flatMap(q => q.
 export const DIFFICULTIES = ["All", "Easy", "Medium", "Hard"];
 
 export const getDailyQuestion = () => {
-    // Create a stable daily random seed based on UTC date
-    const today = new Date();
-    const dateStr = `${today.getUTCFullYear()}-${today.getUTCMonth() + 1}-${today.getUTCDate()}`;
-    
-    let hash = 0;
-    for (let i = 0; i < dateStr.length; i++) {
-        const char = dateStr.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32bit integer
-    }
-    
-    // Ensure positive index
-    const index = Math.abs(hash) % QUESTIONS.length;
-    return QUESTIONS[index];
+  // Create a stable daily random seed based on UTC date
+  const today = new Date();
+  const dateStr = `${today.getUTCFullYear()}-${today.getUTCMonth() + 1}-${today.getUTCDate()}`;
+
+  let hash = 0;
+  for (let i = 0; i < dateStr.length; i++) {
+    const char = dateStr.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+
+  // Ensure positive index
+  const index = Math.abs(hash) % QUESTIONS.length;
+  return QUESTIONS[index];
 };
