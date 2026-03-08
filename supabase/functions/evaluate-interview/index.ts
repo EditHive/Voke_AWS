@@ -100,11 +100,39 @@ Deno.serve(async (req: Request) => {
       "personality_cluster": "Cluster Name"
     }`;
 
-    // Format transcript for Bedrock
-    const bedrockMessages = transcript.map((m: any) => ({
-      role: m.role,
-      content: [{ text: m.text }]
+    // Format transcript for Bedrock (MUST start with 'user' and alternate roles)
+    const sanitizedMessages: any[] = [];
+    let lastRole: string | null = null;
+
+    // Convert transcript to Bedrock format first
+    const rawMessages = (transcript || []).map((m: any) => ({
+      role: m.role || 'user',
+      content: [{ text: m.text || "" }]
     }));
+
+    for (const msg of rawMessages) {
+      if (msg.role === lastRole) {
+        // Merge consecutive messages from the same role
+        const lastMsg = sanitizedMessages[sanitizedMessages.length - 1];
+        lastMsg.content[0].text += "\n" + msg.content[0].text;
+      } else {
+        // Only if it's the first message, it MUST be 'user'
+        if (sanitizedMessages.length === 0 && msg.role === 'assistant') {
+          // Skip or convert first assistant msg if it comes first
+          sanitizedMessages.push({
+            role: 'user',
+            content: [{ text: "Starting interview." }]
+          });
+        }
+        sanitizedMessages.push(msg);
+        lastRole = msg.role;
+      }
+    }
+
+    // Final check: Must have at least one message and MUST NOT end with 'assistant' (Bedrock often allows ending with assistant, but Converse API is picky)
+    if (sanitizedMessages.length === 0) {
+      sanitizedMessages.push({ role: 'user', content: [{ text: "No conversation recorded." }] });
+    }
 
     const bedrock = new BedrockRuntimeClient({
       region: AWS_REGION,
@@ -114,17 +142,25 @@ Deno.serve(async (req: Request) => {
       },
     });
 
+    console.log(`DEBUG: Sending ${sanitizedMessages.length} messages to Bedrock (Llama 3.1 8B)...`);
+
     const command = new ConverseCommand({
-      modelId: "meta.llama3-3-70b-instruct-v1:0",
-      messages: bedrockMessages,
+      modelId: "meta.llama3-1-8b-instruct-v1:0",
+      messages: sanitizedMessages,
       system: [{ text: systemPrompt }],
       inferenceConfig: {
         temperature: 0.3,
-        maxTokens: 4096,
+        maxTokens: 2048,
       }
     });
 
-    const data = await bedrock.send(command);
+    const startTime = Date.now();
+    const data = await bedrock.send(command).catch(e => {
+      console.error("CRITICAL Bedrock Send Error:", e);
+      throw e;
+    });
+
+    console.log(`DEBUG: Bedrock responded in ${Date.now() - startTime}ms`);
     const aiContent = data.output?.message?.content?.[0]?.text;
 
     if (!aiContent) {

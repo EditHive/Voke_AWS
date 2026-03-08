@@ -191,12 +191,10 @@ export function useGroqVoice(props?: UseGroqVoiceProps): UseGroqVoiceReturn {
 
             if (isLocal) {
                 try {
-                    console.log('DEBUG: Generating speech with Local macOS TTS...');
+                    console.log('DEBUG: Attempting local TTS for development...');
                     const response = await fetch('http://localhost:5001', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ text: speechText }),
                     });
 
@@ -204,9 +202,7 @@ export function useGroqVoice(props?: UseGroqVoiceProps): UseGroqVoiceReturn {
                         const blob = await response.blob();
                         const audioUrl = URL.createObjectURL(blob);
 
-                        // STOP: Check if we are still connected before playing
                         if (statusRef.current !== LiveStatus.CONNECTED) {
-                            console.log('DEBUG: Disconnected while generating speech, cancelling playback.');
                             URL.revokeObjectURL(audioUrl);
                             return;
                         }
@@ -217,6 +213,7 @@ export function useGroqVoice(props?: UseGroqVoiceProps): UseGroqVoiceReturn {
                         }
                         const audio = new Audio(audioUrl);
                         audioRef.current = audio;
+                        setIsAiSpeaking(true);
 
                         audio.onended = () => {
                             setIsAiSpeaking(false);
@@ -232,26 +229,34 @@ export function useGroqVoice(props?: UseGroqVoiceProps): UseGroqVoiceReturn {
                         return; // Successfully used local TTS
                     }
                 } catch (localError) {
-                    console.log('DEBUG: Local TTS server not available, using fallback.');
+                    console.log('DEBUG: Local TTS unavailable/failed, using browser fallback.');
                 }
             }
 
-        } catch (error) {
-            console.error('DEBUG: Local TTS error:', error);
-            setIsAiSpeaking(false);
-            setVolume(0);
-
-            // Fallback to browser TTS
-            console.log('DEBUG: Falling back to browser TTS');
-            window.speechSynthesis.cancel(); // Cancel any previous speech
+            // Fallback for PRODUCTION or if Local TTS fails
+            console.log('DEBUG: Using browser SpeechSynthesis fallback...');
+            setIsAiSpeaking(true);
+            window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(speechText);
+
             utterance.onend = () => {
                 setIsAiSpeaking(false);
                 if (statusRef.current === LiveStatus.CONNECTED && startListeningRef.current) {
                     setTimeout(() => startListeningRef.current!(), 500);
                 }
             };
+
+            utterance.onerror = (e) => {
+                console.error("DEBUG: browser TTS error:", e);
+                setIsAiSpeaking(false);
+            };
+
             window.speechSynthesis.speak(utterance);
+
+        } catch (error) {
+            console.error('DEBUG: speakResponse major error:', error);
+            setIsAiSpeaking(false);
+            setVolume(0);
         }
     };
 
