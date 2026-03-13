@@ -1,4 +1,4 @@
-import { executePistonCode, isPistonLanguageSupported, type PistonLanguage } from './pistonExecutor';
+import { executeOnlineCode, isOnlineLanguageSupported, type OnlineCompilerLanguage } from './onlineCompilerExecutor';
 
 // Definition for singly-linked list.
 class ListNode {
@@ -164,7 +164,7 @@ export const pyodideController = new PyodideController();
 // --- Main Execution Function ---
 export const executeCode = async (
   userCode: string,
-  language: 'javascript' | 'python' | 'bash' | 'typescript' | 'java' | 'cpp' | 'c' | 'rust' | 'go' | 'ruby' | 'php' | 'swift' | 'kotlin' | 'scala',
+  language: 'javascript' | 'python' | 'bash' | 'typescript' | 'java' | 'cpp' | 'c' | 'rust' | 'go' | 'ruby' | 'php' | 'swift' | 'kotlin' | 'scala' | 'csharp' | 'fsharp' | 'haskell',
   onLog?: (log: string) => void,
   onInputRequest?: (prompt: string) => void,
   stdin?: string
@@ -175,19 +175,17 @@ export const executeCode = async (
     onLog?.(msg);
   };
 
-  // --- Piston Execution for Supported Languages ---
-  if (isPistonLanguageSupported(language)) {
+  // --- OnlineCompiler Execution for Supported Languages ---
+  if (isOnlineLanguageSupported(language)) {
     captureLog(`⚡ Running your code...\n\n`);
 
     try {
-      const result = await executePistonCode(
-        language as PistonLanguage,
+      const result = await executeOnlineCode(
+        language as OnlineCompilerLanguage,
         userCode,
         stdin,
         {
           onLog: captureLog,
-          runTimeout: 5000,
-          compileTimeout: 10000,
         }
       );
 
@@ -219,7 +217,7 @@ export const executeCode = async (
   }
 
   // --- Python Execution (Pyodide Fallback) ---
-  if (language === 'python') {
+  if ((language as string) === 'python') {
 
     // CHECK: Can we use the worker?
     if (window.crossOriginIsolated && typeof SharedArrayBuffer !== 'undefined') {
