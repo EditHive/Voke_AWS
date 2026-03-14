@@ -1,7 +1,10 @@
 // OnlineCompiler.io API Client for Multi-Language Code Execution
 // API Documentation: https://onlinecompiler.io/docs
 
-import { supabase } from "@/integrations/supabase/client";
+const ONLINE_COMPILER_API_URL = 'https://api.onlinecompiler.io/api/run-code-sync/';
+
+// API Key from environment variables
+const API_KEY = import.meta.env.VITE_ONLINE_COMPILER_API_KEY;
 
 // Compiler ID mapping for OnlineCompiler.io
 export const ONLINE_COMPILER_IDS = {
@@ -69,6 +72,16 @@ export async function executeOnlineCode(
     };
   }
 
+  if (!API_KEY) {
+    return {
+      success: false,
+      output: '',
+      error: 'OnlineCompiler.io API key is missing. Please check your .env file.',
+      language,
+      exitCode: -1,
+    };
+  }
+
   const payload: OnlineCompilerRequest = {
     compiler: compilerId,
     code: code,
@@ -76,19 +89,21 @@ export async function executeOnlineCode(
   };
 
   try {
-    const { data, error: invokeError } = await supabase.functions.invoke('execute-code', {
-      body: payload
+    const response = await fetch(ONLINE_COMPILER_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`,
+      },
+      body: JSON.stringify(payload),
     });
 
-    if (invokeError) {
-      throw new Error(`Edge Function error: ${invokeError.message}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API request failed (${response.status}): ${errorText}`);
     }
 
-    if (data?.error) {
-      throw new Error(data.error);
-    }
-
-    const result: OnlineCompilerResponse = data;
+    const result: OnlineCompilerResponse = await response.json();
     const executionTime = Date.now() - startTime;
 
     const hasError = result.exit_code !== 0 || result.errors.length > 0;
