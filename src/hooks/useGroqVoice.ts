@@ -67,7 +67,7 @@ export function useGroqVoice(props?: UseGroqVoiceProps): UseGroqVoiceReturn {
     const [groqClient, setGroqClient] = useState<Groq | null>(null);
 
     useEffect(() => {
-        const apiKey = props?.apiKey || import.meta.env.VITE_GROQ_API_KEY;
+        const apiKey = props?.apiKey || import.meta.env.VITE_GROQ_API_KEY || import.meta.env.GROQ_API_KEY;
         if (apiKey) {
             setGroqClient(new Groq({
                 apiKey: apiKey,

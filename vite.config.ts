@@ -4,6 +4,7 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  envPrefix: ['VITE_', 'GROQ_API_KEY'],
   server: {
     host: "::",
     port: 8080,

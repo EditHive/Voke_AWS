@@ -20,9 +20,9 @@ import {
 import { loadUserProfileContext, ProfileContext } from "@/utils/profileContext";
 
 const getGroqClient = () => {
-  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY || import.meta.env.GROQ_API_KEY;
   if (!apiKey) {
-    console.warn("VITE_GROQ_API_KEY is missing.");
+    console.warn("VITE_GROQ_API_KEY or GROQ_API_KEY is missing.");
     return null;
   }
   return new Groq({ apiKey, dangerouslyAllowBrowser: true });
