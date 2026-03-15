@@ -136,6 +136,8 @@ Deno.serve(async (req: Request) => {
       throw new Error("No content received from Groq");
     }
 
+    const evaluation = JSON.parse(aiContent);
+
     // 4. Update Database
     console.log("DEBUG: Updating interview session with results...");
     const { error: updateError } = await supabase
