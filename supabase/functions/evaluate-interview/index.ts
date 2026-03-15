@@ -150,8 +150,11 @@ Deno.serve(async (req: Request) => {
 
   } catch (error) {
     console.error("Error in evaluate-interview function:", error);
+    if (error instanceof Error) {
+        console.error("Stack trace:", error.stack);
+    }
     return new Response(
-      JSON.stringify({ error: (error as Error).message }),
+      JSON.stringify({ error: (error as Error).message, stack: (error as Error).stack }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
