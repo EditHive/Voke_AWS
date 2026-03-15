@@ -104,10 +104,18 @@ Deno.serve(async (req: Request) => {
       "personality_cluster": "Cluster Name from list"
     }`;
 
-    // Format messages for Groq
+    // Validate messages is an array
+    if (!Array.isArray(messages)) {
+      throw new Error("Invalid request: 'messages' must be an array.");
+    }
+
+    // Format messages for Groq, stripping any unsupported fields (e.g. 'id', 'createdAt')
     const formattedMessages = [
       { role: "system", content: systemPrompt },
-      ...messages
+      ...messages.map((m: { role: string; content: string }) => ({
+        role: m.role,
+        content: m.content,
+      })),
     ];
 
     const response = await fetch(

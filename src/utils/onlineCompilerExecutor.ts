@@ -3,21 +3,22 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-// Compiler ID mapping for OnlineCompiler.io
+// Language IDs mapped to Judge0 CE compiler keys
+// The edge function strips everything after "-" to get the lang key
 export const ONLINE_COMPILER_IDS = {
-  python: 'python-3.14',
-  javascript: 'typescript-deno', // Using Deno for JS/TS
-  typescript: 'typescript-deno',
-  java: 'openjdk-25',
-  cpp: 'g++-15',
-  c: 'gcc-15',
-  rust: 'rust-1.93',
-  go: 'go-1.26',
-  ruby: 'ruby-4.0',
-  php: 'php-8.5',
-  csharp: 'dotnet-csharp-9',
-  fsharp: 'dotnet-fsharp-9',
-  haskell: 'haskell-9.12',
+  python:     'python-3',
+  javascript: 'javascript-nodejs',
+  typescript: 'typescript-3',
+  java:       'java-openjdk',
+  cpp:        'cpp-gcc',
+  c:          'c-gcc',
+  rust:       'rust-1',
+  go:         'go-1',
+  ruby:       'ruby-2',
+  php:        'php-7',
+  csharp:     'csharp-mono',
+  fsharp:     'fsharp-mono',
+  haskell:    'haskell-ghc',
 } as const;
 
 export type OnlineCompilerLanguage = keyof typeof ONLINE_COMPILER_IDS;

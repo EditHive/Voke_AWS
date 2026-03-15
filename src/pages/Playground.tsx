@@ -4,7 +4,8 @@ import Editor from "@monaco-editor/react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Play, RotateCcw, Terminal, Cpu, Sparkles, Settings, Bot, Send, Code, User, Copy, Check, Search, Trophy, Briefcase } from "lucide-react";
+import { ArrowLeft, Play, RotateCcw, Terminal, Cpu, Sparkles, Settings, Bot, Send, Code, User, Copy, Check, Search, Trophy, Briefcase, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { executeCode } from "@/utils/codeExecutor";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -201,6 +202,12 @@ const Playground = () => {
     const [output, setOutput] = useState("");
     const [isRunning, setIsRunning] = useState(false);
     const [isWaitingForInput, setIsWaitingForInput] = useState(false);
+
+    // Question picker state
+    const [pickerSearch, setPickerSearch] = useState("");
+    const [pickerQuestions, setPickerQuestions] = useState<any[]>([]);
+    const [pickerLoading, setPickerLoading] = useState(false);
+    const [pickerSearched, setPickerSearched] = useState(false);
     const [inputPrompt, setInputPrompt] = useState("");
     const [consoleInput, setConsoleInput] = useState("");
     const consoleInputRef = useRef<HTMLInputElement>(null);
@@ -306,6 +313,34 @@ const Playground = () => {
     const handleLanguageChange = (value: Language) => {
         setLanguage(value);
         setCode(TEMPLATES[value]);
+    };
+
+    // Inline question picker search
+    const handlePickerSearch = async () => {
+        if (!pickerSearch.trim()) return;
+        setPickerLoading(true);
+        setPickerSearched(true);
+        try {
+            const { data, error } = await supabase
+                .from('company_questions')
+                .select('id, title, difficulty, company_id, companies(name)')
+                .ilike('title', `%${pickerSearch.trim()}%`)
+                .limit(15);
+            if (!error) setPickerQuestions(data || []);
+        } catch (e) {
+            console.error('Question picker error:', e);
+        } finally {
+            setPickerLoading(false);
+        }
+    };
+
+    const handlePickQuestion = (q: any) => {
+        const companyName = q.companies?.name || '';
+        const params = new URLSearchParams();
+        params.set('title', q.title);
+        if (companyName) params.set('company', companyName);
+        if (q.difficulty) params.set('difficulty', q.difficulty);
+        navigate(`/playground?${params.toString()}`);
     };
 
     const handleConsoleInput = (e: React.KeyboardEvent) => {
@@ -682,9 +717,62 @@ It seems I couldn't reach the main server, but here is a static analysis based o
                             <TabsContent value="problem" className="flex-1 overflow-hidden m-0 p-0 border-none relative data-[state=inactive]:hidden">
                                 <ScrollArea className="h-full p-4 text-gray-300 text-sm">
                                     {!questionTitle ? (
-                                        <div className="flex flex-col items-center justify-center h-[50vh] text-gray-500 gap-2">
-                                            <Code className="w-8 h-8 opacity-20" />
-                                            <p>Select a question to view description</p>
+                                        <div className="flex flex-col gap-4">
+                                            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Search a Question</p>
+                                            <div className="flex gap-2">
+                                                <div className="relative flex-1">
+                                                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                                                    <input
+                                                        className="w-full bg-[#21262d] border border-[#30363d] rounded-lg pl-8 pr-3 py-2 text-xs text-gray-200 placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                                        placeholder="e.g. Two Sum, Binary Tree..."
+                                                        value={pickerSearch}
+                                                        onChange={e => setPickerSearch(e.target.value)}
+                                                        onKeyDown={e => e.key === 'Enter' && handlePickerSearch()}
+                                                    />
+                                                </div>
+                                                <Button size="sm" className="h-8 bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3" onClick={handlePickerSearch} disabled={pickerLoading}>
+                                                    {pickerLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Search'}
+                                                </Button>
+                                            </div>
+
+                                            {pickerLoading && (
+                                                <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-indigo-400" /></div>
+                                            )}
+
+                                            {!pickerLoading && pickerSearched && pickerQuestions.length === 0 && (
+                                                <p className="text-xs text-gray-600 text-center py-4">No questions found. Try a different keyword.</p>
+                                            )}
+
+                                            {!pickerLoading && pickerQuestions.length > 0 && (
+                                                <div className="flex flex-col gap-2">
+                                                    {pickerQuestions.map(q => (
+                                                        <button
+                                                            key={q.id}
+                                                            onClick={() => handlePickQuestion(q)}
+                                                            className="text-left w-full bg-[#21262d] hover:bg-[#2d333b] border border-[#30363d] hover:border-indigo-500/50 rounded-lg px-3 py-2.5 transition-all group"
+                                                        >
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <span className="text-xs text-gray-200 font-medium group-hover:text-white truncate">{q.title}</span>
+                                                                <div className="flex items-center gap-1.5 shrink-0">
+                                                                    {q.companies?.name && <span className="text-[10px] text-gray-500">{q.companies.name}</span>}
+                                                                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 border ${
+                                                                        q.difficulty === 'EASY' ? 'text-green-400 border-green-500/30' :
+                                                                        q.difficulty === 'MEDIUM' ? 'text-yellow-400 border-yellow-500/30' :
+                                                                        'text-red-400 border-red-500/30'
+                                                                    }`}>{q.difficulty}</Badge>
+                                                                </div>
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {!pickerSearched && (
+                                                <div className="flex flex-col items-center justify-center py-8 text-gray-600 gap-2">
+                                                    <Search className="w-8 h-8 opacity-20" />
+                                                    <p className="text-xs">Search to load a question here</p>
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="markdown-content">

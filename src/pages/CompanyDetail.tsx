@@ -284,16 +284,14 @@ const CompanyDetail = () => {
                                                 </div>
 
                                                 <div className="flex items-center gap-2 shrink-0">
-                                                    {q.url && (
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="gap-2"
-                                                            onClick={() => navigate(`/playground?title=${encodeURIComponent(q.title)}&company=${encodeURIComponent(company.name)}`)}
-                                                        >
-                                                            Solve <Code2 className="h-3 w-3" />
-                                                        </Button>
-                                                    )}
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="gap-2"
+                                                        onClick={() => navigate(`/playground?title=${encodeURIComponent(q.title)}&company=${encodeURIComponent(company.name)}&difficulty=${encodeURIComponent(q.difficulty)}`)}
+                                                    >
+                                                        Solve <Code2 className="h-3 w-3" />
+                                                    </Button>
                                                 </div>
                                             </CardContent>
                                         </Card>
