@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,11 +13,42 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { messages, interview_type } = await req.json();
+    const body = await req.json();
+    let messages = body.messages;
+    let interview_type = body.interview_type || 'voice';
+    const session_id = body.session_id;
 
     const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     if (!GROQ_API_KEY) {
       throw new Error("GROQ_API_KEY is not configured");
+    }
+
+    let supabase;
+    if (session_id) {
+       const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+       const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+       if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+           throw new Error("Supabase credentials missing");
+       }
+       supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+       
+       if (!messages) {
+           const { data: session, error: sessionError } = await supabase
+             .from('interview_sessions')
+             .select('*')
+             .eq('id', session_id)
+             .single();
+             
+           if (sessionError || !session) {
+               throw new Error(`Failed to fetch session: ${sessionError?.message || 'Not found'}`);
+           }
+           messages = session.transcript || [];
+           interview_type = session.interview_type || 'voice';
+       }
+    }
+
+    if (!messages || !Array.isArray(messages)) {
+        throw new Error("messages is missing or not an array");
     }
 
     const systemPrompt = `You are an expert technical interviewer and behavioral analyst. Your task is to evaluate a candidate's performance in a ${interview_type} interview based on the provided transcript.
@@ -106,7 +138,10 @@ Deno.serve(async (req: Request) => {
     // Format messages for Groq
     const formattedMessages = [
       { role: "system", content: systemPrompt },
-      ...messages
+      ...messages.map((m: any) => ({
+        role: m.role === 'user' ? 'user' : 'assistant',
+        content: m.text || m.content || ""
+      }))
     ];
 
     const response = await fetch(
@@ -144,15 +179,31 @@ Deno.serve(async (req: Request) => {
 
     const evaluation = JSON.parse(aiContent);
 
-    return new Response(JSON.stringify(evaluation), {
+    if (session_id && supabase) {
+        const { error: updateError } = await supabase
+          .from('interview_sessions')
+          .update({
+            overall_score: evaluation.score,
+            feedback_summary: evaluation.feedback,
+            whats_good: evaluation.strengths,
+            whats_wrong: evaluation.weaknesses,
+            six_q_score: evaluation.six_q_score,
+            personality_cluster: evaluation.personality_cluster,
+            status: 'completed'
+          })
+          .eq('id', session_id);
+          
+        if (updateError) {
+             console.error("Database update failed:", updateError);
+        }
+    }
+
+    return new Response(JSON.stringify({ success: true, evaluation }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
   } catch (error) {
     console.error("Error in evaluate-interview function:", error);
-    if (error instanceof Error) {
-        console.error("Stack trace:", error.stack);
-    }
     return new Response(
       JSON.stringify({ error: (error as Error).message, stack: (error as Error).stack }),
       {
