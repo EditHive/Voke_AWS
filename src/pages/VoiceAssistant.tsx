@@ -185,7 +185,7 @@ const VoiceAssistant: React.FC = () => {
                                 const repos = await reposResponse.json();
                                 const projectSummaries = await Promise.all(
                                     repos.map(async (repo: any) => {
-                                        return `Project: ${repo.name}\n- Description: ${repo.description || 'No description'}\n- Tech: ${repo.language || 'Not specified'}`;
+                                         return `Project: ${repo.name}\n- Description: ${repo.description || 'No description'}\n- Tech: ${repo.language || 'Not specified'}`;
                                     })
                                 );
                                 context += `\nGITHUB PROJECTS:\n${projectSummaries.join('\n\n')}\n`;
