@@ -69,24 +69,7 @@ export async function loadUserProfileContext(): Promise<ProfileContext> {
 
                         const projectSummaries = await Promise.all(
                             repos.map(async (repo: any) => {
-                                let readmeSummary = 'No README available';
-
-                                try {
-                                    const readmeResponse = await fetch(
-                                        `https://api.github.com/repos/${username}/${repo.name}/readme`,
-                                        { headers }
-                                    );
-
-                                    if (readmeResponse.ok) {
-                                        const readmeData = await readmeResponse.json();
-                                        const decodedContent = atob(readmeData.content);
-                                        readmeSummary = decodedContent.substring(0, 60).replace(/[#*`\n]/g, ' ').trim() + (decodedContent.length > 60 ? '...' : '');
-                                    }
-                                } catch (e) {
-                                    console.log(`[ProfileContext] No README for ${repo.name}`);
-                                }
-
-                                return `Project: ${repo.name}\n- Description: ${repo.description || 'No description'}\n- Tech: ${repo.language || 'Not specified'}\n- Stars: ${repo.stargazers_count}\n- Summary: ${readmeSummary}`;
+                                return `Project: ${repo.name} | Tech: ${repo.language || 'N/A'}`;
                             })
                         );
 
