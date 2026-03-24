@@ -80,7 +80,7 @@ export async function loadUserProfileContext(): Promise<ProfileContext> {
                                     if (readmeResponse.ok) {
                                         const readmeData = await readmeResponse.json();
                                         const decodedContent = atob(readmeData.content);
-                                        readmeSummary = decodedContent.substring(0, 300).replace(/[#*`\n]/g, ' ').trim();
+                                        readmeSummary = decodedContent.substring(0, 60).replace(/[#*`\n]/g, ' ').trim() + (decodedContent.length > 60 ? '...' : '');
                                     }
                                 } catch (e) {
                                     console.log(`[ProfileContext] No README for ${repo.name}`);
@@ -165,7 +165,7 @@ export async function loadUserProfileContext(): Promise<ProfileContext> {
                     resumeText += pageText + '\n';
                 }
 
-                resumeText = resumeText.replace(/\s+/g, ' ').trim().substring(0, 2000);
+                resumeText = resumeText.replace(/\s+/g, ' ').trim().substring(0, 800);
                 context += `\nRESUME CONTENT:\n${resumeText}\n`;
                 hasResume = true;
                 console.log('[ProfileContext] ✓ Resume parsed, length:', resumeText.length);
