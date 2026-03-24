@@ -247,7 +247,7 @@ const VoiceAssistant: React.FC = () => {
 
             const { data: evalData, error: evalError } = await supabase.functions.invoke('evaluate-interview', {
                 body: { 
-                    messages: logs,
+                    messages: logs.map((log: any) => ({ role: log.role, content: log.text || "" })),
                     interview_type: 'voice' 
                 }
             });

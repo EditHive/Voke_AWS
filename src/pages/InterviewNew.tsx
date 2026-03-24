@@ -113,7 +113,9 @@ const InterviewNew = () => {
           interview_type: CATEGORIES.find(c => c.id === activeCategory)?.label || "General",
           question_count: count,
           coding_stats: codingStats,
-          profile_context: profileContext?.context
+          profile_context: profileContext?.context 
+            ? (profileContext.context.length > 3000 ? profileContext.context.slice(0, 3000) + "\n...[truncated for brevity]" : profileContext.context)
+            : undefined
         }
       });
 
